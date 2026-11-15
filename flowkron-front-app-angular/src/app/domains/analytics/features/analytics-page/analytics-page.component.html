@@ -5,20 +5,14 @@
         <p class="muted">Consulta la actividad de tu bandeja y la distribución de oportunidades.</p>
       </div>
 
-      @if (requiresPlan()) {
-        <article class="upgrade-empty">
-          <strong>Activa el acceso a las métricas</strong>
-          <p class="muted">Consulta el estado de tu plan para ver las métricas de tu espacio de trabajo.</p>
-          <a class="btn btn-primary" routerLink="/app/pricing">Ver plan</a>
-        </article>
-      } @else if (isLoading()) {
+      @if (isLoading()) {
         <p class="muted" role="status">Cargando métricas…</p>
       } @else if (loadError()) {
         <article class="card empty-state">
           <p class="muted" role="alert">{{ loadError() }}</p>
           <button type="button" class="btn btn-secondary" (click)="loadAnalytics()">Reintentar</button>
         </article>
-      } @else if (hasLoaded()) {
+      } @else {
       <div class="grid grid-3">
         @for (metric of metrics; track metric.label) {
           <article class="card metric">

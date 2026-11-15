@@ -1,6 +1,7 @@
+import { rm } from "node:fs/promises";
 import makeWASocket, { DisconnectReason, useMultiFileAuthState } from "baileys";
 import pino from "pino";
-import { normalizeInbound, type operationalIngest } from "./ingest.js";
+import { normalizeInbound, type InboundHandler } from "./ingest.js";
 
 const logger = pino();
 const permanentDisconnects: ReadonlySet<number> = new Set([
@@ -31,12 +32,15 @@ export class WhatsAppConnection {
   private qr?: string;
   private socket?: Awaited<ReturnType<typeof openSocket>>["socket"];
   private starting?: Promise<void>;
+  private stopping?: Promise<void>;
+  private saving = Promise.resolve();
+  private forwarding = Promise.resolve();
   private retry?: NodeJS.Timeout;
   private retries = 0;
 
   constructor(
     private readonly directory: string,
-    private readonly ingest?: ReturnType<typeof operationalIngest>,
+    private readonly ingest?: InboundHandler,
     private readonly connect = openSocket
   ) {}
 
@@ -44,7 +48,8 @@ export class WhatsAppConnection {
     return { status: this.status, qr: this.qr };
   }
 
-  start() {
+  start(): Promise<void> {
+    if (this.stopping) return this.stopping.then(() => this.start());
     if (this.starting) return this.starting;
     if (this.socket || this.status === "pairing_required") return Promise.resolve();
     clearTimeout(this.retry);
@@ -59,13 +64,38 @@ export class WhatsAppConnection {
     return this.starting;
   }
 
+  stop() {
+    if (this.stopping) return this.stopping;
+    this.stopping = this.disconnect().finally(() => {
+      this.stopping = undefined;
+    });
+    return this.stopping;
+  }
+
+  private async disconnect() {
+    await this.starting?.catch(() => undefined);
+    clearTimeout(this.retry);
+    this.retry = undefined;
+    const socket = this.socket;
+    this.socket = undefined;
+    this.qr = undefined;
+    this.status = "disconnected";
+    this.retries = 0;
+    socket?.end(undefined);
+    // Settle any queued write before clearing this tenant's credentials.
+    await this.saving;
+    await rm(this.directory, { recursive: true, force: true });
+  }
+
   private async attach() {
     const { socket, saveCreds } = await this.connect(this.directory);
     this.socket = socket;
 
     socket.ev.on("creds.update", () => {
       if (this.socket !== socket) return;
-      void saveCreds().catch(() => logger.error("Could not persist WhatsApp credentials"));
+      this.saving = this.saving.then(() => saveCreds()).catch(() => {
+        logger.error("Could not persist WhatsApp credentials");
+      });
     });
 
     socket.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
@@ -91,17 +121,21 @@ export class WhatsAppConnection {
       }
     });
 
-    socket.ev.on("messages.upsert", async ({ messages, type }) => {
+    socket.ev.on("messages.upsert", ({ messages, type }) => {
       if (type !== "notify" || !this.ingest) return;
       for (const message of messages) {
-        if (this.socket !== socket || this.status !== "connected") return;
         const inbound = normalizeInbound(message);
-        if (!inbound) continue;
-        try {
-          await this.ingest(inbound);
-        } catch {
-          logger.warn("Could not forward an inbound WhatsApp message");
-        }
+        if (!inbound || !message.key.remoteJid) continue;
+        const jid = message.key.remoteJid;
+        this.forwarding = this.forwarding.then(async () => {
+          if (this.socket !== socket || this.status !== "connected") return;
+          await this.ingest?.(inbound, async (text) => {
+            if (this.socket !== socket || this.status !== "connected") throw new Error("Session disconnected");
+            await socket.sendMessage(jid, { text });
+          });
+        }).catch(() => {
+          logger.warn("Could not process an inbound WhatsApp message");
+        });
       }
     });
   }

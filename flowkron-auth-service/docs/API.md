@@ -76,6 +76,12 @@ Con `AUTH_SELF_SIGNUP_ENABLED=True`, una cuenta nueva puede registrarse mediante
 
 Login recibe `email`, `password`, `tenant_id?`, `mfa_code?`. Los JWT humanos agregan `tenant_id`, `membership_id`, `session_id`, `roles`, `permissions`, `subscription`, `onboarding_required` y `amr`.
 
+El registro de empresa aprovisiona su esquema operativo. El acceso se rige por la membresía, el rol y el estado de la empresa.
+
+### Vincular WhatsApp
+
+Las acciones sobre `/api/v1/tenants/{id}/whatsapp/` requieren una sesión de la empresa con permiso `whatsapp.connect`. `GET` devuelve el estado actual y el QR PNG si está pendiente. `POST` inicia el vínculo. `DELETE` desconecta y elimina las credenciales locales de esa sesión. El QR se devuelve con `Cache-Control: no-store`.
+
 
 | Método y ruta | Auth | Propósito |
 | --- | --- | --- |

@@ -101,12 +101,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: docker compose -p flowkron-smoke up --build --wait --wait-timeout 180
+      - run: docker compose -f compose.demo.yaml -p flowkron-smoke up --build --wait --wait-timeout 180
       - run: python flowkron-deploy/bootstrap/smoke.py flowkron-smoke
       - if: failure()
-        run: docker compose -p flowkron-smoke ps --all
+        run: docker compose -f compose.demo.yaml -p flowkron-smoke ps --all
       - if: always()
-        run: docker compose -p flowkron-smoke down
+        run: docker compose -f compose.demo.yaml -p flowkron-smoke down
 
   secrets:
     runs-on: ubuntu-latest

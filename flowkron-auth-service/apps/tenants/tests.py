@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 import json
 from django.test import TestCase, override_settings
@@ -23,12 +24,15 @@ class TenantOnboardingTests(TestCase):
         self.assertTrue(login.data["data"]["onboarding_required"])
 
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['data']['access']}")
-        response = client.post("/api/v1/tenants/onboarding/", {"name": "Acme"}, format="json")
+        with patch("apps.tenants.views.ensure_open_workspace") as provision:
+            response = client.post("/api/v1/tenants/onboarding/", {"name": "Acme"}, format="json")
+        provision.assert_called_once()
 
         self.assertEqual(response.status_code, 201)
         self.assertFalse(response.data["data"]["access"] == login.data["data"]["access"])
         membership = TenantMembership.objects.get(user=user, tenant_id=response.data["data"]["tenant_id"])
         self.assertTrue(membership.membership_roles.filter(role__code="TENANT_OWNER").exists())
+        self.assertIn("whatsapp.connect", response.data["data"]["permissions"])
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

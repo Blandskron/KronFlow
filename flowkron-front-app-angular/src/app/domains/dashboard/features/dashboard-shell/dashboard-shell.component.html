@@ -23,6 +23,9 @@
             @case ('workflow') {
               <span class="nav-icon"><svg lucideWorkflow size="20" aria-hidden="true"></svg></span>
             }
+            @case ('link') {
+              <span class="nav-icon"><svg lucideLink size="20" aria-hidden="true"></svg></span>
+            }
             @case ('book-open') {
               <span class="nav-icon"><svg lucideBookOpen size="20" aria-hidden="true"></svg></span>
             }
@@ -51,9 +54,6 @@
         </span>
       </div>
       <div class="actions">
-        @if (requiresPlan()) {
-          <a class="btn btn-secondary" routerLink="/app/pricing">Ver plan</a>
-        }
         <flowkron-theme-toggle class="mobile-theme" />
         <a class="notify" routerLink="/app/notifications" routerLinkActive="active" ariaCurrentWhenActive="page" aria-label="Notificaciones">
           <svg lucideBell size="20" aria-hidden="true"></svg>

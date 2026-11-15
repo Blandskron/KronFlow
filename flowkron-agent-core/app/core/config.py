@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     cors_allowed_origins: Annotated[List[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:4200", "http://localhost:8080"]
     )
+    baileys_internal_token: str = ""
     internal_token: str = "change-me-local-internal-token"
     jwt_public_key: str = ""
     jwt_public_key_path: str = ""

@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, effect, inject, signal, viewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import {
   LucideArrowLeft,
   LucideMail,
@@ -10,7 +9,6 @@ import {
   LucideSearch
 } from '@lucide/angular';
 import { Conversation, ConversationMessage } from '@domains/conversations/domain/conversation.model';
-import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { ConversationsApiService } from '@domains/conversations/data-access/conversations-api.service';
 
 type ChatStatus = 'new' | 'active' | 'waiting' | 'closed';
@@ -43,14 +41,12 @@ interface Message {
     LucideMessageSquare,
     LucidePhone,
     LucideRefreshCw,
-    LucideSearch,
-    RouterLink
+    LucideSearch
   ],
   templateUrl: './chats-page.component.html',
   styleUrl: './chats-page.component.css'
 })
 export class ChatsPageComponent implements OnInit {
-  readonly auth = inject(AuthService);
   private readonly operational = inject(ConversationsApiService);
   private readonly injector = inject(Injector);
   private readonly backButton = viewChild<ElementRef<HTMLButtonElement>>('backButton');
@@ -63,9 +59,6 @@ export class ChatsPageComponent implements OnInit {
   readonly loadError = signal('');
   readonly chats = signal<ChatContact[]>([]);
   readonly threads = signal<Partial<Record<number, { state: 'loading' | 'error' | 'ready'; messages: Message[] }>>>({});
-  readonly planRequired = signal(false);
-  readonly hasLoaded = signal(false);
-  readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan || this.planRequired()));
 
   readonly statuses = [
     { id: 'all', label: 'Todas' },
@@ -85,32 +78,12 @@ export class ChatsPageComponent implements OnInit {
     });
   });
 
-  constructor() {
-    effect(() => {
-      if (!this.requiresPlan() && !this.isLoading() && !this.hasLoaded() && !this.loadError()) {
-        setTimeout(() => this.loadConversations());
-      }
-    });
-  }
-
   ngOnInit(): void {
-    if (this.requiresPlan()) {
-      this.chats.set([]);
-      return;
-    }
-
     this.loadConversations();
   }
 
   loadConversations(): void {
     if (this.isLoading()) {
-      return;
-    }
-
-    if (this.requiresPlan()) {
-      this.chats.set([]);
-      this.loadError.set('');
-      this.isLoading.set(false);
       return;
     }
 
@@ -122,20 +95,10 @@ export class ChatsPageComponent implements OnInit {
         if (!this.selectedChat()) {
           this.selectedChatId.set(null);
         }
-        this.hasLoaded.set(true);
         this.isLoading.set(false);
       },
       error: (error) => {
-        if (this.isPlanAccessError(error)) {
-          this.planRequired.set(true);
-          this.selectedChatId.set(null);
-          this.threads.set({});
-          this.chats.set([]);
-          this.loadError.set('');
-          this.hasLoaded.set(true);
-        } else {
-          this.loadError.set(this.operationalErrorMessage(error));
-        }
+        this.loadError.set(this.operationalErrorMessage(error));
         this.isLoading.set(false);
       }
     });
@@ -273,10 +236,6 @@ export class ChatsPageComponent implements OnInit {
       return `Hace ${diffHours} h`;
     }
     return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short' }).format(date);
-  }
-
-  private isPlanAccessError(error: unknown): boolean {
-    return error instanceof HttpErrorResponse && error.status === 402;
   }
 
   private operationalErrorMessage(error: unknown): string {

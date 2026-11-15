@@ -40,6 +40,14 @@ def activate_subscription(tenant, plan, provider="", external_id="", current_per
     return tenant
 
 
+def ensure_open_workspace(tenant):
+    runtime = TenantOperationalRuntime.objects.filter(tenant=tenant).first()
+    if tenant.status != Tenant.Status.ACTIVE or (runtime and runtime.status == TenantOperationalRuntime.Status.SUSPENDED):
+        raise requests.RequestException("The workspace is suspended.")
+    if not runtime or runtime.status != TenantOperationalRuntime.Status.ACTIVE:
+        provision_operational_runtime(tenant)
+
+
 def provision_operational_runtime(tenant):
     runtime, _ = TenantOperationalRuntime.objects.get_or_create(
         tenant=tenant,

@@ -103,7 +103,7 @@ class PermissionHardeningTests(TestCase):
 
         self.assertFalse(HasTenantPermission().has_permission(request, view))
 
-    def test_tenant_permission_uses_current_subscription_entitlements(self):
+    def test_tenant_permission_uses_current_workspace_status(self):
         from apps.rbac.models import MembershipRole, TenantRole
         from apps.rbac.services import seed_roles_for_tenant
         from apps.tenants.models import TenantMembership
@@ -118,13 +118,11 @@ class PermissionHardeningTests(TestCase):
         request.auth = {"tenant_id": str(tenant.id), "permissions": ["members.manage"]}
         view = type("View", (), {"required_permission": "members.manage"})()
 
-        self.assertFalse(HasTenantPermission().has_permission(request, view))
-
-        tenant.plan = Tenant.Plan.STARTER
-        tenant.subscription_status = Tenant.SubscriptionStatus.ACTIVE
-        tenant.save(update_fields=["plan", "subscription_status"])
-
         self.assertTrue(HasTenantPermission().has_permission(request, view))
+
+        tenant.status = Tenant.Status.SUSPENDED
+        tenant.save(update_fields=["status"])
+        self.assertFalse(HasTenantPermission().has_permission(request, view))
 
     def test_critical_action_requires_mfa_claim(self):
         user = get_user_model().objects.create_user(username="u@example.com", email="u@example.com")

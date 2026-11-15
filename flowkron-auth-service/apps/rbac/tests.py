@@ -18,7 +18,7 @@ class RbacTests(TestCase):
 
         self.assertIn("roles.assign", permissions_for_membership(membership))
 
-    def test_free_plan_limits_effective_permissions_even_for_owner_role(self):
+    def test_open_source_workspace_grants_owner_permissions_without_a_subscription(self):
         user = get_user_model().objects.create_user(username="owner@example.com", email="owner@example.com")
         tenant = Tenant.objects.create(name="Free Co", legal_name="Free Co", created_by=user)
         membership = TenantMembership.objects.create(user=user, tenant=tenant, status="active")
@@ -28,4 +28,5 @@ class RbacTests(TestCase):
         MembershipRole.objects.create(membership=membership, role=owner)
 
         self.assertIn("members.manage", role_permissions_for_membership(membership))
-        self.assertEqual(permissions_for_membership(membership), ["tenants.read"])
+        self.assertIn("members.manage", permissions_for_membership(membership))
+        self.assertIn("whatsapp.connect", permissions_for_membership(membership))

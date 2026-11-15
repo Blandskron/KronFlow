@@ -1,5 +1,8 @@
 .site-header {
-  border-bottom: 1px solid var(--border);
+  width: min(1240px, calc(100% - 24px));
+  margin: 12px auto 0;
+  border: 1px solid var(--glass-edge);
+  border-radius: 24px;
 }
 
 .header-shell, .header-actions, .brand, nav, .footer-row, .preview-heading {
@@ -104,11 +107,12 @@ nav a:hover { color: var(--primary); }
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 16px;
 }
 
-.feature { padding: 24px; }
+.feature { padding: clamp(20px, 4vw, 34px); grid-column: span 5; border-radius: 24px; }
+.feature:first-child, .feature:last-child { grid-column: span 7; }
 .feature h3 { margin-top: 0; }
 .feature p { margin-bottom: 0; }
 .featured { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
@@ -157,6 +161,7 @@ nav a:hover { color: var(--primary); }
   .header-shell nav a { display: inline-flex; align-items: center; min-height: 36px; }
   .header-actions { gap: 8px; }
   .hero-inner, .feature-grid, .contact .grid { grid-template-columns: minmax(0, 1fr); }
+  .feature-grid .feature { grid-column: auto; }
 }
 
 @media (max-width: 480px) {

@@ -1,4 +1,4 @@
-"""Exercise a disposable Compose project started with the default configuration."""
+"""Exercise a disposable Compose demo project."""
 
 import argparse
 import json
@@ -43,7 +43,7 @@ def main(project):
     assert fetch(operational + "/readyz")["status"] == "ready"
     assert fetch(agent + "/ready")["status"] == "ready"
 
-    compose = ["docker", "compose", "-p", project, "exec", "-T"]
+    compose = ["docker", "compose", "-f", "compose.demo.yaml", "-p", project, "exec", "-T"]
     password = subprocess.check_output(
         compose
         + [
@@ -85,6 +85,10 @@ def main(project):
     django_users = fetch(auth + "/admin/auth/user/")
     assert 'id="changelist"' in django_users and "admin@example.com" in django_users
     assert isinstance(fetch(operational + "/api/v1/leads", headers=headers), dict)
+    whatsapp = fetch(f"{auth}/api/v1/tenants/{session['tenant_id']}/whatsapp/", headers=headers)
+    assert whatsapp["status"] == "disconnected"
+    documents = fetch(agent + "/api/v1/context/documents", headers=headers)
+    assert "agente-demo-blandskron.txt" in json.dumps(documents)
     fetch(
         agent + "/api/v1/context/documents/upload",
         {

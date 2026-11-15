@@ -1,5 +1,0 @@
-.page-section { padding: clamp(18px, 4vw, 36px); }
-.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-.current { max-width: 640px; padding: 24px; }
-.current h2 { margin-top: 0; }
-.current p { line-height: 1.55; }

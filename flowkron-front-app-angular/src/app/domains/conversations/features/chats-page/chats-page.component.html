@@ -4,21 +4,12 @@
       <h1>Conversaciones</h1>
       <p class="muted">Busca contactos, revisa sus mensajes y consulta el estado de cada conversación.</p>
     </div>
-    @if (!requiresPlan()) {
       <button class="btn btn-secondary" type="button" [disabled]="isLoading()" (click)="loadConversations()">
         <svg lucideRefreshCw size="18" aria-hidden="true"></svg>
         {{ isLoading() ? 'Actualizando…' : 'Actualizar' }}
       </button>
-    }
   </header>
 
-  @if (requiresPlan()) {
-    <article class="card state">
-      <h2>Activa el acceso a conversaciones</h2>
-      <p class="muted">Consulta el estado de tu plan para acceder a la bandeja.</p>
-      <a class="btn btn-primary" routerLink="/app/pricing">Ver plan</a>
-    </article>
-  } @else {
     <div class="inbox" [class.thread-open]="selectedChat()">
       <section class="card list glass-surface" aria-label="Lista de conversaciones">
         <div class="filters">
@@ -128,5 +119,4 @@
         }
       </section>
     </div>
-  }
 </section>

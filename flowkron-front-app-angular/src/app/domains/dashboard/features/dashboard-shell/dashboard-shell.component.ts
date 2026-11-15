@@ -4,6 +4,7 @@ import {
   LucideBell,
   LucideBookOpen,
   LucideHome,
+  LucideLink,
   LucideLogOut,
   LucideMessageSquare,
   LucideUser,
@@ -23,6 +24,7 @@ import { ThemeToggleComponent } from '@shared/ui/theme-toggle.component';
     RouterLinkActive,
     ThemeToggleComponent,
     LucideHome,
+  LucideLink,
     LucideMessageSquare,
     LucideWorkflow,
     LucideBarChart3,
@@ -38,7 +40,6 @@ export class DashboardShellComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly workspace = inject(WorkspaceStateService);
   private readonly auth = inject(AuthService);
-  readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan));
   readonly notificationCount = computed(() => 0);
   readonly tenantLogo = computed(() => this.auth.currentTenant()?.logo_url || '');
   readonly brandName = computed(() => this.auth.currentTenant()?.name || 'Flowkron');
@@ -46,6 +47,7 @@ export class DashboardShellComponent implements OnInit {
   readonly navItems = [
     { path: '/app/home', label: 'Inicio', icon: 'home' },
     { path: '/app/conversations', label: 'Bandeja', icon: 'message-square' },
+    { path: '/app/whatsapp', label: 'WhatsApp', icon: 'link' },
     { path: '/app/business-context', label: 'Contexto', icon: 'book-open' },
     { path: '/app/workflows', label: 'Oportunidades', icon: 'workflow' },
     { path: '/app/analytics', label: 'Métricas', icon: 'bar-chart-3' }

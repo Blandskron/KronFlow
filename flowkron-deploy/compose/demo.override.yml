@@ -1,0 +1,5 @@
+services:
+  flowkron-auth-service:
+    environment:
+      FLOWKRON_BOOTSTRAP_ADMIN: "True"
+      FLOWKRON_DEMO_CONTEXT: "true"

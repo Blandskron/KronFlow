@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import hmac
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -48,3 +50,22 @@ def get_conversation_messages(conversation_id: str, tenant: TenantContext = Depe
         raise HTTPException(status_code=404, detail="Conversation not found")
     messages = db.scalars(select(ConversationMessage).where(ConversationMessage.tenant_id == tenant.tenant_id, ConversationMessage.conversation_id == conversation.id).order_by(ConversationMessage.id)).all()
     return [{"sender_type": msg.sender_type, "message_type": msg.message_type, "content": msg.content, "attachments": msg.attachments} for msg in messages]
+
+
+@router.post("/internal/whatsapp/{tenant_id}", response_model=AgentMessageResponse, include_in_schema=False)
+def whatsapp_message(
+    tenant_id: int,
+    payload: AgentMessageRequest,
+    token: str = Header(default="", alias="X-Baileys-Token"),
+    db: Session = Depends(get_db),
+):
+    settings = get_settings()
+    if not settings.baileys_internal_token or not hmac.compare_digest(token.encode(), settings.baileys_internal_token.encode()):
+        raise HTTPException(status_code=401, detail="Invalid Baileys credentials")
+    tenant = TenantContext(tenant_id=str(tenant_id))
+    _assert_payload_tenant(payload.tenant_id, tenant)
+    if tenant_id < 1 or payload.channel != "whatsapp":
+        raise HTTPException(status_code=422, detail="Expected a WhatsApp message")
+    if settings.persistence_mode == "operational":
+        return process_stateless_agent_message(tenant.tenant_id, payload)
+    return process_agent_message(db, tenant.tenant_id, payload)

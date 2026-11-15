@@ -1,3 +1,7 @@
+import requests
+
+from django.db import transaction
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -10,10 +14,10 @@ from apps.audit.services import audit
 from apps.accounts.tokens import issue_tokens
 from apps.rbac.services import permissions_for_membership, roles_for_membership
 from apps.shared.permissions import HasTenantPermission
-from apps.shared.responses import ok
+from apps.shared.responses import api_error, ok
 from apps.shared.image_uploads import absolute_media_url, save_uploaded_image
 
-from .models import Tenant, TenantInvitation, TenantMembership
+from .models import Tenant, TenantInvitation, TenantMembership, TenantOperationalRuntime
 from .serializers import (
     AcceptInvitationSerializer,
     InvitationTokenSerializer,
@@ -25,7 +29,7 @@ from .serializers import (
     TenantSerializer,
     get_pending_invitation,
 )
-from .services import activate_subscription, create_owned_tenant, provision_operational_runtime, rotate_operational_ingest_key
+from .services import activate_subscription, create_owned_tenant, ensure_open_workspace, provision_operational_runtime, rotate_operational_ingest_key, sync_operational_runtime_status
 
 
 @extend_schema_view(
@@ -71,6 +75,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             "runtime": "tenants.read",
             "rotate_ingest_key": "tenants.manage",
             "onboarding": None,
+            "whatsapp": "whatsapp.connect",
         }
         self.required_permission = permission_by_action.get(self.action)
         if self.required_permission:
@@ -93,6 +98,33 @@ class TenantViewSet(viewsets.ModelViewSet):
                 queryset = queryset.none()
         return queryset
 
+    @decorators.action(detail=True, methods=["get", "post", "delete"], url_path="whatsapp")
+    def whatsapp(self, request, pk=None):
+        tenant = self.get_object()
+        if not settings.BAILEYS_INTERNAL_TOKEN:
+            return api_error(status=503, error_code="WHATSAPP_DISABLED", detail="El conector de WhatsApp no está configurado.")
+        endpoint = f"{settings.BAILEYS_SERVICE_URL.rstrip('/')}/internal/baileys/tenants/{tenant.pk}/session"
+        try:
+            if request.method == "POST":
+                ensure_open_workspace(tenant)
+            result = requests.request(
+                request.method,
+                endpoint,
+                headers={"Authorization": f"Bearer {settings.BAILEYS_INTERNAL_TOKEN}"},
+                timeout=12,
+                allow_redirects=False,
+            )
+            result.raise_for_status()
+            state = result.json()
+            data = {"status": state["status"]}
+            if isinstance(state.get("qr"), str) and state["qr"].startswith("data:image/png;base64,"):
+                data["qr"] = state["qr"]
+        except (requests.RequestException, ValueError, KeyError):
+            return api_error(status=503, error_code="WHATSAPP_UNAVAILABLE", detail="No pudimos contactar el conector de WhatsApp. Reintenta en unos segundos.")
+        result = ok(data)
+        result["Cache-Control"] = "no-store"
+        return result
+
     def perform_create(self, serializer):
         tenant, _ = create_owned_tenant(
             self.request.user,
@@ -113,27 +145,44 @@ class TenantViewSet(viewsets.ModelViewSet):
                 {"success": False, "code": "AUTH_EMAIL_NOT_VERIFIED", "message": "Debes verificar tu correo antes de crear empresa.", "details": {}},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        existing_membership = request.user.memberships.filter(status=TenantMembership.Status.ACTIVE, tenant__status=Tenant.Status.ACTIVE).first()
-        if existing_membership:
+        with transaction.atomic():
+            owner = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            profile = owner.profile
+            membership = owner.memberships.select_related("tenant").filter(
+                status=TenantMembership.Status.ACTIVE, tenant__status=Tenant.Status.ACTIVE
+            ).first()
+            if membership:
+                tenant = membership.tenant
+                if profile.onboarding_completed_at or tenant.created_by_id != owner.pk:
+                    return response.Response(
+                        {"success": False, "code": "ONBOARDING_ALREADY_COMPLETED", "message": "El usuario ya tiene una empresa activa."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            else:
+                serializer = TenantOnboardingSerializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                tenant, membership = create_owned_tenant(
+                    owner,
+                    serializer.validated_data["name"],
+                    legal_name=serializer.validated_data.get("legal_name") or serializer.validated_data["name"],
+                    tax_id=serializer.validated_data.get("tax_id", ""),
+                    country=serializer.validated_data.get("country", "CL"),
+                )
+                audit(AuditLog.Event.TENANT_CREATED, request=request, tenant=tenant)
+                audit(AuditLog.Event.TENANT_OWNER_ASSIGNED, request=request, tenant=tenant, membership_id=membership.id)
+
+        try:
+            ensure_open_workspace(tenant)
+        except requests.RequestException:
             return response.Response(
-                {"success": False, "code": "ONBOARDING_ALREADY_COMPLETED", "message": "El usuario ya tiene una empresa activa.", "details": {}},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"success": False, "code": "WORKSPACE_UNAVAILABLE", "message": "Tu empresa se guardó. Reintenta para habilitar su espacio de trabajo."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        serializer = TenantOnboardingSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        tenant, membership = create_owned_tenant(
-            request.user,
-            serializer.validated_data["name"],
-            legal_name=serializer.validated_data.get("legal_name") or serializer.validated_data["name"],
-            tax_id=serializer.validated_data.get("tax_id", ""),
-            country=serializer.validated_data.get("country", "CL"),
-        )
+
         profile.onboarding_completed_at = timezone.now()
         if not profile.account_activated_at:
             profile.account_activated_at = profile.email_verified_at
         profile.save(update_fields=["onboarding_completed_at", "account_activated_at", "updated_at"])
-        audit(AuditLog.Event.TENANT_CREATED, request=request, tenant=tenant)
-        audit(AuditLog.Event.TENANT_OWNER_ASSIGNED, request=request, tenant=tenant, membership_id=membership.id)
         refresh, session = issue_tokens(request.user, membership, request, amr=request.auth.get("amr", "pwd") if request.auth else "pwd")
         return ok(
             {
@@ -153,6 +202,11 @@ class TenantViewSet(viewsets.ModelViewSet):
     @decorators.action(detail=True, methods=["post"])
     def suspend(self, request, pk=None):
         tenant = self.get_object()
+        if TenantOperationalRuntime.objects.filter(tenant=tenant).exists():
+            try:
+                sync_operational_runtime_status(tenant, "suspend")
+            except requests.RequestException:
+                return api_error(status=503, error_code="WORKSPACE_UNAVAILABLE", detail="No pudimos suspender el espacio operativo.")
         tenant.status = Tenant.Status.SUSPENDED
         tenant.save(update_fields=["status", "updated_at"])
         return ok(TenantSerializer(tenant).data)
@@ -160,6 +214,11 @@ class TenantViewSet(viewsets.ModelViewSet):
     @decorators.action(detail=True, methods=["post"])
     def activate(self, request, pk=None):
         tenant = self.get_object()
+        if TenantOperationalRuntime.objects.filter(tenant=tenant, status=TenantOperationalRuntime.Status.SUSPENDED).exists():
+            try:
+                sync_operational_runtime_status(tenant, "activate")
+            except requests.RequestException:
+                return api_error(status=503, error_code="WORKSPACE_UNAVAILABLE", detail="No pudimos reactivar el espacio operativo.")
         tenant.status = Tenant.Status.ACTIVE
         tenant.save(update_fields=["status", "updated_at"])
         return ok(TenantSerializer(tenant).data)

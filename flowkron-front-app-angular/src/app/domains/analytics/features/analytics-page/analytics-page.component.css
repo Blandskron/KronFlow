@@ -3,15 +3,8 @@
 h1 { font-size: clamp(1.75rem, 4vw, 2.125rem); margin: 0 0 8px; }
 .heading p { margin: 0; }
 
-.upgrade-empty, .empty-state, .panel, .metric {
-  padding: clamp(16px, 3vw, 24px);
-}
-.upgrade-empty {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--selected);
-}
-.upgrade-empty strong { font-size: 1.125rem; }
+
+
 .empty-state p { margin-top: 0; }
 
 .metric {

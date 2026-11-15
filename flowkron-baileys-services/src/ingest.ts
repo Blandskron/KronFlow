@@ -58,3 +58,85 @@ export function operationalIngest(env: NodeJS.ProcessEnv) {
     if (!result.ok) throw new Error("Operational ingestion failed");
   };
 }
+
+
+type Inbound = NonNullable<ReturnType<typeof normalizeInbound>>;
+type SendText = (text: string) => Promise<void>;
+export type InboundHandler = (message: Inbound, reply: SendText) => Promise<void>;
+
+export function tenantIngest(
+  tenant: string,
+  token: string,
+  operational: string,
+  agent: string
+): InboundHandler {
+  const headers = { "X-Flowkron-Tenant": tenant, "X-Baileys-Token": token, "Content-Type": "application/json" };
+  const base = new URL("/api/v1/ingest/whatsapp/", operational);
+  const agentUrl = new URL(`/api/v1/agent/internal/whatsapp/${tenant}`, agent);
+  const prompted = new Map<string, number>();
+  const timeout = 70000;
+
+  async function request(url: URL, payload?: object) {
+    const result = await fetch(url, {
+      method: payload ? "POST" : "GET",
+      headers,
+      body: payload ? JSON.stringify(payload) : undefined,
+      redirect: "error",
+      signal: AbortSignal.timeout(timeout)
+    });
+    if (!result.ok) throw new Error(`WhatsApp pipeline HTTP ${result.status}`);
+    const json = await result.json();
+    return json.data ?? json;
+  }
+
+  return async (message, reply) => {
+    const consentUrl = new URL("consent", base);
+    const command = message.body.trim().toUpperCase();
+    if (command === "ACEPTO" || command === "BAJA") {
+      await request(consentUrl, { phone: message.phone, accepted: command === "ACEPTO", policy_version: "flowkron-whatsapp-v1" });
+      await reply(command === "ACEPTO"
+        ? "Gracias. Ya puedes enviar tu consulta. Escribe BAJA si quieres retirar tu autorización."
+        : "Tu autorización fue retirada. Si quieres volver a consultar, escribe ACEPTO.");
+      return;
+    }
+
+    consentUrl.searchParams.set("phone", message.phone);
+    if (!(await request(consentUrl)).consentimiento_datos) {
+      const now = Date.now();
+      const last = prompted.get(message.phone);
+      if (last && now - last < 86_400_000) return;
+      if (prompted.size >= 1024) {
+        const oldest = prompted.keys().next().value;
+        if (oldest) prompted.delete(oldest);
+      }
+      await reply("Hola. Para responder tu consulta, el asistente de esta empresa guarda tu número y los mensajes de esta conversación. Escribe ACEPTO si autorizas ese uso o BAJA para retirarlo.");
+      prompted.set(message.phone, now);
+      return;
+    }
+
+    const messageUrl = new URL("message", base);
+    const stored = await request(messageUrl, message);
+    if (stored.duplicate) return;
+    const result = await request(agentUrl, {
+      tenant_id: tenant,
+      channel: "whatsapp",
+      conversation_id: message.external_thread_id,
+      customer: { external_id: message.phone, phone: message.phone },
+      message: { content: message.body }
+    });
+    const response = result.reply?.content;
+    if (typeof response !== "string" || !response.trim()) throw new Error("Agent returned no WhatsApp reply");
+    if (result.requires_human) {
+      await request(new URL("handoff", base), { phone: message.phone, reason: "agent_requires_human" });
+    }
+    const body = response.slice(0, 4000);
+    await reply(body);
+    await request(messageUrl, {
+      ...message,
+      external_message_id: `${message.external_message_id}:reply`,
+      direction: "outbound",
+      body,
+      sent_at: new Date().toISOString()
+    });
+  };
+}

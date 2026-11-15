@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+import requests
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -56,3 +58,31 @@ class Command(BaseCommand):
             status__in=[TenantOperationalRuntime.Status.ACTIVE, TenantOperationalRuntime.Status.SUSPENDED],
         ).exists():
             provision_operational_runtime(tenant)
+        if local and tenant and os.getenv("FLOWKRON_DEMO_CONTEXT") == "true":
+            self.seed_demo_context(tenant)
+
+    def seed_demo_context(self, tenant):
+        url = f"{settings.OPERATIONAL_SERVICE_URL.rstrip('/')}/internal/tenants/{tenant.pk}/context/documents"
+        headers = {"X-Internal-Token": settings.OPERATIONAL_INTERNAL_TOKEN}
+        existing = requests.get(url, headers=headers, timeout=12)
+        existing.raise_for_status()
+        documents = existing.json()
+        if isinstance(documents, dict):
+            documents = documents.get("data", [])
+        if documents:
+            return
+
+        text = (
+            "BLANDSKRON ofrece una demostración de Flowkron para gestionar consultas por WhatsApp. "
+            "El asistente explica cómo conectar WhatsApp, cargar productos y consultar conversaciones. "
+            "El catálogo, los precios y la disponibilidad se deben confirmar con el equipo. "
+            "Si un cliente pide una cotización, toma nota del producto o servicio que busca y deriva la consulta."
+        )
+        result = requests.post(url, headers=headers, timeout=12, json={
+            "tenant_id": str(tenant.pk),
+            "title": "Guía del agente demo de BLANDSKRON",
+            "filename": "agente-demo-blandskron.txt",
+            "raw_text": text,
+            "chunks": [{"chunk_index": 0, "content": text, "token_count": len(text.split())}],
+        })
+        result.raise_for_status()

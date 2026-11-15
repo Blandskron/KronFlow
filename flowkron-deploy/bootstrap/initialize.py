@@ -45,7 +45,9 @@ def initialize():
     token = credential(iam / "operational_internal_token", "OPERATIONAL_INTERNAL_TOKEN")
     write(operational / "internal_token", token)
     write(agent / "internal_token", token)
-    credential(channel / "internal_token", "BAILEYS_INTERNAL_TOKEN")
+    baileys_token = credential(channel / "internal_token", "BAILEYS_INTERNAL_TOKEN")
+    for service in (iam, operational, agent):
+        write(service / "baileys_internal_token", baileys_token)
 
 
 if __name__ == "__main__":

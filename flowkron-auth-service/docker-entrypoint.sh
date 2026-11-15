@@ -97,4 +97,8 @@ elif run_bool "${FLOWKRON_BOOTSTRAP_ADMIN:-false}" && run_bool "${DJANGO_DEBUG:-
   esac
 fi
 
+if run_bool "${FLOWKRON_PROVISION_WORKSPACES:-false}"; then
+  python manage.py provision_open_workspaces
+fi
+
 exec "$@"

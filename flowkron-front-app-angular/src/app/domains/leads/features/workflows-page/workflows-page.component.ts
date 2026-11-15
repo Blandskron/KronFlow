@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import {
   LucideArrowDownUp,
@@ -46,18 +45,16 @@ interface TicketColumn {
     LucideInfo,
     LucideMail,
     LucidePhone,
-    LucideSearch,
-    RouterLink
+    LucideSearch
   ],
   templateUrl: './workflows-page.component.html',
   styleUrl: './workflows-page.component.css'
 })
-export class WorkflowsPageComponent {
+export class WorkflowsPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly operational = inject(LeadsApiService);
   private readonly conversationsService = inject(ConversationsApiService);
 
-  readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan || this.planRequired()));
   readonly tenantName = computed(() => this.auth.currentTenant()?.name || 'Espacio de trabajo');
   readonly searchQuery = signal('');
   readonly statusFilter = signal<'open' | 'all' | 'closed'>('open');
@@ -66,8 +63,6 @@ export class WorkflowsPageComponent {
   readonly tickets = signal<Ticket[]>([]);
   readonly isLoading = signal(false);
   readonly loadError = signal('');
-  readonly planRequired = signal(false);
-  readonly hasLoaded = signal(false);
   readonly columns = computed<TicketColumn[]>(() => {
     const tickets = this.filteredTickets();
     return [
@@ -94,29 +89,12 @@ export class WorkflowsPageComponent {
     });
   });
 
-  constructor() {
-    effect(() => {
-      if (!this.requiresPlan() && !this.isLoading() && !this.hasLoaded() && !this.loadError()) {
-        setTimeout(() => this.loadWorkflow());
-      }
-    });
-  }
-
   ngOnInit(): void {
-    if (!this.requiresPlan()) {
-      this.loadWorkflow();
-    }
+    this.loadWorkflow();
   }
 
   loadWorkflow(): void {
     if (this.isLoading()) {
-      return;
-    }
-
-    if (this.requiresPlan()) {
-      this.tickets.set([]);
-      this.loadError.set('');
-      this.isLoading.set(false);
       return;
     }
 
@@ -129,18 +107,10 @@ export class WorkflowsPageComponent {
       next: ({ conversations, leads }) => {
         const leadsById = new Map<number, Lead>(leads.items.map((lead) => [lead.id, lead]));
         this.tickets.set(conversations.items.map((conversation: Conversation) => this.toTicket(conversation, leadsById.get(conversation.lead_id))));
-        this.hasLoaded.set(true);
         this.isLoading.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        if (this.isPlanAccessError(error)) {
-          this.planRequired.set(true);
-          this.tickets.set([]);
-          this.loadError.set('');
-          this.hasLoaded.set(true);
-        } else {
-          this.loadError.set(this.operationalErrorMessage(error));
-        }
+        this.loadError.set(this.operationalErrorMessage(error));
         this.isLoading.set(false);
       }
     });
@@ -221,10 +191,6 @@ export class WorkflowsPageComponent {
       return `Hace ${diffHours} h`;
     }
     return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short' }).format(date);
-  }
-
-  private isPlanAccessError(error: unknown): boolean {
-    return error instanceof HttpErrorResponse && error.status === 402;
   }
 
   private operationalErrorMessage(error: unknown): string {

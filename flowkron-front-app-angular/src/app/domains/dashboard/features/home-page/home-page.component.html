@@ -3,27 +3,26 @@
     <h1>Hola, {{ displayName() }}</h1>
     <p class="muted">{{ tenantName() }}</p>
   </header>
+
   <div class="overview">
     <article class="card workspace glass-surface">
-      @if (requiresPlan()) {
-        <div class="icon"><svg lucideBot size="26" aria-hidden="true"></svg></div>
-        <h2>Acceso pendiente</h2>
-        <p class="muted">Consulta el estado de tu plan para habilitar conversaciones y métricas.</p>
-        <a class="btn btn-primary" routerLink="/app/pricing">Ver acceso</a>
-      } @else {
-        <div class="icon ready"><svg lucideCheckCircle2 size="26" aria-hidden="true"></svg></div>
-        <h2>Tu bandeja está disponible</h2>
-        <p class="muted">Abre la bandeja para revisar los mensajes y su historial.</p>
-        <a class="btn btn-primary" routerLink="/app/conversations">Abrir bandeja</a>
-      }
+      <span class="icon ready"><svg lucideLink size="26" aria-hidden="true"></svg></span>
+      <h2>Conecta tu WhatsApp</h2>
+      <p class="muted">Vincula tu cuenta con un código QR para recibir conversaciones y responder con tu agente.</p>
+      <a class="btn btn-primary" routerLink="/app/whatsapp">Conectar WhatsApp</a>
     </article>
-    <a class="card shortcut glass-surface" routerLink="/app/business-context">
-      <strong>Contexto empresarial</strong>
-      <span class="muted">Configura documentos y reglas para el agente.</span>
+    <a class="card shortcut glass-surface context" routerLink="/app/business-context">
+      <strong>Configurar agente</strong>
+      <span class="muted">Agrega tu catálogo, políticas y preguntas frecuentes. Prueba las respuestas antes de conectar el canal.</span>
+    </a>
+    <a class="card shortcut glass-surface" routerLink="/app/conversations">
+      <span class="icon"><svg lucideMessageSquare size="22" aria-hidden="true"></svg></span>
+      <strong>Conversaciones</strong>
+      <span class="muted">Revisa los mensajes y las solicitudes de atención.</span>
     </a>
     <a class="card shortcut glass-surface" routerLink="/app/settings">
       <strong>Configuración</strong>
-      <span class="muted">Consulta la configuración y el acceso de tu equipo.</span>
+      <span class="muted">Administra tu empresa y el acceso de tu equipo.</span>
     </a>
   </div>
 </section>

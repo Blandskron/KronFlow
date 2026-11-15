@@ -1,0 +1,52 @@
+<section class="connection-page">
+  <header>
+    <h1>Conectar WhatsApp</h1>
+    <p class="muted">Vincula la cuenta que atenderá las conversaciones de tu empresa.</p>
+  </header>
+
+  <div class="connection-grid">
+    <article class="card glass-surface connection-panel">
+      <p class="state" role="status">{{ statusLabel() }}</p>
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      @if (session(); as current) {
+        @if (current.status === 'qr_pending' && current.qr) {
+          <img class="qr" [src]="current.qr" width="256" height="256" alt="Código QR para vincular esta cuenta con WhatsApp">
+          <p class="muted">El código se renueva automáticamente.</p>
+        }
+        @if (current.status === 'disconnected') {
+          <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="update('POST')">
+            Generar código QR
+          </button>
+        } @else if (confirmDisconnect()) {
+          <p>Para volver a usar esta cuenta tendrás que escanear un QR nuevo.</p>
+          <div class="actions">
+            <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="update('DELETE')">Confirmar desconexión</button>
+            <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="confirmDisconnect.set(false)">Cancelar</button>
+          </div>
+        } @else {
+          <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="confirmDisconnect.set(true)">
+            {{ current.status === 'pairing_required' ? 'Restablecer vínculo' : current.status === 'connected' ? 'Desconectar' : 'Cancelar vinculación' }}
+          </button>
+        }
+      }
+    </article>
+
+    <article class="card glass-surface steps">
+      <h2>Cómo vincular</h2>
+      <ol>
+        <li>Abre WhatsApp en tu teléfono.</li>
+        <li>En el menú, abre <strong>Dispositivos vinculados</strong> y toca <strong>Vincular un dispositivo</strong>.</li>
+        <li>Escanea el código de esta pantalla con el teléfono.</li>
+      </ol>
+    </article>
+
+    <article class="card glass-surface steps">
+      <h2>Prepara las respuestas</h2>
+      <p class="muted">Carga tus productos, servicios y políticas. Prueba qué responde el agente antes de recibir consultas reales.</p>
+      <a class="btn btn-secondary" routerLink="/app/business-context">Configurar agente</a>
+    </article>
+  </div>
+</section>

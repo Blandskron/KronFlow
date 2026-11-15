@@ -84,14 +84,12 @@ export const routes: Routes = [
           )
       },
       {
-        path: 'integrations',
-        title: 'Integraciones · Flowkron',
+        path: 'whatsapp',
+        title: 'Conectar WhatsApp · Flowkron',
         loadComponent: () =>
-          import('@domains/dashboard/features/placeholder-page/placeholder-page.component').then(
-            (m) => m.PlaceholderPageComponent
-          ),
-        data: { title: 'Integraciones', description: 'Las integraciones se configuran desde tu instancia de Flowkron.' }
+          import('@domains/dashboard/features/whatsapp-page/whatsapp-page.component').then((m) => m.WhatsAppPageComponent)
       },
+      { path: 'integrations', redirectTo: 'whatsapp' },
       {
         path: 'analytics',
         title: 'Métricas · Flowkron',
@@ -108,14 +106,7 @@ export const routes: Routes = [
             (m) => m.NotificationsPageComponent
           )
       },
-      {
-        path: 'pricing',
-        title: 'Plan · Flowkron',
-        loadComponent: () =>
-          import('@domains/dashboard/features/pricing-page/pricing-page.component').then(
-            (m) => m.PricingPageComponent
-          )
-      },
+      { path: 'pricing', redirectTo: 'home' },
       {
         path: 'settings',
         title: 'Configuración · Flowkron',

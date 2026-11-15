@@ -6,6 +6,7 @@ services:
       BAILEYS_INTERNAL_TOKEN_FILE: /run/flowkron/internal_token
       BAILEYS_INGEST_TENANT_CODE: ${BAILEYS_INGEST_TENANT_CODE:-}
       BAILEYS_INGEST_KEY: ${BAILEYS_INGEST_KEY:-}
+      AGENT_CORE_URL: http://flowkron-agent-core:8002
       BAILEYS_SESSIONS_DIR: /app/sessions
       OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://flowkron-operational-service:8001}
     volumes:

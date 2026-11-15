@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import {
   LucideCheckCircle2,
   LucideClock,
@@ -8,7 +7,6 @@ import {
   LucideUsers,
   LucideXCircle
 } from '@lucide/angular';
-import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { AnalyticsApiService } from '@domains/analytics/data-access/analytics-api.service';
 
 @Component({
@@ -19,45 +17,27 @@ import { AnalyticsApiService } from '@domains/analytics/data-access/analytics-ap
     LucideClock,
     LucideMessageSquare,
     LucideUsers,
-    LucideXCircle,
-    RouterLink
+    LucideXCircle
   ],
   templateUrl: './analytics-page.component.html',
   styleUrl: './analytics-page.component.css'
 })
 export class AnalyticsPageComponent implements OnInit {
-  readonly auth = inject(AuthService);
   private readonly operational = inject(AnalyticsApiService);
-  readonly planRequired = signal(false);
-  readonly hasLoaded = signal(false);
   readonly isLoading = signal(false);
   readonly loadError = signal('');
 
-  readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan || this.planRequired()));
 
   metrics: { label: string; value: string; icon: string }[] = [];
 
   leadStats: { label: string; count: number; share: string }[] = [];
 
-  constructor() {
-    effect(() => {
-      if (!this.requiresPlan() && !this.hasLoaded() && !this.isLoading() && !this.loadError()) {
-        setTimeout(() => this.loadAnalytics());
-      }
-    });
-  }
-
   ngOnInit(): void {
-    if (this.requiresPlan()) {
-      this.setEmptyAnalytics();
-      return;
-    }
-
     this.loadAnalytics();
   }
 
   loadAnalytics(): void {
-    if (this.isLoading() || this.hasLoaded()) {
+    if (this.isLoading()) {
       return;
     }
 
@@ -78,17 +58,10 @@ export class AnalyticsPageComponent implements OnInit {
           { label: 'Tibias', count: summary.warm_leads, share: this.percent(summary.warm_leads, summary.total_leads) },
           { label: 'Calientes', count: summary.hot_leads, share: this.percent(summary.hot_leads, summary.total_leads) }
         ];
-        this.hasLoaded.set(true);
         this.isLoading.set(false);
       },
       error: (error) => {
-        if (this.isPlanAccessError(error)) {
-          this.planRequired.set(true);
-          this.setEmptyAnalytics();
-          this.hasLoaded.set(true);
-        } else {
-          this.loadError.set(this.operationalErrorMessage(error));
-        }
+        this.loadError.set(this.operationalErrorMessage(error));
         this.isLoading.set(false);
       }
     });
@@ -99,15 +72,6 @@ export class AnalyticsPageComponent implements OnInit {
       return '0%';
     }
     return `${Math.round((value / total) * 100)}%`;
-  }
-
-  private setEmptyAnalytics(): void {
-    this.metrics = [];
-    this.leadStats = [];
-  }
-
-  private isPlanAccessError(error: unknown): boolean {
-    return error instanceof HttpErrorResponse && error.status === 402;
   }
 
   private operationalErrorMessage(error: unknown): string {

@@ -2,7 +2,7 @@
 
 **CRM inteligente para WhatsApp · by BLANDSKRON**
 
-Flowkron brings a conversation inbox, lead tracking, operational metrics, team management and an AI context simulator into a multi-tenant workspace. The HTTP ingestion API accepts normalized WhatsApp events from an external adapter.
+Flowkron brings a conversation inbox, lead tracking, operational metrics, team management and an AI context simulator into a multi-tenant workspace. Connect WhatsApp by scanning a QR code in the CRM. Each workspace manages its own connection and agent context.
 
 Flowkron is independent and has no affiliation with or endorsement from Meta or WhatsApp. Flowkron is open source under [Apache License 2.0](LICENSE). See the [release review](RELEASE_READINESS.md) for verification and deployment scope.
 
@@ -25,15 +25,25 @@ A fresh checkout can start without an `.env`. The init job generates instance cr
 | Agent Core health | http://localhost:8002/health |
 | Email gateway | Internal address at `http://smtp-http-blandskron:8000` |
 
-On a fresh local database, Compose creates the verified Django superuser `admin@example.com` as the owner of the **BLANDSKRON** workspace and provisions its CRM schema. The same generated password works in the [CRM](http://localhost:8081/login) and the [Django admin](http://localhost:8000/admin/). Retrieve it in your private terminal:
+### Start from scratch
+
+Open the landing or the CRM, create and verify your account, and register your company. Flowkron provisions the company's isolated database schema during setup and opens the workspace without a plan selection. Go to **WhatsApp** to link a device and **Contexto empresarial** to add products and policies. The standard deployment starts without an administrator or demo company.
+
+### Start the demo
+
+Run the demo separately from the standard deployment. Both use the same host ports by default.
 
 ```sh
-docker compose exec -T flowkron-auth-service cat /run/flowkron/bootstrap_admin_password
+docker compose -f compose.demo.yaml up --build --wait
 ```
 
-For a custom initial administrator, set `DJANGO_SUPERUSER_EMAIL` in the private `.env`. To supply a password, set `CREATE_SUPERUSER=True` and `DJANGO_SUPERUSER_PASSWORD` before the first start. `DJANGO_SUPERUSER_USERNAME` is optional and applies to Django admin, while the CRM uses the email. Existing accounts keep their passwords across restarts.
+On its first local start, the demo creates the verified Django superuser `admin@example.com` as owner of **BLANDSKRON** and loads a generic business context for the agent. Sign in to the [CRM](http://localhost:8081/login) or [Django admin](http://localhost:8000/admin/). Retrieve its generated password in your private terminal:
 
-Console mail, local agent responses, and an unlinked Baileys service are available with zero provider credentials. Existing installations should follow the [migration notes](CHANGELOG.md#migrate-a-prior-deployment). See the [deployment guide](flowkron-deploy/README.md) for host ports, persistence and server configuration.
+```sh
+docker compose -f compose.demo.yaml exec -T flowkron-auth-service cat /run/flowkron/bootstrap_admin_password
+```
+
+Console mail, local agent responses and the WhatsApp connector work with no provider credentials for a local install. If you need email delivery to real inboxes, configure the transactional provider below. See the [deployment guide](flowkron-deploy/README.md) for ports, persistence and server configuration.
 
 ## Configure account registration and Google sign-in
 
@@ -65,7 +75,7 @@ Set a valid provider key and replace the example sender with an address on your 
 
 ## Connect a channel or AI provider
 
-- **WhatsApp** accepts normalized events through the [tenant-scoped ingest interface](flowkron-operational-service/docs/API.md). The included [Baileys lab connector](flowkron-baileys-services/README.md) starts disconnected, pairs one account via QR and can forward text from contacts with recorded consent. See the [integration research](flowkron-product-docs/04-architecture/14-whatsapp-connection-and-campaigns.md) for the onboarding, agent and campaign design.
+- **WhatsApp** pairs one account per workspace using the QR in the CRM. The [Baileys connector](flowkron-baileys-services/README.md) records consent, stores text conversations and relays replies from Agent Core.
 - **AI** in Agent Core can use Groq or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](flowkron-agent-core/docs/CONFIGURATION.md) for model selection and local mode.
 - **Operating costs** depend on the infrastructure, messaging, email and AI providers selected by the instance operator.
 
@@ -79,4 +89,4 @@ Set a valid provider key and replace the example sender with an address on your 
 
 ### Inicio rápido en español
 
-Ejecuta `docker compose up --build --wait` desde la raíz. Abre el CRM en el puerto 8081 con `admin@example.com` y recupera la contraseña generada con el comando anterior. Configura un `.env` privado cuando necesites cambiar puertos o habilitar proveedores.
+Ejecuta `docker compose up --build --wait` desde la raíz, registra tu cuenta y crea tu empresa. Para probar con la cuenta administradora de BLANDSKRON y el agente de ejemplo, usa `docker compose -f compose.demo.yaml up --build --wait`.

@@ -1,3 +1,4 @@
+import hmac
 import re
 from dataclasses import dataclass
 
@@ -5,6 +6,7 @@ from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import CurrentPrincipal, get_current_principal, verify_secret
 from app.public_models.tenant_runtime import TenantRuntime
@@ -41,8 +43,6 @@ class TenantContext:
 def ensure_runtime_is_usable(runtime: TenantRuntime) -> None:
     if runtime.status != "active":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant is not active")
-    if runtime.plan in {"free", ""}:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Tenant requires an active paid plan")
 
 
 def resolve_tenant_from_jwt(
@@ -70,8 +70,21 @@ def resolve_tenant_from_ingest_headers(
     request: Request,
     x_tenant_code: str | None = Header(default=None, alias="X-Tenant-Code"),
     x_ingest_key: str | None = Header(default=None, alias="X-Ingest-Key"),
+    bridge_tenant: int | None = Header(default=None, alias="X-Flowkron-Tenant"),
+    bridge_token: str | None = Header(default=None, alias="X-Baileys-Token"),
     db: Session = Depends(get_db),
 ) -> TenantContext:
+    if bridge_tenant is not None or bridge_token is not None:
+        expected = get_settings().baileys_internal_token
+        if not expected or not bridge_token or not bridge_tenant or not hmac.compare_digest(expected.encode(), bridge_token.encode()):
+            raise HTTPException(status_code=401, detail="Invalid Baileys credentials")
+        runtime = db.scalar(select(TenantRuntime).where(TenantRuntime.auth_tenant_id == bridge_tenant))
+        if not runtime:
+            raise HTTPException(status_code=404, detail="Tenant runtime not provisioned")
+        ensure_runtime_is_usable(runtime)
+        context = TenantContext(runtime.auth_tenant_id, runtime.tenant_slug, runtime.schema_name, runtime.tenant_code, runtime.plan, runtime.status)
+        request.state.tenant = context
+        return context
     if not x_tenant_code or not x_ingest_key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing ingest credentials")
 

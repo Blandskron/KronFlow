@@ -11,7 +11,14 @@ function json(response: ServerResponse, status: number, payload: object) {
   response.end(JSON.stringify(payload));
 }
 
-export function createHttpServer(connection: Pick<WhatsAppConnection, "start" | "snapshot">, token: string) {
+type LegacyConnection = Pick<WhatsAppConnection, "start" | "snapshot">;
+type TenantConnection = LegacyConnection & Pick<WhatsAppConnection, "stop">;
+
+export function createHttpServer(
+  connection: LegacyConnection,
+  token: string,
+  resolveTenant?: (id: string) => TenantConnection
+) {
   if (token.trim().length < 32) throw new Error("Set a private BAILEYS_INTERNAL_TOKEN of at least 32 characters");
   const expected = Buffer.from(`Bearer ${token}`);
   return createServer(async (req, res) => {
@@ -25,6 +32,14 @@ export function createHttpServer(connection: Pick<WhatsAppConnection, "start" | 
     }
 
     try {
+      const tenant = /^\/internal\/baileys\/tenants\/([1-9][0-9]{0,14})\/session$/.exec(req.url ?? "");
+      if (tenant && resolveTenant && ["POST", "GET", "DELETE"].includes(req.method ?? "")) {
+        const session = resolveTenant(tenant[1]);
+        if (req.method === "POST") await session.start();
+        if (req.method === "DELETE") await session.stop();
+        const { status, qr } = session.snapshot();
+        return json(res, 200, { status, qr: qr ? await QRCode.toDataURL(qr) : undefined });
+      }
       if (req.method === "POST" && req.url === "/internal/baileys/session/start") {
         await connection.start();
         const { status } = connection.snapshot();

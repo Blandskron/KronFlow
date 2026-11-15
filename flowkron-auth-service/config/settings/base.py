@@ -235,6 +235,11 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 OPERATIONAL_SERVICE_URL = env("OPERATIONAL_SERVICE_URL", default="http://localhost:8001")
 OPERATIONAL_INTERNAL_TOKEN = env("OPERATIONAL_INTERNAL_TOKEN", default="change-me-local-internal-token")
+BAILEYS_SERVICE_URL = env("BAILEYS_SERVICE_URL", default="http://flowkron-baileys-services:3001")
+BAILEYS_INTERNAL_TOKEN = env("BAILEYS_INTERNAL_TOKEN", default="")
+baileys_token_file = env("BAILEYS_INTERNAL_TOKEN_FILE", default="")
+if baileys_token_file and not BAILEYS_INTERNAL_TOKEN:
+    BAILEYS_INTERNAL_TOKEN = Path(baileys_token_file).read_text(encoding="utf-8").strip()
 APP_PUBLIC_URL = env("APP_PUBLIC_URL", default="http://localhost:8081")
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="").strip()
 AUTH_SELF_SIGNUP_ENABLED = env.bool("AUTH_SELF_SIGNUP_ENABLED", default=True)

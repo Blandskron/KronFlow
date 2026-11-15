@@ -48,6 +48,7 @@ export class LandingComponent {
   private readonly fb = inject(FormBuilder);
   private readonly contactService = inject(ContactService);
 
+  readonly signupUrl = `${environment.appUrl}/registrarse`;
   readonly loginUrl = `${environment.appUrl}/login`;
 
   private readonly contactFields = viewChild.required<ElementRef<HTMLFormElement>>('contactFields');

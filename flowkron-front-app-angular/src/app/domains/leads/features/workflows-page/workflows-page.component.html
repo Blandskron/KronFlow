@@ -33,20 +33,14 @@
             <button [class.active]="temperatureFilter() === 'unqualified'" [attr.aria-pressed]="temperatureFilter() === 'unqualified'" type="button" (click)="temperatureFilter.set('unqualified')">Sin calificar</button>
           </div>
 
-          <button class="date-filter" type="button" [disabled]="isLoading() || requiresPlan()" (click)="loadWorkflow()">
+          <button class="date-filter" type="button" [disabled]="isLoading()" (click)="loadWorkflow()">
             <svg lucideRefreshCw size="16"></svg>
             Actualizar
           </button>
         </div>
       </section>
 
-      @if (requiresPlan()) {
-        <article class="upgrade-empty">
-          <strong>Activa el acceso a las oportunidades</strong>
-          <p class="muted">Consulta el estado de tu plan para acceder al tablero.</p>
-          <a class="btn btn-primary" routerLink="/app/pricing">Ver plan</a>
-        </article>
-      } @else if (isLoading()) {
+      @if (isLoading()) {
         <p class="muted board-state" role="status">Cargando oportunidades…</p>
       } @else if (loadError()) {
         <p class="muted board-state" role="alert">{{ loadError() }}</p>

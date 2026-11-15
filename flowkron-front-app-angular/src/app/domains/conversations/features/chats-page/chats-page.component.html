@@ -20,7 +20,7 @@
     </article>
   } @else {
     <div class="inbox" [class.thread-open]="selectedChat()">
-      <section class="card list" aria-label="Lista de conversaciones">
+      <section class="card list glass-surface" aria-label="Lista de conversaciones">
         <div class="filters">
           <label class="search-field">
             <svg lucideSearch size="18" aria-hidden="true"></svg>
@@ -73,7 +73,7 @@
         }
       </section>
 
-      <section class="card conversation" aria-label="Historial de la conversación">
+      <section class="card conversation glass-surface" aria-label="Historial de la conversación">
         @if (selectedChat(); as selected) {
           <header>
             <div class="person">

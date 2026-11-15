@@ -11,7 +11,7 @@ Este repositorio es la fuente de verdad para interfaces, schemas, errores y even
 | --- | --- | --- | --- |
 | `flowkron-auth-service` | Django / DRF + RS256 JWT | `openapi/services/auth-service.openapi.yml` | v0.5.0 |
 | `flowkron-operational-service` | FastAPI + SQLAlchemy + PostgreSQL multi-schema | `openapi/services/operational-service.openapi.yml` | v0.3.1 |
-| `flowkron-agent-core` | FastAPI + Azure OpenAI opcional + RAG lexical/Operational | `openapi/services/agent-core.openapi.yml` | v0.3.1 |
+| `flowkron-agent-core` | FastAPI + Groq opcional + RAG lexical/Operational | `openapi/services/agent-core.openapi.yml` | v0.3.1 |
 | External WhatsApp adapter (reserved interface) | Channel integration | `openapi/services/whatsapp-gateway.openapi.yml` | v0.2.0 |
 
 ## Estructura

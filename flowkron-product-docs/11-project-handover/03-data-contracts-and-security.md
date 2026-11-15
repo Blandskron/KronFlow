@@ -112,7 +112,7 @@ Los secretos se suministran externamente. Nunca deben copiarse a esta documentac
 - claves JWT;
 - secretos de service accounts y API keys;
 - ingest keys;
-- tokens Meta, OpenAI, Azure OpenAI o Google;
+- tokens Meta, Groq o Google;
 - datos reales de usuarios o conversaciones.
 
 La referencia permitida es `.env.example` de cada repositorio, no `.env`.

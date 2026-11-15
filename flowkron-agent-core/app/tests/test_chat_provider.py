@@ -8,30 +8,22 @@ from app.api.v1.schemas.agent import AgentMessageRequest
 from app.application.orchestration import agent_runtime
 from app.core.config import Settings
 from app.domain.ports.llm import ChatMessage
-from app.infrastructure.llm.azure_openai import AzureOpenAIClient
-from app.infrastructure.llm.chat_provider import chat_client
 from app.infrastructure.llm.groq import GroqClient
 from app.infrastructure.operational_context import OperationalContextSource
 
 
-def test_provider_selection_preserves_azure_and_local():
+def test_chat_uses_groq_when_a_key_is_set_unless_explicitly_local():
     settings = Settings(
         _env_file=None,
         chat_provider="auto",
         groq_api_key=SecretStr(""),
-        azure_openai_enabled=True,
-        azure_openai_api_key="synthetic-azure",
-        chat_completion_url="https://example.com/completions",
     )
-    assert isinstance(chat_client(settings), AzureOpenAIClient)
-    assert chat_client(settings).enabled_for_chat
+    assert not GroqClient(settings).enabled_for_chat
 
     settings.groq_api_key = SecretStr("synthetic-groq")
-    assert isinstance(chat_client(settings), GroqClient)
-    settings.chat_provider = "azure"
-    assert isinstance(chat_client(settings), AzureOpenAIClient)
+    assert GroqClient(settings).enabled_for_chat
     settings.chat_provider = "local"
-    assert chat_client(settings) is None
+    assert not GroqClient(settings).enabled_for_chat
 
 
 def test_groq_uses_bearer_and_configured_model(monkeypatch):
@@ -48,7 +40,9 @@ def test_groq_uses_bearer_and_configured_model(monkeypatch):
 
     client = httpx.Client(transport=httpx.MockTransport(completion))
     monkeypatch.setattr(httpx, "Client", lambda **_kwargs: client)
-    settings = Settings(_env_file=None, groq_api_key=SecretStr("synthetic-groq"))
+    settings = Settings(
+        _env_file=None, chat_provider="groq", groq_api_key=SecretStr("synthetic-groq")
+    )
     assert GroqClient(settings).complete([ChatMessage(role="user", content="Hola")]) == "Hola."
 
 

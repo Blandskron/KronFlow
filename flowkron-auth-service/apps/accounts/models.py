@@ -9,6 +9,7 @@ class UserProfile(models.Model):
     avatar_url = models.URLField(blank=True)
     timezone = models.CharField(max_length=64, default="America/Santiago")
     locale = models.CharField(max_length=16, default="es-CL")
+    google_subject = models.CharField(max_length=255, null=True, blank=True, unique=True)
     email_verified_at = models.DateTimeField(null=True, blank=True)
     account_activated_at = models.DateTimeField(null=True, blank=True)
     initial_password_set_at = models.DateTimeField(null=True, blank=True)

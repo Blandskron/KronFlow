@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ErrorDetail
 from drf_spectacular.types import OpenApiTypes
@@ -51,20 +52,24 @@ class LoginView(views.APIView):
             )
         user = serializer.validated_data["user"]
         membership = serializer.validated_data["membership"]
-        refresh, session = issue_tokens(user, membership, request, amr=serializer.validated_data["amr"])
-        audit(AuditLog.Event.LOGIN_SUCCESS, request=request, user=user, tenant=membership.tenant if membership else None, session_id=session.id)
-        return ok(
-            {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "session_id": session.id,
-                "tenant_id": membership.tenant_id if membership else None,
-                "roles": roles_for_membership(membership),
-                "permissions": permissions_for_membership(membership),
-                "subscription": subscription_summary(membership.tenant) if membership else None,
-                "onboarding_required": serializer.validated_data["onboarding_required"],
-            }
-        )
+        return login_response(user, membership, request, amr=serializer.validated_data["amr"])
+
+
+def login_response(user, membership, request, *, amr):
+    refresh, session = issue_tokens(user, membership, request, amr=amr)
+    audit(AuditLog.Event.LOGIN_SUCCESS, request=request, user=user, tenant=membership.tenant if membership else None, session_id=session.id)
+    return ok(
+        {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "session_id": session.id,
+            "tenant_id": membership.tenant_id if membership else None,
+            "roles": roles_for_membership(membership),
+            "permissions": permissions_for_membership(membership),
+            "subscription": subscription_summary(membership.tenant) if membership else None,
+            "onboarding_required": membership is None,
+        }
+    )
 
 
 class MeView(views.APIView):
@@ -148,40 +153,45 @@ class ChangePasswordView(views.APIView):
 
 class TaggedTokenRefreshView(TokenRefreshView):
     @extend_schema(tags=["Auth - Tokens"])
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         try:
-            refresh_claims = FlowkronRefreshToken(request.data.get("refresh"), verify=False)
+            refresh_claims = FlowkronRefreshToken(request.data.get("refresh") or "")
         except TokenError:
-            refresh_claims = {}
+            return Response({"detail": "Token inválido o revocado.", "code": "token_not_valid"}, status=401)
+
+        session_id = refresh_claims.get("session_id")
+        session = UserSession.objects.select_for_update().filter(
+            id=session_id, user_id=refresh_claims.get("user_id"),
+            status=UserSession.Status.ACTIVE, expires_at__gt=timezone.now(),
+        ).first()
+        membership = None
+        if session and refresh_claims.get("membership_id"):
+            membership = TenantMembership.objects.select_related("tenant", "user").filter(
+                id=refresh_claims["membership_id"], user_id=session.user_id,
+                status=TenantMembership.Status.ACTIVE, tenant__status="active",
+            ).first()
+        if not session or (not membership and not refresh_claims.get("onboarding_required")):
+            return Response({"detail": "Tu sesión expiró o se cerró.", "code": "token_not_valid"}, status=401)
+
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-        except TokenError as exc:
-            return Response({"detail": str(exc), "code": "token_not_valid"}, status=status.HTTP_401_UNAUTHORIZED)
+        except TokenError:
+            return Response({"detail": "Token inválido o revocado.", "code": "token_not_valid"}, status=401)
         data = dict(serializer.validated_data)
-        membership_id = refresh_claims.get("membership_id")
-        session_id = refresh_claims.get("session_id")
-        membership = None
-        if membership_id:
-            membership = (
-                TenantMembership.objects.select_related("tenant", "user")
-                .filter(id=membership_id, status=TenantMembership.Status.ACTIVE, tenant__status="active")
-                .first()
-            )
-        session = UserSession.objects.filter(id=session_id, status=UserSession.Status.ACTIVE).first()
-        if session and session.is_active and (membership or refresh_claims.get("onboarding_required")):
-            session.last_refresh_at = timezone.now()
-            session.save(update_fields=["last_refresh_at", "updated_at"])
-            access = AccessToken.for_user(membership.user if membership else session.user)
-            access["tenant_id"] = str(membership.tenant_id) if membership else None
-            access["membership_id"] = str(membership.id) if membership else None
-            access["session_id"] = str(session.id)
-            access["roles"] = roles_for_membership(membership)
-            access["permissions"] = permissions_for_membership(membership)
-            access["subscription"] = subscription_summary(membership.tenant) if membership else None
-            access["onboarding_required"] = membership is None
-            access["amr"] = refresh_claims.get("amr", "pwd")
-            data["access"] = str(access)
+        session.last_refresh_at = timezone.now()
+        session.save(update_fields=["last_refresh_at", "updated_at"])
+        access = AccessToken.for_user(session.user)
+        access["tenant_id"] = str(membership.tenant_id) if membership else None
+        access["membership_id"] = str(membership.id) if membership else None
+        access["session_id"] = str(session.id)
+        access["roles"] = roles_for_membership(membership)
+        access["permissions"] = permissions_for_membership(membership)
+        access["subscription"] = subscription_summary(membership.tenant) if membership else None
+        access["onboarding_required"] = membership is None
+        access["amr"] = refresh_claims.get("amr", "pwd")
+        data["access"] = str(access)
         return Response(data, status=status.HTTP_200_OK)
 
 

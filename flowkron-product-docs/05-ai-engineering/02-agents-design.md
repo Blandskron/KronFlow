@@ -12,7 +12,7 @@ Estado: `PARTIAL`
 - `POST /api/v1/agent/messages`: contrato universal.
 - `POST /api/v1/agent/simulate`: prueba desde App.
 - Retrieval de contexto mediante Operational.
-- Azure OpenAI opcional y fallback/handoff.
+- Groq opcional y fallback/handoff.
 - Acciones preparadas mediante adapters no productivos.
 
 ## Contrato mínimo
@@ -45,4 +45,3 @@ Un agente productivo requiere:
 - Sin tool executor autorizado.
 - Sin evaluator/quality gate.
 - Sin memoria productiva completa.
-

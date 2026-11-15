@@ -10,4 +10,4 @@ docker compose logs --tail 100 flowkron-auth-service smtp-http-blandskron
 docker compose down
 ```
 
-Preserve the existing PostgreSQL and Redis volumes, IAM media and signing keys when upgrading. See the [migration instructions](../../CHANGELOG.md#upgrade-an-existing-installation). Keep private logs and local email messages out of shared issue reports.
+Preserve the existing PostgreSQL and Redis volumes, IAM media and signing keys when upgrading. See the [migration instructions](../../CHANGELOG.md#migrate-a-prior-deployment). Keep private logs and local email messages out of shared issue reports.

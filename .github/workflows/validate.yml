@@ -92,7 +92,21 @@ jobs:
           python scripts/validate-json-schemas.py
           python scripts/validate-yaml-structure.py
           python scripts/validate-agent-docs.py
-      - run: docker compose --env-file .env.example config --quiet
+      - run: docker compose config --quiet
+
+  compose-startup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: docker compose -p flowkron-smoke up --build --wait --wait-timeout 180
+      - run: python flowkron-deploy/bootstrap/smoke.py flowkron-smoke
+      - if: failure()
+        run: docker compose -p flowkron-smoke ps --all
+      - if: always()
+        run: docker compose -p flowkron-smoke down
 
   secrets:
     runs-on: ubuntu-latest

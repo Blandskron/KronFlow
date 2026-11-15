@@ -8,7 +8,7 @@ Path("flowkron_agent_core.db").unlink(missing_ok=True)
 os.environ["PERSISTENCE_MODE"] = "local"
 os.environ["ALLOW_LOCAL_DB_BOOTSTRAP"] = "true"
 os.environ["ALLOW_INSECURE_TENANT_HEADER"] = "true"
-os.environ["AZURE_OPENAI_ENABLED"] = "false"
+os.environ["CHAT_PROVIDER"] = "local"
 
 from app.core.database import create_tables
 from app.infrastructure.operational_context import OperationalContextClient

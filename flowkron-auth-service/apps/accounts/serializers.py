@@ -71,7 +71,9 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         email = attrs["email"].lower()
-        user = authenticate(self.context["request"], username=email, password=attrs["password"])
+        usernames = list(User.objects.filter(email__iexact=email).values_list("username", flat=True)[:2])
+        username = usernames[0] if len(usernames) == 1 else email
+        user = authenticate(self.context["request"], username=username, password=attrs["password"])
         if not user:
             raise serializers.ValidationError("Credenciales invalidas.", code="AUTH_INVALID_CREDENTIALS")
         if not user.is_active:

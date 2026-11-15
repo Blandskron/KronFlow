@@ -49,6 +49,10 @@ Un middleware contractual envuelve JSON bajo `/api/v1/*`, incluyendo vistas nati
 
 | Método y ruta | Auth | Propósito |
 | --- | --- | --- |
+| `GET /api/v1/auth/options/` | Pública | Indica si hay registro público y entrega el ID público y el desafío para Google |
+| `POST /api/v1/auth/signup/` | Pública | Solicita por correo un enlace temporal para una cuenta nueva |
+| `POST /api/v1/auth/signup/complete/` | Pública | Valida el enlace y la contraseña antes de crear la cuenta verificada |
+| `POST /api/v1/auth/google/` | Pública | Valida la credencial de Google y el desafío de un solo uso, aplica MFA y emite una sesión de Flowkron |
 | `POST /api/v1/auth/login/` | Pública | Emite access/refresh y crea sesión; admite `tenant_id` y `mfa_code`; si no hay tenant devuelve `onboarding_required=true` |
 | `POST /api/v1/auth/refresh/` | Refresh token | Rota refresh y reconstruye claims del access si membership/sesión siguen activas |
 | `POST /api/v1/auth/verify/` | Pública | Verifica JWT según Simple JWT |
@@ -68,7 +72,9 @@ Un middleware contractual envuelve JSON bajo `/api/v1/*`, incluyendo vistas nati
 | `POST /api/v1/auth/mfa/verify/` | Bearer humano | Comprueba un código TOTP |
 | `GET /api/v1/auth/jwks/` | Pública | Signing keys DB vigentes; ver advertencia en `SECURITY.md` |
 
-No existe registro público abierto. Los usuarios se crean por administración, comando interno o invitación válida. El correo de verificación usa `APP_PUBLIC_URL` para crear un enlace a `/confirm-email?token=...` en la aplicación. Login recibe `email`, `password`, `tenant_id?`, `mfa_code?`. Los JWT humanos agregan `tenant_id`, `membership_id`, `session_id`, `roles`, `permissions`, `subscription`, `onboarding_required` y `amr`.
+Con `AUTH_SELF_SIGNUP_ENABLED=True`, una cuenta nueva puede registrarse mediante un enlace de correo o una identidad de Google. La cuenta nueva llega al onboarding sin pertenecer a un tenant. El registro por correo usa `APP_PUBLIC_URL` para crear un enlace a `/registrarse#token=...` con dos horas de vigencia. Google identifica cada cuenta por el claim `sub`. Si el correo corresponde a una cuenta existente de Flowkron, esa cuenta requiere su método de acceso original.
+
+Login recibe `email`, `password`, `tenant_id?`, `mfa_code?`. Los JWT humanos agregan `tenant_id`, `membership_id`, `session_id`, `roles`, `permissions`, `subscription`, `onboarding_required` y `amr`.
 
 
 | Método y ruta | Auth | Propósito |

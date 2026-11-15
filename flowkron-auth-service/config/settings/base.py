@@ -8,7 +8,7 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-env = environ.Env(
+env = environ.FileAwareEnv(
     DJANGO_DEBUG=(bool, True),
     CORS_ALLOWED_ORIGINS=(list, []),
 )
@@ -16,7 +16,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-local-dev-key")
 DEBUG = env("DJANGO_DEBUG")
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 if not DEBUG and SECRET_KEY == "unsafe-local-dev-key":
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG=False.")
 IAM_AUTO_VERIFY_USER_EMAIL = env.bool("IAM_AUTO_VERIFY_USER_EMAIL", default=False)
@@ -236,6 +236,8 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 OPERATIONAL_SERVICE_URL = env("OPERATIONAL_SERVICE_URL", default="http://localhost:8001")
 OPERATIONAL_INTERNAL_TOKEN = env("OPERATIONAL_INTERNAL_TOKEN", default="change-me-local-internal-token")
 APP_PUBLIC_URL = env("APP_PUBLIC_URL", default="http://localhost:8081")
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="").strip()
+AUTH_SELF_SIGNUP_ENABLED = env.bool("AUTH_SELF_SIGNUP_ENABLED", default=True)
 SIGNING_KEY_ENCRYPTION_KEY = env("SIGNING_KEY_ENCRYPTION_KEY", default="")
 SIGNING_KEY_ENCRYPTION_SALT = env("SIGNING_KEY_ENCRYPTION_SALT", default="flowkron-auth-service")
 MAIL_GATEWAY_URL = env("MAIL_GATEWAY_URL", default="")

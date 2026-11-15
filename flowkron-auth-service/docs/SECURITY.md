@@ -51,13 +51,13 @@ Al crear sesión se marcan `NEW_DEVICE`, `DEVICE_CHANGED` o `IP_CHANGED` compara
 
 ## Onboarding e invitaciones
 
-- No existe registro publico abierto.
+- `AUTH_SELF_SIGNUP_ENABLED` controla el registro público. El registro por correo exige posesión del enlace temporal antes de crear la cuenta.
 - Un usuario con email no verificado no puede completar onboarding ni operar endpoints tenantizados.
 - `/api/v1/tenants/onboarding/` crea el primer tenant solo para usuarios verificados sin membership activa.
 - El tenant debe conservar al menos un miembro activo con rol `TENANT_OWNER`; no se permite remover ni degradar al ultimo owner.
 - Las invitaciones usan token aleatorio hasheado, expiracion, estado y un solo uso.
 - Un usuario existente solo puede aceptar una invitacion si esta autenticado y su email coincide con el email invitado.
-- Un usuario nuevo puede activarse solo mediante token de invitacion valido; ese flujo no equivale a registro publico.
+- Las invitaciones requieren un token válido y mantienen sus propias reglas de activación. Google valida la firma, la audiencia, el emisor y un desafío de un solo uso. La coincidencia de correo conserva el método original de una cuenta existente.
 - Los tokens de invitacion se envian por correo/enlace y no deben escribirse en logs.
 
 ## API keys: límite explícito

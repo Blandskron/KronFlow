@@ -34,7 +34,7 @@ Django REST Framework
 
 Los permisos efectivos son la intersección de los permisos RBAC con los entitlements habilitados por el plan/suscripción.
 
-No existe registro público abierto. La cuenta nace por administración interna o por una invitación válida de tenant. La confirmación de email puede definir la password inicial mediante `new_password`; una invitación válida también puede activar una cuenta nueva cerrada al email invitado.
+Las cuentas pueden nacer por administración interna, por invitación o por registro público habilitado. El registro por correo crea la cuenta después de validar un enlace temporal y la contraseña. Google puede crear una cuenta con un correo de Google verificado y guarda el identificador `sub` en el perfil. Las cuentas públicas comienzan sin membresía y pasan al onboarding de empresa.
 
 ## Machine-to-machine
 

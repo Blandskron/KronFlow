@@ -41,8 +41,7 @@ Endpoints de salud:
 - `ALLOW_INSECURE_TENANT_HEADER`: solo local, permite `X-Tenant-Id`.
 - `MAX_UPLOAD_BYTES`, `ALLOWED_UPLOAD_EXTENSIONS`, `LOW_CONFIDENCE_THRESHOLD`.
 - `CORS_ALLOWED_ORIGINS`: lista JSON o separada por comas.
-- `AZURE_OPENAI_ENABLED`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_VERSION`, `CHAT_COMPLETION_URL`, `CHAT_COMPLETION_MODEL_NAME`, `CHAT_COMPLETION_MAX_TOKENS`, `CHAT_COMPLETION_TEMPERATURE`, `CHAT_COMPLETION_TIMEOUT_SECONDS`: habilitan chat GPT/Azure OpenAI.
-- `EMBEDDING_URL`, `EMBEDDING_MODEL_NAME`, `EMBEDDING_TIMEOUT_SECONDS`: preparan embeddings/vector store futuro; la persistencia documental integrada vive en Operational.
+- `GROQ_API_KEY`, `GROQ_MODEL` y `CHAT_PROVIDER`: habilitan y seleccionan el chat.
 
 ## Endpoints principales
 
@@ -93,7 +92,7 @@ La suite actual cubre healthcheck, formularios locales, catalogo de plantillas W
 
 ## Proveedores de chat
 
-Groq usa `GROQ_API_KEY` y el modelo configurable `GROQ_MODEL`. Azure OpenAI usa su propia clave y URL de despliegue. En modo integrado, el agente genera respuestas con las fuentes obtenidas desde Operational y solicita traspaso si falla el proveedor. Consulta la [configuración de proveedores](docs/CONFIGURATION.md).
+Groq usa `GROQ_API_KEY` y el modelo configurable `GROQ_MODEL`. En modo integrado, el agente genera respuestas con las fuentes obtenidas desde Operational y solicita traspaso si falla el proveedor. Consulta la [configuración de proveedores](docs/CONFIGURATION.md).
 
 ## Modelo de datos
 

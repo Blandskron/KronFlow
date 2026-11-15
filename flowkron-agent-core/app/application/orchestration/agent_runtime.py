@@ -7,7 +7,7 @@ from app.api.v1.schemas.agent import AgentActionPayload, AgentMessageRequest, Ag
 from app.core.config import get_settings
 from app.domain.ports.llm import ChatMessage
 from app.infrastructure.external_tools.mock_tools import prepare_action
-from app.infrastructure.llm.chat_provider import chat_client
+from app.infrastructure.llm.groq import GroqClient
 from app.infrastructure.operational_context import operational_context_client
 from app.infrastructure.vector_store.simple_retriever import retrieve_sources
 from app.models.agent import AgentResponseTrace
@@ -19,7 +19,7 @@ GREETING_RE = re.compile(r"^\s*(hola|buenas|buenos dias|buenos días|buenas tard
 
 def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest) -> AgentMessageResponse:
     settings = get_settings()
-    llm = chat_client(settings)
+    llm = GroqClient(settings)
     sources = operational_context_client.retrieve_sources(tenant_id, payload.message.content)
     confidence = sources[0].score if sources else 0.0
     source_payloads = [
@@ -33,7 +33,7 @@ def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest
         for source in sources
     ]
     handoff_reason = None if sources else "insufficient_context"
-    if sources and llm and llm.enabled_for_chat:
+    if sources and llm.enabled_for_chat:
         try:
             context = "\n\n".join(source.content for source in sources[:3])
             user_content = payload.message.content if not context else f"Contexto:\n{context}\n\nPregunta:\n{payload.message.content}"
@@ -134,11 +134,11 @@ def process_agent_message(db: Session, tenant_id: str, payload: AgentMessageRequ
     sources = retrieve_sources(db, tenant_id, payload.message.content)
     confidence = sources[0].score if sources else 0.0
     settings = get_settings()
-    llm = chat_client(settings)
+    llm = GroqClient(settings)
     requires_human = confidence < settings.low_confidence_threshold
     if sources:
         source_text = sources[0].content[:700]
-        if llm and llm.enabled_for_chat:
+        if llm.enabled_for_chat:
             try:
                 reply_content = llm.complete(
                     [

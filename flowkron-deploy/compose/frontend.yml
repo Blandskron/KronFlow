@@ -4,11 +4,14 @@ services:
       context: ../../flowkron-front-landing-angular
       dockerfile: Dockerfile
       args:
-        APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8081}
-        CONTACT_API_BASE_URL: ${CONTACT_API_BASE_URL:-http://localhost:8000}
+        APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:${APP_PORT:-8081}}
+        CONTACT_API_BASE_URL: ${CONTACT_API_BASE_URL:-http://localhost:${AUTH_PORT:-8000}}
         SALES_WHATSAPP_NUMBER: ${SALES_WHATSAPP_NUMBER:-}
     ports:
       - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${LANDING_PORT:-8080}:80"
+    depends_on:
+      flowkron-auth-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
       interval: 15s
@@ -24,15 +27,19 @@ services:
       context: ../../flowkron-front-app-angular
       dockerfile: Dockerfile
       args:
-        API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8000/api/v1}
-        OPERATIONAL_API_PUBLIC_URL: ${OPERATIONAL_API_PUBLIC_URL:-http://localhost:8001/api/v1}
-        AGENT_CORE_API_PUBLIC_URL: ${AGENT_CORE_API_PUBLIC_URL:-http://localhost:8002/api/v1}
-        LANDING_PUBLIC_URL: ${LANDING_PUBLIC_URL:-http://localhost:8080}
+        API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:${AUTH_PORT:-8000}/api/v1}
+        OPERATIONAL_API_PUBLIC_URL: ${OPERATIONAL_API_PUBLIC_URL:-http://localhost:${OPERATIONAL_PORT:-8001}/api/v1}
+        AGENT_CORE_API_PUBLIC_URL: ${AGENT_CORE_API_PUBLIC_URL:-http://localhost:${AGENT_CORE_PORT:-8002}/api/v1}
+        LANDING_PUBLIC_URL: ${LANDING_PUBLIC_URL:-http://localhost:${LANDING_PORT:-8080}}
         SALES_WHATSAPP_NUMBER: ${SALES_WHATSAPP_NUMBER:-}
     ports:
       - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${APP_PORT:-8081}:80"
     depends_on:
       flowkron-auth-service:
+        condition: service_healthy
+      flowkron-operational-service:
+        condition: service_healthy
+      flowkron-agent-core:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/login"]

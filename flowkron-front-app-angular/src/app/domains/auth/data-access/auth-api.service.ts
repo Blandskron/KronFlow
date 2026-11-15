@@ -5,6 +5,8 @@ import { API_BASE_URL } from '@core/config/api.config';
 import { ApiErrorBody, ApiResponse } from '@shared/types/api.types';
 import {
   AuthError,
+  AuthOptions,
+  GoogleLoginRequest,
   LoginRequest,
   LoginResponse,
   MeResponse,
@@ -61,9 +63,38 @@ export class AuthService {
     writeTenantId(tenant?.id ?? null);
   }
 
+  authOptions(): Observable<AuthOptions> {
+    return this.http.get<ApiResponse<AuthOptions>>(`${API_BASE_URL}/auth/options/`).pipe(
+      map((response) => response.data)
+    );
+  }
+
+  requestSignup(email: string): Observable<void> {
+    return this.signup('signup', { email });
+  }
+
+  completeSignup(token: string, password: string): Observable<void> {
+    return this.signup('signup/complete', { token, password });
+  }
+
+  private signup(path: string, body: Record<string, string>): Observable<void> {
+    return this.http.post(`${API_BASE_URL}/auth/${path}/`, body).pipe(
+      map(() => void 0),
+      catchError((error) => throwError(() => this.toAuthError(error)))
+    );
+  }
+
   login(request: LoginRequest): Observable<MeResponse> {
+    return this.startSession('login', request);
+  }
+
+  googleLogin(request: GoogleLoginRequest): Observable<MeResponse> {
+    return this.startSession('google', request);
+  }
+
+  private startSession(path: 'login' | 'google', request: LoginRequest | GoogleLoginRequest): Observable<MeResponse> {
     this.isLoading.set(true);
-    return this.http.post<ApiResponse<LoginResponse>>(`${API_BASE_URL}/auth/login/`, request).pipe(
+    return this.http.post<ApiResponse<LoginResponse>>(`${API_BASE_URL}/auth/${path}/`, request).pipe(
       tap((response) => this.applyLoginResponse(response.data)),
       switchMap(() => this.fetchCurrentUser()),
       finalize(() => this.isLoading.set(false)),

@@ -4,10 +4,10 @@ Conector de laboratorio para vincular por QR una cuenta de WhatsApp como disposi
 
 ## Ejecutar el piloto
 
-Desde la raíz, copia `.env.example` a `.env` si no tienes uno. Genera un secreto de al menos 32 caracteres para `BAILEYS_INTERNAL_TOKEN`. Deja vacías las dos variables de ingesta para probar únicamente el vínculo.
+El conector arranca desconectado con el Compose principal. El init genera su Bearer privado si no configuras `BAILEYS_INTERNAL_TOKEN`. Deja vacías las variables de ingesta si solo quieres probar el vínculo.
 
 ```powershell
-docker compose --profile whatsapp-lab up -d --build flowkron-baileys-services
+docker compose up -d --build flowkron-baileys-services
 ```
 
 El servicio escucha en el puerto interno 3001. Usa `Authorization: Bearer <BAILEYS_INTERNAL_TOKEN>` para los endpoints de sesión.
@@ -21,13 +21,13 @@ El servicio escucha en el puerto interno 3001. Usa `Authorization: Bearer <BAILE
 Inicia la conexión desde el contenedor de laboratorio:
 
 ```powershell
-docker compose --profile whatsapp-lab exec -T flowkron-baileys-services node -e 'fetch("http://127.0.0.1:3001/internal/baileys/session/start",{method:"POST",headers:{Authorization:"Bearer "+process.env.BAILEYS_INTERNAL_TOKEN}}).then(async r=>{console.log(await r.json());if(!r.ok) process.exitCode=1})'
+docker compose exec -T flowkron-baileys-services node -e 'fetch("http://127.0.0.1:3001/internal/baileys/session/start",{method:"POST",headers:{Authorization:"Bearer "+require("node:fs").readFileSync(process.env.BAILEYS_INTERNAL_TOKEN_FILE, "utf8").trim()}}).then(async r=>{console.log(await r.json());if(!r.ok) process.exitCode=1})'
 ```
 
 Consulta el estado y abre el código en un archivo temporal. Escanéalo desde **Dispositivos vinculados** con una cuenta de laboratorio bajo tu control. Elimina el archivo al terminar.
 
 ```powershell
-$flowPairing = docker compose --profile whatsapp-lab exec -T flowkron-baileys-services node -e 'fetch("http://127.0.0.1:3001/internal/baileys/session",{headers:{Authorization:"Bearer "+process.env.BAILEYS_INTERNAL_TOKEN}}).then(r=>r.text()).then(console.log)' | ConvertFrom-Json
+$flowPairing = docker compose exec -T flowkron-baileys-services node -e 'fetch("http://127.0.0.1:3001/internal/baileys/session",{headers:{Authorization:"Bearer "+require("node:fs").readFileSync(process.env.BAILEYS_INTERNAL_TOKEN_FILE, "utf8").trim()}}).then(r=>r.text()).then(console.log)' | ConvertFrom-Json
 $flowPairing.status
 if ($flowPairing.qr) {
   $flowPairingFile = Join-Path $env:TEMP ('flowkron-whatsapp-' + [guid]::NewGuid() + '.png')

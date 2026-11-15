@@ -10,7 +10,9 @@ class GroqClient:
 
     @property
     def enabled_for_chat(self) -> bool:
-        return bool(self.settings.groq_api_key.get_secret_value().strip())
+        return self.settings.chat_provider != "local" and bool(
+            self.settings.groq_api_key.get_secret_value().strip()
+        )
 
     def complete(self, messages: list[ChatMessage]) -> str:
         if not self.enabled_for_chat:

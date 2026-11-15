@@ -2,19 +2,19 @@
 
 ## Secretos
 
-
-
 `docker compose config` expande secretos; usar `--quiet`. También revisar logs, inspect, backups y shell history.
 
-## JWT y bind mounts
+El init genera credenciales independientes por proyecto y las escribe en volúmenes internos. Conservar estos volúmenes junto a las bases de datos. El usuario inicial de laboratorio solo se aprovisiona en una base vacía, con debug y bind loopback.
 
-Auth tiene acceso RW al directorio completo de claves; operational lo monta RO, pero puede leer todos los archivos del directorio, incluida la privada si está presente. El montaje RO impide escribir, no limita qué archivos puede leer. Para producción conviene entregar únicamente la clave pública a operational mediante secret/archivo dedicado y proteger permisos del host.
+## JWT y almacenamiento
+
+Los montajes predeterminados separan las claves privada y pública. Auth guarda la privada. Operational y Agent Core montan el volumen público en solo lectura. Para conservar montajes antiguos y separar también las claves, configura `FLOWKRON_JWT_PUBLIC_MOUNT` con la ubicación de la clave pública.
 
 La generación automática de claves puede invalidar sesiones si se pierde/regenera el directorio. Definir ciclo de vida, backup cifrado y rotación coordinada.
 
 ## Datos y exposición
 
-PostgreSQL, Redis, ambas APIs y ambos frontends se publican en todas las interfaces del host por defecto. Una red bridge no protege esos puertos. Fuera de local:
+PostgreSQL, Redis, las APIs y ambos frontends escuchan en loopback por defecto. El gateway de correo y Baileys permanecen en la red interna. Fuera de local:
 
 - no publicar DB/Redis;
 - colocar APIs/frontends detrás de ingress/reverse proxy HTTPS;
@@ -26,11 +26,11 @@ PostgreSQL, Redis, ambas APIs y ambos frontends se publican en todas las interfa
 
 ## Defaults no productivos
 
-Antes de un ambiente real: `DJANGO_DEBUG=False`, desactivar creación de superusuario/seeds/generación automática de claves según el proceso, revisar migraciones como job controlado, usar SMTP real administrado y eliminar defaults personales.
+Antes de un ambiente real: configurar `DJANGO_DEBUG=False`, hosts permitidos, TLS y secretos privados adecuados. Revisar migraciones y bootstrap según el proceso del entorno. Probar correo con el proveedor elegido.
 
 ## Brechas de plataforma
 
-Este repositorio no define TLS, reverse proxy, rate limiting de borde, Docker secrets, backups, restore, resource limits, logging centralizado, métricas/alertas, rolling update, alta disponibilidad ni separación de redes. `container_name` fijo y volúmenes locales dificultan escalado/multi-host.
+Este Compose ofrece un entorno de un solo host. La infraestructura de producción debe definir TLS, proxy, rotación de secretos, backups, observabilidad y recuperación según el despliegue.
 
 Las imágenes de infraestructura fijan versión mayor (`postgres:18`, `redis:7`), no digest/patch inmutable. Planificar actualizaciones y escaneo de vulnerabilidades.
 

@@ -9,7 +9,7 @@ Estado: `PARTIAL`
 
 Existen dos piezas de IA:
 
-1. `flowkron-agent-core`: runtime FastAPI independiente del canal, con contexto empresarial, plantillas, extracción documental, retrieval lexical, simulación, Azure OpenAI opcional y fallback.
+1. `flowkron-agent-core`: runtime FastAPI independiente del canal, con contexto empresarial, plantillas, extracción documental, retrieval lexical, simulación, Groq opcional y fallback.
 
 
 ## Persistencia
@@ -24,7 +24,7 @@ En modo integrado:
 
 ## Respuesta y fallback
 
-Agent Core puede usar Azure OpenAI cuando está configurado externamente. Debe devolver respuesta estructurada, confianza, fuentes, acción preparada y necesidad de handoff. Si el proveedor falla o no existe contexto suficiente, usa fallback seguro.
+Agent Core puede usar Groq cuando está configurado externamente. Debe devolver respuesta estructurada, confianza, fuentes, acción preparada y necesidad de handoff. Si el proveedor falla o no existe contexto suficiente, usa fallback seguro.
 
 ## Brechas
 

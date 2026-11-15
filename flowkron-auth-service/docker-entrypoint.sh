@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if [ -n "${DATABASE_URL_FILE:-}" ]; then
+  DATABASE_URL="$(cat "$DATABASE_URL_FILE")"
+  export DATABASE_URL
+fi
+
 run_bool() {
   value="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
   [ "$value" = "1" ] || [ "$value" = "true" ] || [ "$value" = "yes" ]
@@ -27,7 +32,13 @@ if [ -n "$db_target" ]; then
   db_host="${db_target%:*}"
   db_port="${db_target##*:}"
   echo "Waiting for database ${db_host}:${db_port}..."
+  attempts=0
   until nc -z "$db_host" "$db_port"; do
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 60 ]; then
+      echo "Database did not become reachable within 60 seconds." >&2
+      exit 1
+    fi
     sleep 1
   done
 fi
@@ -79,14 +90,11 @@ if run_bool "${RUN_COLLECTSTATIC:-true}"; then
 fi
 
 if run_bool "${CREATE_SUPERUSER:-false}"; then
-  if [ -z "${DJANGO_SUPERUSER_EMAIL:-}" ] || [ -z "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
-    echo "CREATE_SUPERUSER=true requires DJANGO_SUPERUSER_EMAIL and DJANGO_SUPERUSER_PASSWORD." >&2
-    exit 1
-  fi
-  python manage.py ensure_superuser \
-    --email "$DJANGO_SUPERUSER_EMAIL" \
-    --username "${DJANGO_SUPERUSER_USERNAME:-$DJANGO_SUPERUSER_EMAIL}" \
-    --password "$DJANGO_SUPERUSER_PASSWORD"
+  python manage.py bootstrap_local_workspace --explicit
+elif run_bool "${FLOWKRON_BOOTSTRAP_ADMIN:-false}" && run_bool "${DJANGO_DEBUG:-false}"; then
+  case "${FLOWKRON_BIND_HOST:-127.0.0.1}" in
+    127.0.0.1) python manage.py bootstrap_local_workspace ;;
+  esac
 fi
 
 exec "$@"

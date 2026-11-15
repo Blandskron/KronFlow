@@ -35,5 +35,3 @@ El stack publica servicios al host y usa HTTP. Está orientado a desarrollo/inte
 - backups y restauración;
 - CDN;
 - registro de imágenes y CI/CD.
-
-La [guía técnica Azure](10-azure-migration-technical-guide.md) es una arquitectura propuesta y todavía no está implementada.

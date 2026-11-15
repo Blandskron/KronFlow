@@ -58,7 +58,7 @@ Pasos:
 4. Ejecuta migraciones.
 5. Ejecuta seeds.
 6. Ejecuta collectstatic.
-7. Crea o actualiza superuser si `CREATE_SUPERUSER=true`.
+7. Crea el superusuario inicial si `CREATE_SUPERUSER=true`. Si la misma cuenta ya existe y sigue siendo superusuario activo, conserva su contraseña.
 8. Ejecuta comando final, por defecto Gunicorn.
 
 ## Variables del entrypoint
@@ -69,7 +69,7 @@ Pasos:
 | `RUN_MIGRATIONS` | `true` | Ejecuta `migrate --noinput` |
 | `RUN_SEEDS` | `true` | Ejecuta `seed_iam` y `seed_iam_advanced` |
 | `RUN_COLLECTSTATIC` | `true` | Ejecuta `collectstatic --noinput` |
-| `CREATE_SUPERUSER` | `false` | Crea o actualiza superuser |
+| `CREATE_SUPERUSER` | `false` | Crea un superusuario verificado con membresía de propietario en BLANDSKRON |
 | `DJANGO_SUPERUSER_EMAIL` | requerido si aplica | Email admin |
 | `DJANGO_SUPERUSER_PASSWORD` | requerido si aplica | Password admin |
 | `DJANGO_SUPERUSER_USERNAME` | email | Username admin |
@@ -150,7 +150,6 @@ Usar:
 - Kubernetes secrets
 - AWS Secrets Manager
 - GCP Secret Manager
-- Azure Key Vault
 - HashiCorp Vault
 
 ## Estrategia de despliegue recomendada

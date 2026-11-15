@@ -17,7 +17,9 @@ db.sqlite3
 db.sqlite3-journal
 *.db
 *.db-journal
-.env
+.env*
+*.pem
+*.key
 keys
 staticfiles
 media

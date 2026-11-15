@@ -16,6 +16,9 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const shouldAttachAuth = isApiRequest || isOperationalRequest || isAgentCoreRequest;
   const isAuthRequest =
     request.url.includes('/auth/login/') ||
+    request.url.includes('/auth/google/') ||
+    request.url.includes('/auth/options/') ||
+    request.url.includes('/auth/signup/') ||
     request.url.includes('/auth/password/forgot/') ||
     request.url.includes('/auth/password/reset/') ||
     request.url.includes('/auth/email/confirm/');

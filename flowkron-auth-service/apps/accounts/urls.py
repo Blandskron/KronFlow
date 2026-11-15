@@ -2,9 +2,14 @@ from django.urls import path
 
 from apps.security.views import ClientCredentialsView, EmailConfirmView, EmailResendView, ForgotPasswordView, InitialPasswordView, JwksView, MfaConfirmView, MfaSetupView, MfaVerifyView, ResetPasswordView, TokenIntrospectionView
 
+from .public_auth import AuthOptionsView, GoogleLoginView, SignupCompleteView, SignupView
 from .views import ChangePasswordView, LoginView, LogoutAllView, LogoutView, MeView, ProfileAvatarView, ProfileView, TaggedTokenRefreshView, TaggedTokenVerifyView
 
 urlpatterns = [
+    path("options/", AuthOptionsView.as_view(), name="auth-options"),
+    path("google/", GoogleLoginView.as_view(), name="auth-google"),
+    path("signup/", SignupView.as_view(), name="auth-signup"),
+    path("signup/complete/", SignupCompleteView.as_view(), name="auth-signup-complete"),
     path("login/", LoginView.as_view(), name="auth-login"),
     path("refresh/", TaggedTokenRefreshView.as_view(), name="auth-refresh"),
     path("verify/", TaggedTokenVerifyView.as_view(), name="auth-token-verify"),

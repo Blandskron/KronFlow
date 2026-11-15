@@ -1,6 +1,5 @@
 .site-header {
   border-bottom: 1px solid var(--border);
-  background: var(--card);
 }
 
 .header-shell, .header-actions, .brand, nav, .footer-row, .preview-heading {
@@ -28,7 +27,9 @@ nav a:hover { color: var(--primary); }
 
 .hero {
   padding-block: clamp(64px, 10vw, 132px);
-  background: radial-gradient(ellipse at 75% 15%, rgba(126, 65, 188, 0.22), transparent 62%);
+  background:
+    radial-gradient(ellipse at 78% 54%, var(--ambient-violet), transparent 52%),
+    radial-gradient(ellipse at 90% 68%, var(--ambient-blue), transparent 38%);
 }
 
 .hero-inner {
@@ -63,7 +64,7 @@ nav a:hover { color: var(--primary); }
   display: grid;
   gap: 15px;
   padding: clamp(16px, 4vw, 32px);
-  box-shadow: 0 24px 58px color-mix(in srgb, var(--brand-deep) 22%, transparent);
+  box-shadow: 0 26px 64px color-mix(in srgb, var(--brand-deep) 24%, transparent);
 }
 
 .preview-heading {
@@ -112,7 +113,7 @@ nav a:hover { color: var(--primary); }
 .feature p { margin-bottom: 0; }
 .featured { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
 
-.contact { background: var(--accent); }
+.contact { background: radial-gradient(ellipse at 75% 50%, var(--ambient-violet), transparent 65%), var(--background); }
 .contact .grid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
 .contact-form { display: grid; gap: 16px; padding: clamp(16px, 4vw, 30px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-field { display: grid; gap: 6px; align-content: start; }

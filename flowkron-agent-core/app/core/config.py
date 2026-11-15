@@ -1,5 +1,6 @@
 from functools import lru_cache
 import json
+import os
 from typing import Annotated, List, Literal
 
 from pydantic import Field, SecretStr, field_validator
@@ -30,22 +31,19 @@ class Settings(BaseSettings):
         default_factory=lambda: [".pdf", ".docx", ".csv", ".xlsx", ".txt", ".md"]
     )
     low_confidence_threshold: float = 0.35
-    chat_provider: Literal["auto", "groq", "azure", "local"] = "auto"
+    chat_provider: Literal["auto", "groq", "local"] = "auto"
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-20b"
-    azure_openai_enabled: bool = False
-    azure_openai_api_version: str = "2024-02-01"
-    azure_openai_api_key: str = ""
-    chat_completion_url: str = ""
-    chat_completion_model_name: str = "gpt-4o-mini"
     chat_completion_max_tokens: int = 2000
     chat_completion_temperature: float = 0.3
     chat_completion_timeout_seconds: int = 60
-    embedding_url: str = ""
-    embedding_model_name: str = "text-embedding-3-small"
-    embedding_timeout_seconds: int = 60
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        secrets_dir=os.getenv("FLOWKRON_SETTINGS_DIR"),
+        extra="ignore",
+    )
 
     @field_validator("cors_allowed_origins", "allowed_upload_extensions", mode="before")
     @classmethod

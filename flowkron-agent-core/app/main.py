@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.v1.routes.agent import router as agent_router
 from app.api.v1.routes.context import router as context_router
@@ -59,5 +61,17 @@ def healthz():
 @app.get("/ready", tags=["Health"])
 def ready():
     if settings.persistence_mode == "operational":
+        try:
+            response = httpx.get(
+                f"{settings.operational_service_url.rstrip('/')}/readyz", timeout=2
+            )
+            response.raise_for_status()
+        except httpx.HTTPError:
+            raise HTTPException(status_code=503, detail="Operational unavailable") from None
         return {"status": "ready", "persistence": "delegated", "operational_service_url": settings.operational_service_url}
-    return {"status": "ready" if check_database() else "not_ready"}
+    try:
+        if check_database():
+            return {"status": "ready"}
+    except SQLAlchemyError:
+        pass
+    raise HTTPException(status_code=503, detail="Database unavailable")

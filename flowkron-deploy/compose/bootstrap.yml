@@ -1,0 +1,29 @@
+services:
+  flowkron-init:
+    image: python:3.12-slim
+    network_mode: none
+    command: ["python", "/initialize.py"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-flowkron_admin}
+      POSTGRES_DB: ${POSTGRES_DB:-flowkron_auth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      DATABASE_URL: ${DATABASE_URL:-}
+      OPERATIONAL_DATABASE_URL: ${OPERATIONAL_DATABASE_URL:-}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+      SIGNING_KEY_ENCRYPTION_KEY: ${SIGNING_KEY_ENCRYPTION_KEY:-}
+      OPERATIONAL_INTERNAL_TOKEN: ${OPERATIONAL_INTERNAL_TOKEN:-}
+      BAILEYS_INTERNAL_TOKEN: ${BAILEYS_INTERNAL_TOKEN:-}
+    volumes:
+      - ../bootstrap/initialize.py:/initialize.py:ro
+      - flowkron-postgres-config:/bootstrap/postgres
+      - flowkron-iam-config:/bootstrap/iam
+      - flowkron-operational-config:/bootstrap/operational
+      - flowkron-agent-config:/bootstrap/agent
+      - flowkron-channel-config:/bootstrap/channel
+
+volumes:
+  flowkron-postgres-config:
+  flowkron-iam-config:
+  flowkron-operational-config:
+  flowkron-agent-config:
+  flowkron-channel-config:

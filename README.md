@@ -8,13 +8,13 @@ Flowkron is independent and has no affiliation with or endorsement from Meta or 
 
 ## Start locally
 
-Use Docker Desktop or Docker Engine with a current Docker Compose plugin. Copy the sample environment and replace the development passwords and signing secrets before use outside an isolated local environment.
+Use Docker Desktop or Docker Engine with the Docker Compose plugin. From the repository root, start the full local stack:
 
-```powershell
-Copy-Item .env.example .env
-docker compose config --quiet
+```sh
 docker compose up --build --wait
 ```
+
+A fresh checkout can start without an `.env`. The init job generates instance credentials and keeps them in Docker volumes. Add a private `.env` based on [the example](.env.example) only for overrides or external providers.
 
 | Surface | Default address |
 | --- | --- |
@@ -25,13 +25,26 @@ docker compose up --build --wait
 | Agent Core health | http://localhost:8002/health |
 | Email gateway | Internal address at `http://smtp-http-blandskron:8000` |
 
-To sign in to a new stack, set `CREATE_SUPERUSER=True` and provide a synthetic `DJANGO_SUPERUSER_EMAIL`, matching `DJANGO_SUPERUSER_USERNAME`, and a strong local password in `DJANGO_SUPERUSER_PASSWORD`. Recreate the IAM service once, then turn off automatic superuser setup. In the sample configuration, verification and recovery messages appear in the IAM container console. Use synthetic email addresses and keep those logs local.
+On a fresh local database, Compose creates the verified Django superuser `admin@example.com` as the owner of the **BLANDSKRON** workspace and provisions its CRM schema. The same generated password works in the [CRM](http://localhost:8081/login) and the [Django admin](http://localhost:8000/admin/). Retrieve it in your private terminal:
 
-```powershell
-docker compose logs --tail 60 flowkron-auth-service
+```sh
+docker compose exec -T flowkron-auth-service cat /run/flowkron/bootstrap_admin_password
 ```
 
-The first run applies Django migrations and seeds roles and the plan catalog. Tenant activation and provisioning still enforce the existing IAM and Operational plan rules. Access to an operational workspace requires an active non-free tenant runtime. The CRM shows the current access state. See the [IAM setup guide](flowkron-auth-service/docs/DEPLOYMENT.md) for operator commands and [Operational API](flowkron-operational-service/docs/API.md) for provisioning and ingestion. The [synthetic seed script](flowkron-operational-service/scripts/seed_demo_tenant.sql) targets an existing disposable tenant and is opt-in.
+For a custom initial administrator, set `DJANGO_SUPERUSER_EMAIL` in the private `.env`. To supply a password, set `CREATE_SUPERUSER=True` and `DJANGO_SUPERUSER_PASSWORD` before the first start. `DJANGO_SUPERUSER_USERNAME` is optional and applies to Django admin, while the CRM uses the email. Existing accounts keep their passwords across restarts.
+
+Console mail, local agent responses, and an unlinked Baileys service are available with zero provider credentials. Existing installations should follow the [migration notes](CHANGELOG.md#migrate-a-prior-deployment). See the [deployment guide](flowkron-deploy/README.md) for host ports, persistence and server configuration.
+
+## Configure account registration and Google sign-in
+
+The CRM supports email registration and Google sign-in. Email registration sends a verification link to the address entered, then lets the recipient choose a password. Configure transactional email for real delivery. With the local console backend, the link is written to the IAM container logs.
+
+- Set `GOOGLE_OAUTH_CLIENT_ID` in the private root `.env` to the Google OAuth client ID for a **Web application**. An empty value hides the Google button.
+- In Google Cloud, add `http://localhost` and `http://localhost:8081` to **Authorized JavaScript origins** for Docker development. If you use a different CRM port, add that exact origin. For a hosted CRM, add its exact HTTPS origin. Apply **Flowkron** branding in Google Auth Platform. [Google Identity Services setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
+- Flowkron uses the Google Identity Services popup callback. Leave **Authorized redirect URIs** empty for a client dedicated to Flowkron. The server validates Google's ID token and uses the `sub` claim to identify the account. This flow uses the public client ID. [Google ID token verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
+- Set `AUTH_SELF_SIGNUP_ENABLED=False` if this instance should accept only existing users and invitations. Existing Google-linked accounts can still sign in when the client ID remains configured.
+
+Apply the configuration and account migration with `docker compose up --build --wait`. If you host the frontends on custom domains, set `APP_PUBLIC_URL` to the CRM URL and include the CRM and landing origins in `CORS_ALLOWED_ORIGINS`.
 
 ## Enable transactional email
 
@@ -52,8 +65,8 @@ Set a valid provider key and replace the example sender with an address on your 
 
 ## Connect a channel or AI provider
 
-- **WhatsApp** accepts normalized events through the [tenant-scoped ingest interface](flowkron-operational-service/docs/API.md). The optional [Baileys lab connector](flowkron-baileys-services/README.md) pairs one account via QR and can forward text from contacts with recorded consent. See the [integration research](flowkron-product-docs/04-architecture/14-whatsapp-connection-and-campaigns.md) for the onboarding, agent and campaign design.
-- **AI** in Agent Core can use Groq, Azure OpenAI or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](flowkron-agent-core/docs/CONFIGURATION.md) for model selection and other providers.
+- **WhatsApp** accepts normalized events through the [tenant-scoped ingest interface](flowkron-operational-service/docs/API.md). The included [Baileys lab connector](flowkron-baileys-services/README.md) starts disconnected, pairs one account via QR and can forward text from contacts with recorded consent. See the [integration research](flowkron-product-docs/04-architecture/14-whatsapp-connection-and-campaigns.md) for the onboarding, agent and campaign design.
+- **AI** in Agent Core can use Groq or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](flowkron-agent-core/docs/CONFIGURATION.md) for model selection and local mode.
 - **Operating costs** depend on the infrastructure, messaging, email and AI providers selected by the instance operator.
 
 ## Develop and contribute
@@ -66,4 +79,4 @@ Set a valid provider key and replace the example sender with an address on your 
 
 ### Inicio rápido en español
 
-Copia `.env.example` a `.env`, configura los secretos locales y ejecuta `docker compose up --build --wait`. Abre el CRM en el puerto 8081. El ejemplo registra el correo de verificación en el contenedor de IAM. Para enviar correo real, configura el remitente verificado y las credenciales del gateway.
+Ejecuta `docker compose up --build --wait` desde la raíz. Abre el CRM en el puerto 8081 con `admin@example.com` y recupera la contraseña generada con el comando anterior. Configura un `.env` privado cuando necesites cambiar puertos o habilitar proveedores.

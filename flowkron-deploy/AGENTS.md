@@ -4,17 +4,18 @@ Fuente única de contexto e instrucciones agenticas para `flowkron-deploy`. Los 
 
 ## Propósito y límites
 
-El stack base integra IAM, Operational, Agent Core, frontends, correo, PostgreSQL y Redis. El perfil opcional `whatsapp-lab` añade el conector Baileys de laboratorio.
+El stack base integra IAM, Operational, Agent Core, frontends, correo, PostgreSQL y Redis. El conector Baileys de laboratorio arranca desconectado.
 
 ## Mapa
 
 | Archivo | Responsabilidad |
 | --- | --- |
 | `docker-compose.yml` | Nombre del proyecto e includes del stack base |
+| `compose/bootstrap.yml` | Inicialización de credenciales en volúmenes por servicio |
 | `compose/infrastructure.yml` | PostgreSQL 18, Redis 7, named volumes y red |
 | `compose/backend.yml` | Auth/operational, healthchecks, dependencias y bind mounts |
 | `compose/frontend.yml` | Landing/app y build args públicos |
-| `compose/whatsapp.yml` | Conector interno, perfil de laboratorio y volumen privado de sesión |
+| `compose/whatsapp.yml` | Conector interno y volumen privado de sesión |
 | `.env.example` | Contrato de configuración local sin secretos reales |
 | `data/jwt-keys/` | Claves generadas locales, ignoradas; no leer |
 | `data/auth-media/` | Media persistente del auth, ignorada; no leer |
@@ -24,12 +25,11 @@ El stack base integra IAM, Operational, Agent Core, frontends, correo, PostgreSQ
 
 - Los contenedores usan `flowkron-network`. Los gateways de correo y WhatsApp permanecen en la red interna.
 - PostgreSQL/Redis persisten en named volumes.
-- Auth monta `data/jwt-keys` RW y `data/auth-media` RW.
-- Operational monta las claves JWT RO y declara dependencia Compose de auth saludable; usa PostgreSQL por `OPERATIONAL_DATABASE_URL`.
-- Auth declara dependencias de Redis y PostgreSQL saludables; su entrypoint espera PostgreSQL usando `DATABASE_URL`.
-- App depende solo de auth saludable; landing no declara dependencias.
+- Auth monta volúmenes privados para claves JWT y media, y publica la clave JWT en otro volumen.
+- Operational espera PostgreSQL saludable y monta la clave JWT pública RO.
+- Auth espera Redis, PostgreSQL y Operational. En local prepara el primer workspace después de aplicar migraciones.
+- La app espera auth, operational y agent-core. La landing espera auth.
 - Agent Core declara dependencia Compose de auth y operational saludables.
-- No hay dependencia de salud que garantice operational o agent-core antes de iniciar la app frontend.
 
 ## Invariantes
 
@@ -37,7 +37,7 @@ El stack base integra IAM, Operational, Agent Core, frontends, correo, PostgreSQ
 - Preservar nombres DNS/servicio `flowkron-*`, red compartida y healthchecks cuando afecten `depends_on`.
 - Distinguir puerto interno del contenedor y puerto publicado configurable.
 - URLs de frontend son build args públicos y deben ser alcanzables por el navegador; no usar DNS interno de Compose para ellas.
-- Los secretos obligatorios del stack base usan `${VAR:?mensaje}`. El conector opcional valida su Bearer al arrancar, con valores vacíos en `.env.example`.
+- Mantener funcional el arranque sin `.env`. Los secretos del init persisten por proyecto. La configuración explícita se proporciona por un entorno privado.
 - No fijar credenciales/defaults personales ni usar `latest`.
 - Cambios de DB/volumen/JWT/startup deben contemplar migración, rollback y pérdida de datos.
 
@@ -51,7 +51,7 @@ docker compose config --quiet
 
 No captures la configuración expandida. No ejecutes `down -v`, `docker system prune`, rotación/borrado de claves, migraciones destructivas ni despliegues sin aprobación explícita y backup verificado.
 
-Este stack usa defaults locales peligrosos fuera de desarrollo: debug, seeds, migrations, collectstatic, generación JWT y creación de superusuario activados; DB/Redis/APIs publicados; HTTP sin TLS. Revisa [docs/SECURITY.md](docs/SECURITY.md).
+Este stack se publica en loopback por defecto, con HTTP y debug para desarrollo local. La creación automática del primer workspace solo se ejecuta en loopback con debug. Revisa [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Autorización
 
@@ -62,7 +62,7 @@ Requiere aprobación: editar Compose/plantilla env, puertos/redes/volúmenes/dep
 ## Validación proporcional
 
 - Docs: enlaces, referencias, fences y `git diff --check`.
-- YAML/env: `docker compose config --quiet` con un `.env` local ya gestionado por el usuario.
+- YAML/env: `docker compose config --quiet` sin `.env` y con overrides de ejemplo.
 - Runtime autorizado: `docker compose ps`, health endpoints y logs acotados sin secretos.
 - No afirmar que un healthcheck prueba la funcionalidad completa.
 

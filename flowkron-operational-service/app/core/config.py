@@ -1,5 +1,6 @@
 from functools import lru_cache
 import json
+import os
 import re
 from typing import Annotated, List
 
@@ -31,7 +32,12 @@ class Settings(BaseSettings):
     tenant_migration_version: str = "tenant_schema_v2"
     ingest_rate_limit_per_minute: int = 120
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        secrets_dir=os.getenv("FLOWKRON_SETTINGS_DIR"),
+        extra="ignore",
+    )
 
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod

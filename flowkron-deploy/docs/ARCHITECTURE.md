@@ -2,9 +2,7 @@
 
 ## Modelo Compose
 
-`docker-compose.yml` define `name: flowkron-stack` e incluye infraestructura, backends y frontends.
-
-> [!NOTE]
+`docker-compose.yml` define `name: flowkron-stack` e incluye inicialización, infraestructura, backends, frontends, correo y Baileys.
 
 ```text
 Browser
@@ -26,12 +24,11 @@ La red bridge facilita DNS interno, pero los puertos publicados siguen expuestos
 
 ## Dependencias
 
-1. PostgreSQL y Redis no dependen de otros servicios.
-2. Auth declara `depends_on` solo de Redis saludable; su entrypoint espera PostgreSQL usando `DATABASE_URL`.
-3. Operational espera auth saludable; recibe la publica JWT por bind mount RO y usa PostgreSQL mediante `OPERATIONAL_DATABASE_URL`.
-4. Agent Core espera auth y operational saludables; recibe la publica JWT por bind mount RO y delega persistencia a Operational.
-5. App espera auth saludable, pero debe poder alcanzar Operational y Agent Core desde el navegador.
-6. Landing inicia de forma independiente.
+1. Init guarda la configuración de cada servicio y termina. PostgreSQL y Baileys esperan ese resultado. Redis inicia en paralelo.
+2. Operational espera que PostgreSQL acepte conexiones TCP. Su readiness comprueba una consulta real.
+3. Auth espera PostgreSQL, Redis y Operational. Aplica migraciones, prepara las claves JWT y aprovisiona el primer workspace en un proyecto local vacío.
+4. Agent Core espera Auth y Operational. En modo integrado, su readiness depende de Operational.
+5. La app espera los tres backends. La landing espera Auth para el formulario de contacto.
 
 `depends_on` ordena inicio/health inicial; no garantiza readiness funcional continua.
 
@@ -41,8 +38,10 @@ La red bridge facilita DNS interno, pero los puertos publicados siguen expuestos
 | --- | --- | --- |
 | `flowkron-postgres-18-cluster` | Named volume | Datos PostgreSQL |
 | `flowkron-redis-data` | Named volume | Redis |
-| `data/jwt-keys` | Bind mount | Auth RW; operational/agent-core RO |
-| `data/auth-media` | Bind mount | Media de auth |
+| `flowkron-jwt-keys`, `flowkron-jwt-public` | Named volumes | Clave privada en Auth. Clave pública de verificación en Operational y Agent Core |
+| `flowkron-auth-media` | Named volume | Media de Auth |
+| `flowkron-*-config` | Named volumes | Credenciales iniciales por servicio |
+| `baileys-lab-sessions` | Named volume | Sesión vinculada de Baileys |
 
 `docker compose down` preserva datos. `down -v` borra named volumes.
 
@@ -74,9 +73,9 @@ Despues de agregar tablas tenant activas, los tenants existentes requieren `POST
 - PostgreSQL: `pg_isready`.
 - Redis: `redis-cli ping`.
 - Auth: `GET /healthz/`.
-- Operational: `GET /healthz`.
-- Agent Core: `GET /health`.
+- Operational: `GET /readyz`.
+- Agent Core: `GET /ready`.
 - Landing: `GET /`.
 - App: `GET /login`.
 
-Son liveness/readiness superficiales; no prueban login, migraciones correctas, SMTP, flujos operacionales ni consistencia de datos.
+El [smoke test](VALIDATION.md) comprueba login, aprovisionamiento, datos del tenant, simulación y contacto después del arranque.

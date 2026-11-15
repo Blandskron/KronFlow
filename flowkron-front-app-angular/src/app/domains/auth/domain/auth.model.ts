@@ -24,6 +24,18 @@ export interface AuthTokenResponse {
   refresh: string;
 }
 
+export interface AuthOptions {
+  signup_enabled: boolean;
+  google_client_id: string;
+  google_nonce: string;
+}
+
+export interface GoogleLoginRequest {
+  credential: string;
+  nonce: string;
+  mfa_code?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

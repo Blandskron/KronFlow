@@ -11,6 +11,13 @@ export const routes: Routes = [
     loadComponent: () => import('@domains/auth/features/login-page/login-page.component').then((m) => m.LoginComponent)
   },
   {
+    path: 'registrarse',
+    title: 'Crear cuenta · Flowkron',
+    canActivate: [noAuthGuard],
+    loadComponent: () =>
+      import('@domains/auth/features/signup-page/signup-page.component').then((m) => m.SignupPageComponent)
+  },
+  {
     path: 'forgot-password',
     title: 'Recuperar contraseña · Flowkron',
     loadComponent: () =>

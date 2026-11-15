@@ -1,6 +1,6 @@
 <div class="dashboard">
   <a class="skip-link" href="#workspace-content" (click)="$event.preventDefault(); workspaceContent.focus()">Ir al contenido</a>
-  <aside class="sidebar">
+  <aside class="sidebar glass-surface">
     <a class="brand product-brand" routerLink="/app/home">
       <span class="app-logo" aria-hidden="true"></span>
       <span><strong>Flowkron</strong><small>by BLANDSKRON</small></span>
@@ -38,7 +38,7 @@
   </aside>
 
   <section class="workspace">
-    <header class="topbar">
+    <header class="topbar glass-surface">
       <div class="brand">
         <span class="app-logo small" [class.has-image]="tenantLogo()">
           @if (tenantLogo(); as logo) {

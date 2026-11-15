@@ -4,7 +4,7 @@
 
 ## Repository and dependencies
 
-The repository contains two Angular SPAs, Django IAM, Operational and Agent Core on FastAPI, the Blandskron mail gateway, contracts and Docker Compose. Postgres and Redis are local services. Azure OpenAI and Resend are configured separately. Meta credentials and webhook handling belong to an external WhatsApp adapter.
+The repository contains two Angular SPAs, Django IAM, Operational and Agent Core on FastAPI, the Blandskron mail gateway, contracts and Docker Compose. Postgres and Redis are local services. Groq and Resend are configured separately. Meta credentials and webhook handling belong to an external WhatsApp adapter.
 
 The Python manifests use PyPI packages and the Angular lockfiles resolve to npm registry packages. No private package registry is required by the integrated stack. Flowkron is distributed by BLANDSKRON under Apache-2.0. Third-party packages retain their own license and attribution terms. The brand artwork follows the palette and requirements supplied in the brief. The separate Blandskron Brand Guidelines v1.0 was unavailable for review.
 

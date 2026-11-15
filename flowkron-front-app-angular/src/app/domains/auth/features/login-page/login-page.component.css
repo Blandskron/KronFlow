@@ -66,4 +66,8 @@
         color: var(--error-text);
         font-weight: 700;
       }
-    
+
+.signup-link { color: var(--muted-foreground); margin: 16px 0 0; }
+.signup-link a { color: var(--primary); font-weight: 700; }
+.google-button:not(:empty), .google-mfa, .google-button ~ .form-error { margin-top: 16px; }
+.google-button { display: flex; }

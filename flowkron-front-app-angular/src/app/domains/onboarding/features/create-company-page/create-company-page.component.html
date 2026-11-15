@@ -21,8 +21,11 @@
       <p class="form-error">{{ errorMessage() }}</p>
     }
 
-    <button class="btn btn-primary" type="submit" [disabled]="auth.isLoading()">
+    <button class="btn btn-primary" type="submit" [disabled]="auth.isLoading() || loggingOut()">
       {{ auth.isLoading() ? 'Creando empresa...' : 'Crear empresa y continuar' }}
+    </button>
+    <button class="btn btn-secondary" type="button" [disabled]="auth.isLoading() || loggingOut()" (click)="logout()">
+      Cerrar sesión
     </button>
   </form>
 </flowkron-auth-layout>

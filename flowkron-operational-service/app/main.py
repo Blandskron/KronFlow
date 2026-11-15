@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.ingest.whatsapp import router as whatsapp_ingest_router
 from app.api.internal.context import router as internal_context_router
@@ -63,5 +64,10 @@ def health():
 
 @app.get("/readyz", tags=["Health"])
 def readyz():
-    return {"status": "ready" if check_database() else "not_ready"}
+    try:
+        if check_database():
+            return {"status": "ready"}
+    except SQLAlchemyError:
+        pass
+    raise HTTPException(status_code=503, detail="Database unavailable")
 

@@ -11,7 +11,6 @@
 | [Logging](07-logging.md) | Trazabilidad y reglas |
 | [Disaster recovery](08-disaster-recovery.md) | Requisitos de recuperación |
 | [GitFlow](09-gitflow.md) | Ramas, PR y releases |
-| [Migración Azure](10-azure-migration-technical-guide.md) | Arquitectura propuesta |
 | [Railway](11-railway-deployment-runbook.md) | Runbook técnico |
 
-La única infraestructura reproducible confirmada es Docker Compose local. Azure y Railway requieren validación en un ambiente real.
+La única infraestructura reproducible confirmada es Docker Compose local. Railway requiere validación en un ambiente real.

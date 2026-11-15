@@ -21,6 +21,8 @@ COPY . .
 RUN dos2unix /app/docker-entrypoint.sh \
     && chmod +x /app/docker-entrypoint.sh \
     && adduser --disabled-password --gecos "" appuser \
+    && install -d -m 0700 /app/keys /app/media \
+    && install -d -m 0755 -o appuser -g appuser /jwt-public \
     && chown -R appuser:appuser /app
 
 USER appuser

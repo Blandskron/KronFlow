@@ -7,7 +7,7 @@ Estado: `PARTIAL`
 
 ## Estado actual
 
-- Agent Core contiene un adapter Azure OpenAI configurable.
+- Agent Core contiene un adaptador configurable para Groq.
 - Las credenciales y deployment/model name se configuran externamente.
 - No existe interfaz multi-provider completa, routing por tarea ni evaluación comparativa.
 - Los tests no llaman proveedores reales.
@@ -35,4 +35,3 @@ Definir una interfaz provider-neutral y registrar provider, deployment/model, ve
 - Fallback seguro/handoff.
 - Salida validada.
 - Trazar versión sin registrar prompts sensibles completos.
-

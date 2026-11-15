@@ -3,14 +3,18 @@ services:
     image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-flowkron_auth}
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env.local}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.local}
+      POSTGRES_USER: ${POSTGRES_USER:-flowkron_admin}
+      POSTGRES_PASSWORD_FILE: /run/flowkron/password
     ports:
-      - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+      - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-15432}:5432"
     volumes:
       - flowkron-postgres-18-cluster:/var/lib/postgresql
+      - flowkron-postgres-config:/run/flowkron:ro
+    depends_on:
+      flowkron-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?POSTGRES_USER must be set in .env.local} -d ${POSTGRES_DB:-flowkron_auth}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20

@@ -1,5 +1,6 @@
 
     <flowkron-auth-layout>
+      <div class="auth-card">
       <form [formGroup]="form" (ngSubmit)="login()">
         <a class="back" [href]="landingUrl">Volver a Flowkron</a>
         <div class="brand"><span class="app-logo" aria-hidden="true"></span><span><strong>Flowkron</strong><small class="muted">by BLANDSKRON</small></span></div>
@@ -35,5 +36,22 @@
           {{ auth.isLoading() ? 'Ingresando…' : 'Iniciar sesión' }}
         </button>
       </form>
+
+      @if (signupEnabled()) {
+        <p class="signup-link">¿Primera vez en Flowkron? <a routerLink="/registrarse">Crear cuenta</a></p>
+      }
+
+      <div #googleButton class="google-button"></div>
+      @if (googleMfa()) {
+        <form class="google-mfa" (submit)="$event.preventDefault(); confirmGoogleMfa()">
+          <label for="google-mfa-code">Código de autenticación de Flowkron</label>
+          <input class="field" id="google-mfa-code" [formControl]="googleCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+          <button class="btn btn-primary" type="submit" [disabled]="googleCode.invalid || auth.isLoading()">Verificar código</button>
+          <button class="btn btn-secondary" type="button" (click)="cancelGoogleMfa()">Cancelar</button>
+        </form>
+      }
+      @if (googleError()) {
+        <p class="form-error" role="alert">{{ googleError() }}</p>
+      }
+      </div>
     </flowkron-auth-layout>
-  

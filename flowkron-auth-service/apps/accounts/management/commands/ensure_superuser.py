@@ -1,6 +1,11 @@
+import os
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.exceptions import ValidationError
+from django.core.management.base import BaseCommand, CommandError
+from django.core.validators import validate_email
+from django.db import transaction
 from django.utils import timezone
 
 from apps.rbac.models import MembershipRole, TenantRole
@@ -13,34 +18,51 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--email", required=True)
-        parser.add_argument("--password", required=True)
-        parser.add_argument("--username", required=False)
+        parser.add_argument("--password", help="Defaults to DJANGO_SUPERUSER_PASSWORD.")
+        parser.add_argument("--username")
+        parser.add_argument("--create-only", action="store_true", help="Preserve an existing administrator.")
 
+    @transaction.atomic
     def handle(self, *args, **options):
-        email = options["email"].lower()
-        username = (options.get("username") or email).lower()
-        password = options["password"]
+        email = options["email"].strip().lower()
+        username = (options.get("username") or email).strip().lower()
+        password = options.get("password") or os.environ.get("DJANGO_SUPERUSER_PASSWORD")
         User = get_user_model()
 
-        user, created = User.objects.get_or_create(
-            username=username,
-            defaults={"email": email, "is_staff": True, "is_superuser": True, "is_active": True},
-        )
-        changed = created
-        if user.email != email:
-            user.email = email
-            changed = True
-        if not user.is_staff or not user.is_superuser or not user.is_active:
-            user.is_staff = True
-            user.is_superuser = True
-            user.is_active = True
-            changed = True
+        try:
+            validate_email(email)
+            User._meta.get_field("username").run_validators(username)
+        except ValidationError as exc:
+            raise CommandError("The administrator email or username is invalid.") from exc
+        if not password:
+            raise CommandError("Set DJANGO_SUPERUSER_PASSWORD or pass --password.")
+
+        user = User.objects.select_for_update().filter(username=username).first()
+        created = user is None
+        if user and options["create_only"]:
+            if user.email.lower() != email or not (user.is_staff and user.is_superuser and user.is_active):
+                raise CommandError("The bootstrap username already belongs to a different or inactive account.")
+            self.stdout.write("Existing Django superuser preserved.")
+            return
+        if User.objects.filter(email__iexact=email).exclude(pk=user.pk if user else None).exists():
+            raise CommandError("The administrator email already belongs to another account.")
+
+        if created:
+            user = User(username=username)
+        user.email = email
+        user.is_staff = True
+        user.is_superuser = True
+        user.is_active = True
+        user._skip_email_verification = True
         user.set_password(password)
         user.save()
 
-        if hasattr(user, "profile") and not user.profile.email_verified_at:
-            user.profile.email_verified_at = timezone.now()
-            user.profile.save(update_fields=["email_verified_at", "updated_at"])
+        profile = user.profile
+        now = timezone.now()
+        profile.email_verified_at = profile.email_verified_at or now
+        profile.account_activated_at = profile.account_activated_at or now
+        profile.initial_password_set_at = profile.initial_password_set_at or now
+        profile.save(update_fields=["email_verified_at", "account_activated_at", "initial_password_set_at", "updated_at"])
 
         tenant, _ = Tenant.objects.get_or_create(
             slug=settings.IAM_PLATFORM_TENANT_SLUG,

@@ -1,0 +1,3 @@
+name: flowkron-stack
+include:
+  - ./flowkron-deploy/docker-compose.yml

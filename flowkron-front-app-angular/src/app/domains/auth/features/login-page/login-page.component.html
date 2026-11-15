@@ -1,0 +1,40 @@
+
+    <flowkron-auth-layout>
+      <form [formGroup]="form" (ngSubmit)="login()">
+        <a class="back" [href]="landingUrl">Volver</a>
+        <div class="brand"><span class="app-logo"></span><strong>Flowkron</strong></div>
+        <h1>Bienvenido</h1>
+        <p class="muted">Ingresa a tu espacio de trabajo.</p>
+
+        <label for="login-email">Correo electrónico</label>
+        <input class="field" id="login-email" type="email" formControlName="email" autocomplete="username" placeholder="tu@empresa.example">
+
+        <label for="login-password">Contraseña</label>
+        <div class="password">
+          <input class="field" [type]="showPassword ? 'text' : 'password'" id="login-password" formControlName="password" autocomplete="current-password">
+          <button type="button" [attr.aria-label]="showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'" (click)="showPassword = !showPassword">
+            @if (showPassword) {
+              <svg lucideEyeOff size="18"></svg>
+            } @else {
+              <svg lucideEye size="18"></svg>
+            }
+          </button>
+        </div>
+
+        @if (mfaRequired()) {
+          <label for="login-mfa">Código MFA</label>
+          <input class="field" id="login-mfa" type="text" formControlName="mfaCode" autocomplete="one-time-code" inputmode="numeric" placeholder="123456">
+        }
+
+        @if (errorMessage()) {
+          <p class="form-error" role="alert">{{ errorMessage() }}</p>
+        }
+
+        <button class="forgot" type="button" (click)="goToForgotPassword()">Olvidaste tu contrasena?</button>
+        <button class="btn btn-primary" type="submit" [disabled]="auth.isLoading()">
+          {{ auth.isLoading() ? 'Ingresando...' : 'Accede con tu correo electronico' }}
+        </button>
+        <small class="muted">by BLANDSKRON</small>
+      </form>
+    </flowkron-auth-layout>
+  

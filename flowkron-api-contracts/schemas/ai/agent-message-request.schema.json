@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Blandskron/flowkron/refs/heads/main/flowkron-api-contracts/schemas/ai/agent-message-request.schema.json",
+  "title": "AgentMessageRequest",
+  "type": "object",
+  "required": ["channel", "conversation_id", "customer", "message", "metadata"],
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": ["string", "null"] },
+    "channel": {
+      "type": "string",
+      "enum": ["whatsapp", "instagram", "facebook", "tiktok", "webchat", "email", "voice", "other"]
+    },
+    "conversation_id": { "type": "string" },
+    "customer": {
+      "type": "object",
+      "required": ["external_id"],
+      "additionalProperties": false,
+      "properties": {
+        "external_id": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "phone": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] }
+      }
+    },
+    "message": {
+      "type": "object",
+      "required": ["type", "content", "attachments"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["text", "audio", "image", "file"] },
+        "content": { "type": "string" },
+        "attachments": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["raw_payload"],
+      "additionalProperties": false,
+      "properties": {
+        "timestamp": { "type": ["string", "null"] },
+        "source_url": { "type": ["string", "null"] },
+        "campaign_id": { "type": ["string", "null"] },
+        "raw_payload": { "type": "object" }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+<flowkron-auth-layout>
+  <form [formGroup]="form" (ngSubmit)="createCompany()">
+    <div class="brand"><span class="app-logo"></span><strong>Flowkron</strong></div>
+    <div class="status">Primer acceso</div>
+    <h1>Crea tu empresa</h1>
+    <p class="muted">Este espacio sera el tenant principal. Tu usuario quedara como owner.</p>
+
+    <label>Nombre de empresa</label>
+    <input class="field" formControlName="name" placeholder="Acme SpA">
+
+    <label>Razon social</label>
+    <input class="field" formControlName="legal_name" placeholder="Acme Servicios SpA">
+
+    <label>Identificador fiscal</label>
+    <input class="field" formControlName="tax_id" placeholder="76.123.456-7">
+
+    <label>Pais</label>
+    <input class="field country" formControlName="country" maxlength="2" placeholder="CL">
+
+    @if (errorMessage()) {
+      <p class="form-error">{{ errorMessage() }}</p>
+    }
+
+    <button class="btn btn-primary" type="submit" [disabled]="auth.isLoading()">
+      {{ auth.isLoading() ? 'Creando empresa...' : 'Crear empresa y continuar' }}
+    </button>
+  </form>
+</flowkron-auth-layout>

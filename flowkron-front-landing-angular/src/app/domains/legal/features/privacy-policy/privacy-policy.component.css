@@ -1,0 +1,6 @@
+.site-header { background: var(--card); border-bottom: 1px solid var(--border); }
+.header-shell, .brand, .header-actions { display: flex; align-items: center; gap: 12px; }
+.header-shell { min-height: 76px; justify-content: space-between; flex-wrap: wrap; padding-block: 12px; }
+.brand small { display: block; color: var(--muted-foreground); }
+.privacy { max-width: 70ch; padding-block: 64px; }
+p { color: var(--muted-foreground); line-height: 1.7; }

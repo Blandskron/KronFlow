@@ -1,0 +1,22 @@
+{
+  "tenant_id": "tenant-validacion",
+  "channel": "webchat",
+  "conversation_id": "conv-123",
+  "customer": {
+    "external_id": "customer-123",
+    "name": "Cliente Validacion",
+    "phone": null,
+    "email": "cliente@example.com"
+  },
+  "message": {
+    "type": "text",
+    "content": "Cual es el horario de atencion?",
+    "attachments": []
+  },
+  "metadata": {
+    "timestamp": "2026-07-03T20:00:00Z",
+    "source_url": null,
+    "campaign_id": null,
+    "raw_payload": {}
+  }
+}

@@ -1,0 +1,22 @@
+# Local and generated files
+.env
+.env.*
+!.env.example
+node_modules/
+.angular/
+dist/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.sqlite3
+*.db
+*.pem
+*.key
+*.pfx
+coverage/
+playwright-report/
+test-results/
+visual-test-results/
+flowkron-deploy/data/

@@ -1,0 +1,2015 @@
+openapi: 3.1.0
+info:
+  title: Flowkron Operational Service API
+  version: 0.3.1
+  description: |
+    Servicio operacional multi-tenant de la plataforma Flowkron.
+    Gestiona ingesta de mensajes WhatsApp desde un adaptador de WhatsApp, leads, conversaciones,
+    analíticas, contexto de agente y aprovisionamiento de schemas por tenant.
+  contact:
+    name: Flowkron Engineering
+servers:
+  - url: http://localhost:8001
+    description: Local development
+  - url: http://localhost:8001
+    description: Production
+
+tags:
+  - name: Health
+    description: Healthcheck del servicio
+  - name: Ingest
+    description: Ingesta de eventos desde un adaptador de WhatsApp (auth por X-Tenant-Code + X-Ingest-Key)
+  - name: Leads
+    description: CRUD de leads del tenant (auth JWT Bearer)
+  - name: Conversations
+    description: Lecttura de conversaciones y mensajes del tenant (auth JWT Bearer)
+  - name: Analytics
+    description: Resumen analítico del tenant (auth JWT Bearer)
+  - name: Agents
+    description: Gestión del agente del tenant (STUB — parcialmente implementado)
+  - name: Operational Data
+    description: Acceso directo a tablas operacionales del tenant (auth JWT Bearer)
+  - name: Internal Tenants
+    description: Aprovisionamiento y gestión interna de tenants (auth X-Internal-Token)
+  - name: Internal Context
+    description: Acceso al contexto empresarial por tenant para Agent Core (auth X-Internal-Token)
+  - name: Internal Migrations
+    description: Ejecución de migraciones de schema (auth X-Internal-Token)
+
+paths:
+
+  # ─── Health ─────────────────────────────────────────────────────────────────
+
+  /healthz:
+    get:
+      summary: Liveness check
+      operationId: health_liveness
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /readyz:
+    get:
+      summary: Readiness check (verifica conexión a DB)
+      operationId: health_readiness
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Servicio listo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: DB no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ─── Ingest — WhatsApp ───────────────────────────────────────────────────────
+
+  /api/v1/ingest/whatsapp/message:
+    post:
+      summary: Ingestar un mensaje entrante de WhatsApp
+      description: |
+        Crea o actualiza cliente, lead y conversación. Registra el mensaje
+        de forma idempotente usando `external_message_id`. Requiere runtime
+        activo y plan pagado.
+      operationId: ingest_whatsapp_message
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppMessageIn'
+      responses:
+        '200':
+          description: Mensaje procesado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/ingest/whatsapp/lead-classification:
+    post:
+      summary: Actualizar clasificación de un lead por teléfono
+      operationId: ingest_whatsapp_lead_classification
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadClassificationIn'
+      responses:
+        '200':
+          description: Clasificación actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ingest/whatsapp/handoff:
+    post:
+      summary: Marcar conversación como requiere atención humana
+      operationId: ingest_whatsapp_handoff
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoffIn'
+      responses:
+        '200':
+          description: Handoff registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ingest/whatsapp/status:
+    post:
+      summary: Actualizar estado de una conversación por thread externo
+      operationId: ingest_whatsapp_status
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppStatusIn'
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+
+  /api/v1/ingest/whatsapp/inventory:
+    get:
+      summary: Obtener inventario disponible del tenant
+      operationId: ingest_whatsapp_inventory
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Inventario
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/ingest/whatsapp/customer:
+    get:
+      summary: Obtener cliente por teléfono
+      operationId: ingest_whatsapp_customer_get
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      parameters:
+        - name: phone
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 4
+            maxLength: 48
+      responses:
+        '200':
+          description: Datos del cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerOut'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/ingest/whatsapp/consent:
+    get:
+      summary: Obtener estado de consentimiento por teléfono
+      operationId: ingest_whatsapp_consent_get
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      parameters:
+        - name: phone
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 4
+            maxLength: 48
+      responses:
+        '200':
+          description: Estado de consentimiento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentOut'
+    post:
+      summary: Registrar consentimiento de datos de un cliente
+      operationId: ingest_whatsapp_consent_post
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentIn'
+      responses:
+        '200':
+          description: Consentimiento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentOut'
+
+  /api/v1/ingest/whatsapp/client:
+    post:
+      summary: Upsert de cliente desde un adaptador de WhatsApp
+      operationId: ingest_whatsapp_client_upsert
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpsertIn'
+      responses:
+        '200':
+          description: Cliente upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientUpsertResponse'
+
+  /api/v1/ingest/whatsapp/lead:
+    post:
+      summary: Upsert de lead enriquecido desde un adaptador de WhatsApp
+      operationId: ingest_whatsapp_lead_upsert
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadUpsertIn'
+      responses:
+        '200':
+          description: Lead upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadUpsertResponse'
+
+  /api/v1/ingest/whatsapp/privacy-requests:
+    post:
+      summary: Registrar solicitud de derecho de datos (privacidad)
+      operationId: ingest_whatsapp_privacy_request
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivacyRequestIn'
+      responses:
+        '201':
+          description: Solicitud registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyRequestResponse'
+
+  /api/v1/ingest/whatsapp/dashboard-messages:
+    post:
+      summary: Registrar mensajes de usuario y agente para el dashboard
+      operationId: ingest_whatsapp_dashboard_messages
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardMessagesIn'
+      responses:
+        '200':
+          description: Mensajes registrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardMessagesResponse'
+
+  /api/v1/ingest/whatsapp/executives/assign:
+    post:
+      summary: Asignar ejecutivo round-robin a un lead
+      operationId: ingest_whatsapp_executives_assign
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutiveAssignIn'
+      responses:
+        '200':
+          description: Ejecutivo asignado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutiveOut'
+
+  /api/v1/ingest/whatsapp/executives/link:
+    post:
+      summary: Vincular un lead a un ejecutivo ya seleccionado
+      operationId: ingest_whatsapp_executives_link
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutiveLinkIn'
+      responses:
+        '200':
+          description: Lead vinculado al ejecutivo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # ─── Leads (Dashboard JWT) ───────────────────────────────────────────────────
+
+  /api/v1/leads:
+    get:
+      summary: Listar leads del tenant autenticado
+      operationId: leads_list
+      tags: [Leads]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: temperature
+          in: query
+          schema:
+            type: string
+            enum: [cold, warm, hot]
+        - name: lifecycle_status
+          in: query
+          schema:
+            type: string
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [inbound, outbound]
+      responses:
+        '200':
+          description: Lista paginada de leads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Plan Free — upgrade requerido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/leads/{lead_id}:
+    get:
+      summary: Obtener lead por ID
+      operationId: leads_get
+      tags: [Leads]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lead_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalle del lead
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Actualizar un lead
+      operationId: leads_patch
+      tags: [Leads]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lead_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadUpdate'
+      responses:
+        '200':
+          description: Lead actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Conversations (Dashboard JWT) ──────────────────────────────────────────
+
+  /api/v1/conversations:
+    get:
+      summary: Listar conversaciones del tenant autenticado
+      operationId: conversations_list
+      tags: [Conversations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, archived]
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [whatsapp, email, web]
+        - name: requires_human
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista paginada de conversaciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/conversations/{conversation_id}:
+    get:
+      summary: Obtener conversación por ID
+      operationId: conversations_get
+      tags: [Conversations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalle de conversación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/conversations/{conversation_id}/messages:
+    get:
+      summary: Listar mensajes de una conversación
+      operationId: conversations_messages_list
+      tags: [Conversations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Lista paginada de mensajes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Analytics (Dashboard JWT) ──────────────────────────────────────────────
+
+  /api/v1/analytics/summary:
+    get:
+      summary: Resumen de métricas del tenant autenticado
+      operationId: analytics_summary
+      tags: [Analytics]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Métricas agregadas del tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─── Agents STUB (Dashboard JWT) ─────────────────────────────────────────────
+
+  /api/v1/agents:
+    get:
+      summary: Listar agentes del tenant (siempre retorna lista vacía)
+      operationId: agents_list
+      tags: [Agents]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de agentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentOut'
+
+  /api/v1/agents/configure:
+    post:
+      summary: Configurar agente del tenant (NOT IMPLEMENTED)
+      operationId: agents_configure
+      tags: [Agents]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentConfigureRequest'
+      responses:
+        '501':
+          description: No implementado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/agents/{agent_id}:
+    patch:
+      summary: Actualizar agente (NOT IMPLEMENTED — siempre 404)
+      operationId: agents_patch
+      tags: [Agents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentUpdateRequest'
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Operational Data (Dashboard JWT) ──────────────────────────────────────
+
+  /api/v1/operational/clientes:
+    get:
+      summary: Listar clientes del tenant
+      operationId: operational_clientes_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Lista paginada de clientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/leads:
+    get:
+      summary: Listar leads (tabla operacional nativa)
+      operationId: operational_leads_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Lista paginada de leads (raw)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/inventario-vehiculos:
+    get:
+      summary: Listar inventario de vehículos del tenant
+      operationId: operational_inventario_vehiculos_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: disponible
+          in: query
+          schema:
+            type: boolean
+            nullable: true
+      responses:
+        '200':
+          description: Inventario de vehículos paginado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/conversaciones:
+    get:
+      summary: Listar conversaciones (tabla operacional nativa)
+      operationId: operational_conversaciones_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Conversaciones paginadas (raw)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/mensajes-dashboard:
+    get:
+      summary: Listar mensajes del dashboard
+      operationId: operational_mensajes_dashboard_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: whatsapp_id
+          in: query
+          schema:
+            type: string
+            nullable: true
+      responses:
+        '200':
+          description: Mensajes del dashboard paginados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/solicitudes-derechos:
+    get:
+      summary: Listar solicitudes de derechos de datos (privacidad)
+      operationId: operational_solicitudes_derechos_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Solicitudes de privacidad paginadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/ejecutivos:
+    get:
+      summary: Listar ejecutivos del tenant
+      operationId: operational_ejecutivos_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Ejecutivos paginados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/log-limpiezas:
+    get:
+      summary: Listar log de limpieza/anonimización de datos
+      operationId: operational_log_limpiezas_list
+      tags: [Operational Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Log de limpiezas paginado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  # ─── Internal — Tenants (X-Internal-Token) ──────────────────────────────────
+
+  /internal/tenants/provision:
+    post:
+      summary: Crear/provisionar schema del tenant en la DB operacional
+      operationId: internal_tenant_provision
+      tags: [Internal Tenants]
+      security:
+        - InternalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantProvisionRequest'
+      responses:
+        '201':
+          description: Schema provisioned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantProvisionResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /internal/tenants/{tenant_id}/runtime:
+    get:
+      summary: Obtener runtime info del tenant
+      operationId: internal_tenant_runtime_get
+      tags: [Internal Tenants]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Runtime del tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantRuntimeResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/tenants/{tenant_id}/suspend:
+    post:
+      summary: Suspender el schema del tenant
+      operationId: internal_tenant_suspend
+      tags: [Internal Tenants]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tenant suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantRuntimeResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/tenants/{tenant_id}/activate:
+    post:
+      summary: Reactivar el schema del tenant
+      operationId: internal_tenant_activate
+      tags: [Internal Tenants]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tenant activado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantRuntimeResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/tenants/{tenant_id}/rotate-ingest-key:
+    post:
+      summary: Rotar la ingest key del tenant
+      operationId: internal_tenant_rotate_ingest_key
+      tags: [Internal Tenants]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Nueva ingest key generada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateIngestKeyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Internal — Context (para Agent Core) ───────────────────────────────────
+
+  /internal/tenants/{tenant_id}/context/documents:
+    post:
+      summary: Crear documento de contexto empresarial (desde Agent Core)
+      description: |
+        Recibe texto extraido y chunks desde Agent Core. Operational resuelve el schema
+        por `tenant_id` logico, valida que `payload.tenant_id` coincida y asigna
+        `version=max(version)+1` por `tenant_id + filename` para permitir re-subidas
+        del mismo archivo sin violar la constraint unica.
+      operationId: internal_context_documents_create
+      tags: [Internal Context]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextDocumentCreate'
+      responses:
+        '201':
+          description: Documento creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextDocumentRead'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      summary: Listar documentos de contexto del tenant
+      operationId: internal_context_documents_list
+      tags: [Internal Context]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de documentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContextDocumentRead'
+
+  /internal/tenants/{tenant_id}/context/status:
+    get:
+      summary: Estado del contexto empresarial del tenant
+      description: |
+        Calcula progreso sobre cinco documentos activos recomendados. En el modo
+        integrado actual `document_actions` devuelve `delete`, `patch`, `replace`
+        y `retry_processing` en `false` porque Operational es el duenio de la
+        persistencia y Agent Core no debe modificar documentos directamente.
+      operationId: internal_context_status
+      tags: [Internal Context]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Estado del contexto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessContextStatusRead'
+
+  /internal/tenants/{tenant_id}/context/retrieve:
+    post:
+      summary: Recuperar chunks de contexto relevantes para RAG
+      description: Recupera solo chunks de documentos `active`; `limit` se normaliza entre 1 y 10.
+      operationId: internal_context_retrieve
+      tags: [Internal Context]
+      security:
+        - InternalToken: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextRetrieveRequest'
+      responses:
+        '200':
+          description: Chunks recuperados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContextSourceRead'
+
+  # ─── Internal — Migrations ────────────────────────────────────────────────────
+
+  /internal/migrations/run-all:
+    post:
+      summary: Ejecutar migraciones en todos los schemas activos
+      operationId: internal_migrations_run_all
+      tags: [Internal Migrations]
+      security:
+        - InternalToken: []
+      responses:
+        '200':
+          description: Resultado de migraciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrateAllResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT RS256 emitido por flowkron-auth-service. Debe incluir claim `tenant_id`,
+        runtime activo y plan distinto de Free para acceder a los endpoints del dashboard.
+    IngestAuth:
+      type: apiKey
+      in: header
+      name: X-Ingest-Key
+      description: |
+        Requiere headers `X-Tenant-Code` y `X-Ingest-Key`. El runtime debe estar activo
+        y el plan debe ser pagado.
+    InternalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: Token compartido entre servicios internos (INTERNAL_TOKEN env var).
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  schemas:
+
+    # ── Health ─────────────────────────────────────────────────────────────────
+
+    HealthResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: ok
+
+    # ── Error ──────────────────────────────────────────────────────────────────
+
+    ApiError:
+      type: object
+      required: [type, title, status, detail, instance, error_code]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        error_code:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+
+    # ── Ingest ─────────────────────────────────────────────────────────────────
+
+    WhatsAppMessageIn:
+      type: object
+      required: [external_message_id, phone, sent_at]
+      properties:
+        external_message_id:
+          type: string
+          maxLength: 220
+        external_thread_id:
+          type: string
+          maxLength: 180
+          nullable: true
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        full_name:
+          type: string
+          default: ''
+        email:
+          type: string
+          default: ''
+        direction:
+          type: string
+          enum: [inbound, outbound]
+          default: inbound
+        body:
+          type: string
+          default: ''
+        channel:
+          type: string
+          enum: [whatsapp]
+          default: whatsapp
+        sent_at:
+          type: string
+          format: date-time
+        raw_payload:
+          type: object
+          default: {}
+
+    LeadClassificationIn:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        direction:
+          type: string
+          enum: [inbound, outbound]
+          nullable: true
+        temperature:
+          type: string
+          enum: [cold, warm, hot]
+          nullable: true
+        lifecycle_status:
+          type: string
+          maxLength: 32
+          nullable: true
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        metadata:
+          type: object
+          default: {}
+
+    HandoffIn:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        external_thread_id:
+          type: string
+          maxLength: 180
+          nullable: true
+        reason:
+          type: string
+          default: ''
+        assigned_to_user_id:
+          type: integer
+          nullable: true
+
+    WhatsAppStatusIn:
+      type: object
+      required: [external_thread_id, status]
+      properties:
+        external_thread_id:
+          type: string
+          minLength: 1
+          maxLength: 180
+        status:
+          type: string
+          minLength: 1
+          maxLength: 32
+
+    ConsentIn:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        accepted:
+          type: boolean
+          default: true
+        channel:
+          type: string
+          default: whatsapp
+          maxLength: 40
+        policy_version:
+          type: string
+          default: v1.0
+          maxLength: 40
+
+    ConsentOut:
+      type: object
+      properties:
+        phone:
+          type: string
+        consentimiento_datos:
+          type: boolean
+          default: false
+        fecha_consentimiento:
+          type: string
+          format: date-time
+          nullable: true
+
+    CustomerOut:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+        rut:
+          type: string
+          nullable: true
+        nombre:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        telefono:
+          type: string
+          nullable: true
+        whatsapp_id:
+          type: string
+          nullable: true
+
+    ClientUpsertIn:
+      type: object
+      required: [rut, nombre, phone]
+      properties:
+        rut:
+          type: string
+          minLength: 1
+          maxLength: 80
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 180
+        email:
+          type: string
+          maxLength: 180
+          nullable: true
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        consentimiento_datos:
+          type: boolean
+          default: true
+
+    ClientUpsertResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+
+    LeadUpsertIn:
+      type: object
+      required: [cliente_id]
+      properties:
+        cliente_id:
+          type: integer
+          minimum: 1
+        score:
+          type: integer
+          minimum: 0
+          maximum: 115
+          default: 0
+        clasificacion:
+          type: string
+          enum: [caliente, tibio, frio]
+          default: frio
+        plazo_compra:
+          type: string
+          enum: [este_dia, esta_semana, este_mes, tres_meses, cotizando, explorando]
+          nullable: true
+        requiere_credito:
+          type: boolean
+          default: false
+        estado:
+          type: string
+          enum: [nuevo, contactado, en_proceso, ganado, perdido]
+          default: nuevo
+        resumen_ia:
+          type: string
+          nullable: true
+        estado_seguimiento:
+          type: string
+          nullable: true
+          default: pendiente
+
+    LeadUpsertResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        cliente_id:
+          type: integer
+
+    PrivacyRequestIn:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        tipo_derecho:
+          type: string
+          enum: [acceso, rectificacion, eliminacion, oposicion, portabilidad]
+          default: eliminacion
+
+    PrivacyRequestResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+
+    DashboardMessagesIn:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 4
+          maxLength: 48
+        user_message:
+          type: string
+          default: ''
+        agent_message:
+          type: string
+          default: ''
+
+    DashboardMessagesResponse:
+      type: object
+      properties:
+        message_ids:
+          type: array
+          items:
+            type: integer
+
+    ExecutiveAssignIn:
+      type: object
+      required: [lead_id]
+      properties:
+        lead_id:
+          type: integer
+          minimum: 1
+
+    ExecutiveLinkIn:
+      type: object
+      required: [lead_id, executive_id]
+      properties:
+        lead_id:
+          type: integer
+          minimum: 1
+        executive_id:
+          type: integer
+          minimum: 1
+
+    ExecutiveOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        whatsapp:
+          type: string
+        leads_asignados:
+          type: integer
+          nullable: true
+
+    IngestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          default: true
+        lead_id:
+          type: integer
+          nullable: true
+        conversation_id:
+          type: integer
+          nullable: true
+        message_id:
+          type: integer
+          nullable: true
+        duplicate:
+          type: boolean
+          default: false
+
+    # ── Leads ──────────────────────────────────────────────────────────────────
+
+    LeadOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        source:
+          type: string
+        direction:
+          type: string
+        temperature:
+          type: string
+          enum: [cold, warm, hot]
+        lifecycle_status:
+          type: string
+        assigned_to_user_id:
+          type: integer
+          nullable: true
+        score:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LeadUpdate:
+      type: object
+      description: |
+        Nota: los campos `direction`, `tags` y `metadata` son aceptados pero
+        no se persisten actualmente en la implementación.
+      properties:
+        full_name:
+          type: string
+          maxLength: 180
+          nullable: true
+        email:
+          type: string
+          maxLength: 180
+          nullable: true
+        direction:
+          type: string
+          maxLength: 24
+          nullable: true
+        temperature:
+          type: string
+          maxLength: 24
+          nullable: true
+        lifecycle_status:
+          type: string
+          maxLength: 32
+          nullable: true
+        assigned_to_user_id:
+          type: integer
+          nullable: true
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+
+    LeadListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeadOut'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # ── Conversations ──────────────────────────────────────────────────────────
+
+    ConversationOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        lead_id:
+          type: integer
+        lead_name:
+          type: string
+        lead_phone:
+          type: string
+        channel:
+          type: string
+        external_thread_id:
+          type: string
+        status:
+          type: string
+          enum: [open, closed, archived]
+        requires_human:
+          type: boolean
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message:
+          type: string
+          nullable: true
+        temperature:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MessageOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversation_id:
+          type: integer
+        external_message_id:
+          type: string
+        sender_type:
+          type: string
+          enum: [lead, agent, human]
+        body:
+          type: string
+        raw_payload:
+          type: object
+        sent_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    ConversationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationOut'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    MessageListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageOut'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # ── Analytics ──────────────────────────────────────────────────────────────
+
+    AnalyticsSummary:
+      type: object
+      properties:
+        total_leads:
+          type: integer
+        cold_leads:
+          type: integer
+        warm_leads:
+          type: integer
+        hot_leads:
+          type: integer
+        open_conversations:
+          type: integer
+        requires_human:
+          type: integer
+        messages_today:
+          type: integer
+        messages_last_7_days:
+          type: integer
+
+    # ── Agents ─────────────────────────────────────────────────────────────────
+
+    AgentOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        prompt_config:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AgentConfigureRequest:
+      type: object
+      required: [name, role]
+      properties:
+        name:
+          type: string
+          maxLength: 160
+        role:
+          type: string
+          maxLength: 160
+        prompt_config:
+          type: object
+          default: {}
+
+    AgentUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 160
+          nullable: true
+        role:
+          type: string
+          maxLength: 160
+          nullable: true
+        status:
+          type: string
+          maxLength: 32
+          nullable: true
+        prompt_config:
+          type: object
+          nullable: true
+
+    # ── Operational Data ───────────────────────────────────────────────────────
+
+    OperationalPaginatedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # ── Internal Tenant ────────────────────────────────────────────────────────
+
+    TenantProvisionRequest:
+      type: object
+      required: [auth_tenant_id, tenant_slug]
+      properties:
+        auth_tenant_id:
+          type: integer
+          minimum: 1
+        tenant_slug:
+          type: string
+          minLength: 2
+          maxLength: 120
+        tenant_name:
+          type: string
+          maxLength: 180
+          nullable: true
+        plan:
+          type: string
+          default: starter
+          maxLength: 32
+        recreate_schema:
+          type: boolean
+          default: false
+
+    TenantRuntimeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        auth_tenant_id:
+          type: integer
+        tenant_slug:
+          type: string
+        schema_name:
+          type: string
+        tenant_code:
+          type: string
+        plan:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, suspended, cancelled, provision_failed]
+        provisioned_at:
+          type: string
+          format: date-time
+          nullable: true
+        suspended_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    TenantProvisionResponse:
+      type: object
+      properties:
+        runtime:
+          $ref: '#/components/schemas/TenantRuntimeResponse'
+        ingest_key:
+          type: string
+          nullable: true
+          description: Solo presente en creación nueva. No se vuelve a exponer.
+        created:
+          type: boolean
+
+    RotateIngestKeyResponse:
+      type: object
+      properties:
+        tenant_code:
+          type: string
+        ingest_key:
+          type: string
+
+    MigrateAllResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        success:
+          type: integer
+        failed:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+
+    # ── Internal Context ───────────────────────────────────────────────────────
+
+    ContextChunkCreate:
+      type: object
+      properties:
+        chunk_index:
+          type: integer
+        content:
+          type: string
+        token_count:
+          type: integer
+        source_ref:
+          type: string
+          default: ''
+
+    ContextDocumentCreate:
+      type: object
+      required: [tenant_id, title, filename, raw_text]
+      properties:
+        tenant_id:
+          type: string
+        title:
+          type: string
+        filename:
+          type: string
+        content_type:
+          type: string
+          default: text/plain
+        status:
+          type: string
+          default: active
+        priority:
+          type: integer
+          default: 100
+        raw_text:
+          type: string
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextChunkCreate'
+          default: []
+
+    ContextDocumentRead:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: string
+        title:
+          type: string
+        filename:
+          type: string
+        content_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+        priority:
+          type: integer
+        version:
+          type: integer
+        source_type:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+
+    BusinessContextStatusRead:
+      type: object
+      properties:
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        agent_status:
+          type: string
+          enum: [not_configured, pending, processing, trained, active, error]
+        last_updated_at:
+          type: string
+          nullable: true
+        active_documents_count:
+          type: integer
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextDocumentRead'
+        document_actions:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    ContextRetrieveRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        limit:
+          type: integer
+          default: 3
+
+    ContextSourceRead:
+      type: object
+      properties:
+        document_id:
+          type: integer
+        chunk_id:
+          type: integer
+        title:
+          type: string
+        score:
+          type: number
+        content:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: No autenticado — token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Acceso prohibido — sin permisos suficientes o plan no válido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyRequests:
+      description: Rate limit de ingesta excedido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'

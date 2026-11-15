@@ -1,0 +1,53 @@
+domain: auth
+errors:
+  - code: AUTH_400_INVALID_CREDENTIALS
+    http_status: 400
+    message: Credenciales inválidas.
+  - code: AUTH_400_INVALID_TOKEN
+    http_status: 400
+    message: Token inválido o expirado.
+  - code: AUTH_400_MFA_CODE_INVALID
+    http_status: 400
+    message: Código MFA inválido.
+  - code: AUTH_400_PASSWORD_WEAK
+    http_status: 400
+    message: La contraseña no cumple los requisitos de seguridad.
+  - code: AUTH_401_TOKEN_EXPIRED
+    http_status: 401
+    message: Token de acceso expirado.
+  - code: AUTH_401_REFRESH_EXPIRED
+    http_status: 401
+    message: Refresh token expirado o revocado.
+  - code: AUTH_403_EMAIL_NOT_VERIFIED
+    http_status: 403
+    message: Email no verificado.
+  - code: AUTH_403_MFA_REQUIRED
+    http_status: 403
+    message: Se requiere código MFA para completar el login.
+  - code: AUTH_403_TENANT_ACCESS_DENIED
+    http_status: 403
+    message: El usuario no tiene acceso al tenant solicitado.
+  - code: AUTH_403_USER_INACTIVE
+    http_status: 403
+    message: La cuenta del usuario está inactiva.
+  - code: AUTH_403_SCOPE_INSUFFICIENT
+    http_status: 403
+    message: El token no tiene el scope requerido para esta operación.
+  - code: AUTH_403_SUPERUSER_REQUIRED
+    http_status: 403
+    message: Esta operación requiere privilegios de superusuario.
+  - code: AUTH_409_EMAIL_ALREADY_EXISTS
+    http_status: 409
+    message: El email ya está registrado.
+  - code: AUTH_429_RATE_LIMITED
+    http_status: 429
+    message: Demasiados intentos. Intenta de nuevo más tarde.
+  - code: AUTH_502_OPERATIONAL_PROVISION_FAILED
+    http_status: 502
+    message: Error al provisionar el tenant en el servicio operacional.
+  - code: AUTH_502_SUBSCRIPTION_ACTIVATION_FAILED
+    http_status: 502
+    message: Error al activar la suscripción del tenant.
+  - code: INVALID_CLIENT
+    http_status: 401
+    message: client_id o client_secret inválidos.

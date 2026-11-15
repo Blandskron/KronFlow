@@ -1,0 +1,532 @@
+components:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Envelope estándar de respuesta HTTP
+  # Todos los servicios envuelven sus respuestas en ApiResponse o ApiError.
+  # ──────────────────────────────────────────────────────────────────────────
+
+  schemas:
+
+    # ── Metadata de respuesta ────────────────────────────────────────────────
+
+    ApiStatus:
+      type: object
+      required: [code, message]
+      description: Estado HTTP legible por humanos incluido en el envelope.
+      properties:
+        code:
+          type: integer
+          minimum: 100
+          maximum: 599
+        message:
+          type: string
+
+    ResponseMeta:
+      type: object
+      required: [api_version, service, request_id, correlation_id, timestamp]
+      description: Metadata de trazabilidad incluida en todas las respuestas.
+      properties:
+        api_version:
+          type: string
+          example: v1
+        service:
+          type: string
+          example: auth-service
+          enum:
+            - auth-service
+            - operational-service
+            - agent-core
+        environment:
+          type: string
+          example: local
+        tenant_id:
+          type: string
+          nullable: true
+        user_id:
+          type: string
+          nullable: true
+        request_id:
+          type: string
+          format: uuid
+        correlation_id:
+          type: string
+          format: uuid
+        trace_id:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+    # ── Error estándar (Problem Details / RFC 7807) ──────────────────────────
+
+    ApiError:
+      type: object
+      required: [type, title, status, detail, instance, error_code, errors, meta]
+      description: |
+        Error estándar basado en RFC 7807 Problem Details.
+        Todos los servicios usan esta estructura para respuestas de error.
+      properties:
+        type:
+          type: string
+          format: uri
+          example: urn:flowkron:problem:auth/invalid-credentials
+        title:
+          type: string
+          example: Credenciales inválidas
+        status:
+          type: integer
+          example: 401
+        detail:
+          type: string
+          example: El email o la contraseña son incorrectos.
+        instance:
+          type: string
+          example: /api/v1/auth/login/
+        error_code:
+          type: string
+          example: AUTH_400_INVALID_CREDENTIALS
+        errors:
+          type: array
+          items:
+            type: object
+            required: [code, message]
+            properties:
+              field:
+                type: string
+                nullable: true
+              code:
+                type: string
+              message:
+                type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    # ── Paginación ────────────────────────────────────────────────────────────
+
+    PaginatedMeta:
+      type: object
+      required: [total, limit, offset]
+      description: Metadata de paginación incluida en todas las listas paginadas.
+      properties:
+        total:
+          type: integer
+          description: Total de items disponibles sin paginación.
+        limit:
+          type: integer
+          description: Máximo de items por página solicitado.
+        offset:
+          type: integer
+          description: Desplazamiento desde el inicio.
+        has_more:
+          type: boolean
+          description: Indica si hay más páginas disponibles.
+
+    # ── Identidad y suscripción (auth-service) ───────────────────────────────
+
+    SubscriptionInfo:
+      type: object
+      description: |
+        Estado de suscripción del tenant. Incluido en LoginResponse, MeResponse
+        y en los claims del JWT.
+      properties:
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        status:
+          type: string
+          enum: [free, trialing, active, past_due, canceled, unpaid]
+        entitlements:
+          type: array
+          description: Lista de funcionalidades habilitadas para este plan.
+          items:
+            type: string
+          example: [whatsapp_ingest, analytics, agent_core]
+        current_period_end:
+          type: string
+          format: date-time
+          nullable: true
+        requires_paid_plan:
+          type: boolean
+          description: True si el recurso solicitado requiere un plan pagado.
+
+    OperationalRuntimeInfo:
+      type: object
+      description: |
+        Estado del schema operacional del tenant en PostgreSQL.
+        Incluido en TenantRead para mostrar al dashboard si el runtime está listo.
+      properties:
+        schema_name:
+          type: string
+          description: Nombre del schema PostgreSQL aislado del tenant.
+        tenant_code:
+          type: string
+          description: Código único del tenant usado en ingest (X-Tenant-Code).
+        plan:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, suspended, cancelled, provision_failed]
+        provisioned_at:
+          type: string
+          format: date-time
+          nullable: true
+        suspended_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: string
+          nullable: true
+
+    UserProfileRead:
+      type: object
+      description: Perfil extendido del usuario autenticado.
+      properties:
+        display_name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        timezone:
+          type: string
+          example: America/Santiago
+          nullable: true
+        locale:
+          type: string
+          example: es-CL
+          nullable: true
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        mfa_enabled:
+          type: boolean
+        mfa_confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    UserRead:
+      type: object
+      description: Representación pública del usuario autenticado.
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        profile:
+          $ref: "#/components/schemas/UserProfileRead"
+
+    TenantRead:
+      type: object
+      description: Representación pública del tenant del usuario autenticado.
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        legal_name:
+          type: string
+          nullable: true
+        tax_id:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+        country:
+          type: string
+          maxLength: 2
+          nullable: true
+        status:
+          type: string
+          enum: [active, suspended, archived]
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        subscription_status:
+          type: string
+        subscription:
+          $ref: "#/components/schemas/SubscriptionInfo"
+          nullable: true
+        operational_runtime:
+          $ref: "#/components/schemas/OperationalRuntimeInfo"
+          nullable: true
+
+    TenantMembershipRead:
+      type: object
+      description: Membresía de un usuario en un tenant, incluyendo sus roles.
+      properties:
+        id:
+          type: integer
+        tenant:
+          type: integer
+        user:
+          type: integer
+        user_email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        role_codes:
+          type: array
+          items:
+            type: string
+          example: [OWNER, ADMIN]
+        status:
+          type: string
+          enum: [invited, active, suspended, revoked]
+        joined_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    SessionRead:
+      type: object
+      description: Sesión JWT activa del usuario.
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [active, revoked, expired, compromised]
+        expires_at:
+          type: string
+          format: date-time
+
+    # ── JWT Claims (documentación de referencia) ──────────────────────────────
+
+    JWTAccessClaims:
+      type: object
+      description: |
+        Claims incluidos en el JWT de acceso (RS256) emitido por auth-service.
+        Estos claims son verificados por operational-service y agent-core.
+      properties:
+        sub:
+          type: string
+          description: User ID (integer como string).
+        tenant_id:
+          type: integer
+          description: ID del tenant activo.
+        membership_id:
+          type: integer
+        session_id:
+          type: integer
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        subscription:
+          $ref: "#/components/schemas/SubscriptionInfo"
+        amr:
+          type: string
+          enum: [pwd, mfa]
+          description: Authentication Method Reference.
+        iss:
+          type: string
+          example: flowkron-auth-service
+        aud:
+          type: string
+          example: flowkron
+        exp:
+          type: integer
+          description: Unix timestamp de expiración.
+        iat:
+          type: integer
+          description: Unix timestamp de emisión.
+
+    # ── Tipos utilitarios ─────────────────────────────────────────────────────
+
+    UUIDString:
+      type: string
+      format: uuid
+      description: UUID v4 en formato string.
+
+    DateTimeString:
+      type: string
+      format: date-time
+      description: Fecha y hora en formato ISO 8601 UTC.
+
+    EmptyObject:
+      type: object
+      description: Respuesta vacía de éxito.
+      properties:
+        success:
+          type: boolean
+          example: true
+
+  # ── Parámetros reutilizables ─────────────────────────────────────────────────
+
+  parameters:
+    LimitQuery:
+      name: limit
+      in: query
+      description: Máximo de items a retornar.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+    OffsetQuery:
+      name: offset
+      in: query
+      description: Número de items a omitir desde el inicio.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    TenantIdHeader:
+      name: X-Tenant-ID
+      in: header
+      description: |
+        Selecciona el tenant activo. Debe coincidir con el claim `tenant_id` del JWT.
+        Alternativa al claim JWT cuando el mismo usuario tiene membresía en múltiples tenants.
+      schema:
+        type: string
+
+    CorrelationIdHeader:
+      name: X-Correlation-ID
+      in: header
+      description: ID de correlación para trazabilidad entre servicios.
+      schema:
+        type: string
+        format: uuid
+
+    CsrfTokenHeader:
+      name: X-CSRFToken
+      in: header
+      required: true
+      description: Token CSRF requerido en endpoints públicos de contacto (auth-service Django).
+      schema:
+        type: string
+
+  # ── Esquemas de seguridad ────────────────────────────────────────────────────
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT RS256 emitido por flowkron-auth-service.
+        Contiene claims: tenant_id, roles, permissions, subscription, amr.
+
+    IngestAuth:
+      type: apiKey
+      in: header
+      name: X-Ingest-Key
+      description: |
+        Credencial de ingesta para operational-service.
+        Requiere también el header X-Tenant-Code con el código del tenant.
+
+    InternalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: |
+        Token compartido entre contenedores internos (auth ↔ operational ↔ agent-core).
+        Nunca expuesto a clientes externos.
+
+    AdminToken:
+      type: apiKey
+      in: header
+      name: X-Admin-Token
+      description: Token para endpoints de administración interna de auth-service.
+
+  # ── Respuestas reutilizables ─────────────────────────────────────────────────
+
+  responses:
+    BadRequest:
+      description: Solicitud inválida — error de validación o input incorrecto.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Unauthorized:
+      description: No autenticado — token ausente, expirado o inválido.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Forbidden:
+      description: Prohibido — sin permisos suficientes, plan inadecuado o runtime inactivo.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Conflict:
+      description: Conflicto — el recurso ya existe (ej. email duplicado).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    UnprocessableEntity:
+      description: Entidad no procesable — error de validación semántica.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    TooManyRequests:
+      description: Demasiadas solicitudes — rate limit excedido.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    PaymentRequired:
+      description: Plan Free — se requiere upgrade para acceder a este recurso.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    NoContent:
+      description: Operación exitosa sin contenido de respuesta.

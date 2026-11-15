@@ -1,0 +1,80 @@
+
+    <main class="dashboard">
+      <aside class="sidebar card">
+        <a class="app-logo" [class.has-image]="tenantLogo()" routerLink="/app/home" [attr.aria-label]="brandName()">
+          @if (tenantLogo(); as logo) {
+            <img [src]="logo" alt="">
+          }
+        </a>
+        <nav>
+          @for (item of navItems; track item.path) {
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: false }"
+              [attr.aria-label]="item.label"
+            >
+              @switch (item.icon) {
+                @case ('home') {
+                  <span class="nav-icon"><svg lucideHome size="20"></svg></span>
+                }
+                @case ('message-square') {
+                  <span class="nav-icon"><svg lucideMessageSquare size="20"></svg></span>
+                }
+                @case ('bot') {
+                  <span class="nav-icon"><svg lucideBot size="20"></svg></span>
+                }
+                @case ('workflow') {
+                  <span class="nav-icon"><svg lucideWorkflow size="20"></svg></span>
+                }
+                @case ('book-open') {
+                  <span class="nav-icon"><svg lucideBookOpen size="20"></svg></span>
+                }
+                @case ('bar-chart-3') {
+                  <span class="nav-icon"><svg lucideBarChart3 size="20"></svg></span>
+                }
+              }
+              <small>{{ item.label }}</small>
+            </a>
+          }
+        </nav>
+        <flowkron-theme-toggle />
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar card">
+          <div class="brand">
+            <span class="app-logo small" [class.has-image]="tenantLogo()">
+              @if (tenantLogo(); as logo) {
+                <img [src]="logo" alt="">
+              }
+            </span>
+            <span><strong>{{ brandName() }}</strong><small>Flowkron by BLANDSKRON</small></span>
+          </div>
+          <div class="actions">
+            @if (requiresPlan()) {
+              <a class="btn btn-secondary" routerLink="/app/pricing">Contratar tu plan</a>
+            }
+            <flowkron-theme-toggle class="mobile-theme" />
+            <a class="notify" routerLink="/app/notifications" aria-label="Notificaciones">
+              <svg lucideBell size="20"></svg>
+              @if (notificationCount() > 0) {
+                <span>{{ notificationCount() }}</span>
+              }
+            </a>
+            <button class="user" type="button" aria-label="Mi perfil" (click)="openProfile()">
+              <svg lucideUser size="18"></svg>
+            </button>
+            <button class="btn btn-ghost logout" type="button" (click)="logout()">
+              <svg lucideLogOut size="18"></svg>
+              Salir
+            </button>
+          </div>
+        </header>
+
+        <section class="content">
+          <router-outlet />
+        </section>
+      </section>
+    </main>
+  

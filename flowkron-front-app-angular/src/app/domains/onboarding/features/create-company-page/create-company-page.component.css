@@ -1,0 +1,40 @@
+      form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status {
+        width: fit-content;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: var(--primary-50);
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 8px 0 0;
+        font-size: 34px;
+      }
+
+      label {
+        font-weight: 700;
+      }
+
+      .country {
+        text-transform: uppercase;
+        max-width: 96px;
+      }
+
+      .form-error {
+        margin: 0;
+        color: var(--error-500);
+        font-weight: 700;
+      }

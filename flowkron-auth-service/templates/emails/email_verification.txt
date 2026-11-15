@@ -1,0 +1,8 @@
+Hola,
+
+Confirma tu correo para activar el acceso a {{ app_name }}.
+
+Confirma tu correo desde este enlace:
+{{ confirm_url }}
+
+Si no esperabas este correo, puedes ignorarlo.

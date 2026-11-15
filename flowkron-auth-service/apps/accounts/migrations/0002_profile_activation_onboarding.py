@@ -1,0 +1,26 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("accounts", "0001_initial"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="userprofile",
+            name="account_activated_at",
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="userprofile",
+            name="initial_password_set_at",
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="userprofile",
+            name="onboarding_completed_at",
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+    ]

@@ -1,0 +1,29 @@
+<section class="page-section">
+  <header class="heading">
+    <h1>Hola, {{ displayName() }}</h1>
+    <p class="muted">{{ tenantName() }}</p>
+  </header>
+  <div class="overview">
+    <article class="card workspace">
+      @if (requiresPlan()) {
+        <div class="icon"><svg lucideBot size="26" aria-hidden="true"></svg></div>
+        <h2>Espacio operacional pendiente</h2>
+        <p class="muted">Consulta el estado de tu plan para habilitar conversaciones y métricas.</p>
+        <a class="btn btn-primary" routerLink="/app/pricing">Ver acceso</a>
+      } @else {
+        <div class="icon ready"><svg lucideCheckCircle2 size="26" aria-hidden="true"></svg></div>
+        <h2>Espacio operacional activo</h2>
+        <p class="muted">Abre la bandeja para revisar los mensajes y su historial.</p>
+        <a class="btn btn-primary" routerLink="/app/conversations">Abrir bandeja</a>
+      }
+    </article>
+    <a class="card shortcut" routerLink="/app/business-context">
+      <strong>Contexto empresarial</strong>
+      <span class="muted">Configura documentos y reglas para el agente.</span>
+    </a>
+    <a class="card shortcut" routerLink="/app/settings">
+      <strong>Configuración</strong>
+      <span class="muted">Consulta la configuración y el acceso de tu equipo.</span>
+    </a>
+  </div>
+</section>

@@ -1,0 +1,41 @@
+
+      .page-section {
+        padding: 32px;
+      }
+
+      h1 {
+        font-size: 34px;
+        margin: 0 0 8px;
+      }
+
+      .list {
+        margin-top: 24px;
+        overflow: hidden;
+      }
+
+      article {
+        display: grid;
+        grid-template-columns: 44px 1fr auto;
+        gap: 14px;
+        padding: 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      article:last-child {
+        border-bottom: 0;
+      }
+
+      article > span {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--primary-50);
+        color: var(--primary);
+      }
+
+      p {
+        margin: 4px 0 0;
+      }
+    

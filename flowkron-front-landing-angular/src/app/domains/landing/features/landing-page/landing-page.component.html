@@ -1,0 +1,144 @@
+<main class="page">
+  @if (salesWhatsAppNumber) {
+    <button class="whatsapp" type="button" aria-label="Contactar por WhatsApp" (click)="openWhatsApp()">
+      <svg lucideMessageSquare size="26"></svg>
+    </button>
+  }
+
+  <header class="site-header">
+    <div class="container header-shell">
+      <a class="brand" href="/">
+        <span class="app-logo" aria-hidden="true"></span>
+        <span><strong>Flowkron</strong><small>by BLANDSKRON</small></span>
+      </a>
+      <nav aria-label="Navegación principal">
+        <a href="#platform">Plataforma</a>
+        <a href="#contact">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <flowkron-theme-toggle />
+        <a class="btn btn-secondary" [href]="loginUrl">Iniciar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-inner">
+      <div>
+        <h1>CRM inteligente para WhatsApp</h1>
+        <p class="hero-copy">Consulta conversaciones y oportunidades en un solo lugar. Define el contexto de tu empresa y prueba cómo respondería un agente de IA.</p>
+        <a class="btn btn-primary" href="#platform">
+          Explorar funciones
+          <svg lucideArrowRight size="18" aria-hidden="true"></svg>
+        </a>
+      </div>
+      <div class="card inbox-preview" aria-label="Conversación de ejemplo">
+        <div class="preview-heading">
+          <span class="preview-avatar"><svg lucideMessageSquare size="20" aria-hidden="true"></svg></span>
+          <div><strong>Bandeja de conversaciones</strong><small>Ejemplo</small></div>
+        </div>
+        <p class="preview-bubble">Hola, ¿dónde puedo revisar las opciones disponibles?</p>
+        <p class="preview-bubble reply">Puedo ayudarte a encontrarlas. ¿Qué estás buscando?</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="platform" class="section container">
+    <h2>Tu espacio de trabajo</h2>
+    <div class="feature-grid">
+      <article class="card feature featured">
+        <h3>Conversaciones</h3>
+        <p>Consulta el historial y el estado de los mensajes que llegan a tu instancia. La conexión con WhatsApp requiere un adaptador externo.</p>
+      </article>
+      <article class="card feature">
+        <h3>Contexto empresarial</h3>
+        <p>Configura plantillas, documentos y reglas. Prueba el comportamiento del agente con el simulador.</p>
+      </article>
+      <article class="card feature">
+        <h3>Seguimiento comercial</h3>
+        <p>Revisa oportunidades y métricas de actividad por empresa.</p>
+      </article>
+      <article class="card feature">
+        <h3>Equipo y permisos</h3>
+        <p>Invita a tu equipo y administra su acceso a la instancia.</p>
+      </article>
+    </div>
+  </section>
+
+      <section id="contact" class="section contact">
+        <div class="container grid grid-2">
+          <div>
+            <p class="eyebrow">Contacto</p>
+            <h2>Hablemos de Flowkron</h2>
+            <p class="muted">Escríbenos si tienes preguntas sobre Flowkron o sobre cómo configurar tu instancia.</p>
+
+          </div>
+
+          <form class="card contact-form" [formGroup]="contactForm" (ngSubmit)="submitContact()" novalidate>
+            <input class="field" formControlName="name" aria-label="Nombre completo" maxlength="120" placeholder="Nombre completo *" [attr.aria-invalid]="isInvalid('name')">
+            @if (isInvalid('name')) {
+              <small class="field-error">Ingresa un nombre valido sin HTML ni secuencias de control.</small>
+            }
+
+            <input class="field" formControlName="email" aria-label="Correo empresarial" type="email" maxlength="254" placeholder="Email empresarial *" [attr.aria-invalid]="isInvalid('email')">
+            @if (isInvalid('email')) {
+              <small class="field-error">Ingresa un email empresarial valido.</small>
+            }
+
+            <input class="field" formControlName="company" aria-label="Empresa" maxlength="120" placeholder="Empresa" [attr.aria-invalid]="isInvalid('company')">
+            @if (isInvalid('company')) {
+              <small class="field-error">La empresa no puede incluir HTML ni secuencias de control.</small>
+            }
+
+            <input class="field" formControlName="phone" aria-label="Teléfono" maxlength="32" placeholder="Teléfono" [attr.aria-invalid]="isInvalid('phone')">
+            @if (isInvalid('phone')) {
+              <small class="field-error">El teléfono solo puede contener numeros, espacios y simbolos telefonicos.</small>
+            }
+
+            <textarea class="field" formControlName="message" aria-label="Mensaje" maxlength="2000" rows="4" placeholder="Cuentanos cómo podemos ayudarte..." [attr.aria-invalid]="isInvalid('message')"></textarea>
+            @if (isInvalid('message')) {
+              <small class="field-error">Escribe un mensaje válido sin HTML ni secuencias de control.</small>
+            }
+
+            <label class="terms">
+              <input type="checkbox" formControlName="acceptTerms">
+              Acepto los
+              <button type="button" (click)="showTerms = true">Términos</button>
+              y la
+              <a style="color: var(--primary)" routerLink="/politica-privacidad">Privacidad</a>
+            </label>
+            @if (isInvalid('acceptTerms')) {
+              <small class="field-error">Debes aceptar los términos y la política de privacidad.</small>
+            }
+
+            @if (contactStatus === 'success') {
+              <p class="form-status success" role="status">Mensaje enviado. Te responderemos pronto.</p>
+            }
+            @if (contactStatus === 'error') {
+              <p class="form-status error" role="alert">No pudimos enviar el mensaje. Revisa los datos e intenta nuevamente.</p>
+            }
+
+            <button class="btn btn-primary" type="submit" [disabled]="contactForm.invalid || submitting">
+              {{ submitting ? 'Enviando...' : 'Enviar mensaje' }}
+            </button>
+          </form>
+        </div>
+      </section>
+
+
+  <footer>
+    <div class="container footer-row">
+      <span><strong>Flowkron</strong> by BLANDSKRON</span>
+      <span>Proyecto independiente, sin afiliación ni respaldo de Meta o WhatsApp.</span>
+      <a routerLink="/politica-privacidad">Privacidad</a>
+      <button type="button" (click)="showTerms = true">Términos</button>
+    </div>
+  </footer>
+
+  <flowkron-legal-modal
+    title="Términos de uso"
+    body="Consulta las condiciones de uso con el operador de tu instancia de Flowkron antes de enviar datos."
+    [open]="showTerms"
+    (close)="showTerms = false"
+  />
+</main>

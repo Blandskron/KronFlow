@@ -1,0 +1,387 @@
+
+      .workflow-page {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: var(--background);
+      }
+
+      .workflow-controls {
+        margin: 24px 24px 0;
+        overflow: hidden;
+      }
+
+      .controls-top,
+      .filters-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .controls-top {
+        padding: 16px 22px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .left-controls,
+      .view-toggle,
+      .status-tabs,
+      .filter-group,
+      .date-filter,
+      .workspace-select,
+      .channel-icon,
+      .time {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .left-controls {
+        gap: 12px;
+      }
+
+      .workspace-select,
+      .date-filter {
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--accent);
+        color: var(--foreground);
+        padding: 11px 16px;
+        font-weight: 700;
+      }
+
+      .view-toggle,
+      .filter-group {
+        border-radius: 14px;
+        background: var(--muted);
+        padding: 4px;
+      }
+
+      .view-toggle button,
+      .filter-group button,
+      .status-tabs button {
+        border: 0;
+        background: transparent;
+        color: var(--muted-foreground);
+        font-weight: 700;
+      }
+
+      .view-toggle button {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+      }
+
+      .view-toggle button.active,
+      .filter-group button.active {
+        color: var(--foreground);
+        background: var(--card);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .status-tabs {
+        gap: 20px;
+      }
+
+      .status-tabs button {
+        position: relative;
+        padding: 10px 0;
+        font-size: 16px;
+      }
+
+      .status-tabs button.active {
+        color: var(--foreground);
+      }
+
+      .status-tabs button.active::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -17px;
+        height: 2px;
+        background: var(--primary);
+      }
+
+      .filters-row {
+        padding: 16px 22px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+
+      .search-box {
+        flex: 1 1 420px;
+        min-width: 260px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--input-background);
+        color: var(--muted-foreground);
+        display: grid;
+        grid-template-columns: 1fr 22px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+      }
+
+      .search-box input {
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--foreground);
+        padding: 13px 0;
+        font: inherit;
+      }
+
+      .filter-group {
+        gap: 2px;
+        flex: 0 1 auto;
+      }
+
+      .filter-group button {
+        min-height: 34px;
+        border-radius: 10px;
+        padding: 0 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(260px, 1fr));
+        gap: 18px;
+        padding: 24px;
+        overflow-x: auto;
+      }
+
+      .board-state {
+        margin: 18px 24px 0;
+        padding: 18px 22px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--accent);
+      }
+
+      .upgrade-empty {
+        display: grid;
+        gap: 10px;
+        margin: 18px 24px 0;
+        padding: 22px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary-50), var(--info-50));
+      }
+
+      :host-context(.dark) .upgrade-empty {
+        background: rgba(126, 65, 188, 0.12);
+      }
+
+      .upgrade-empty strong {
+        font-size: 18px;
+      }
+
+      .upgrade-empty p,
+      .empty-column {
+        margin: 0;
+      }
+
+      .upgrade-empty .btn {
+        width: max-content;
+      }
+
+      .empty-column {
+        padding: 16px 4px;
+      }
+
+      .column {
+        min-height: 620px;
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid rgba(126, 65, 188, 0.18);
+        background: linear-gradient(135deg, var(--primary-50), var(--info-50));
+      }
+
+      :host-context(.dark) .column {
+        border-color: rgba(126, 65, 188, 0.28);
+        background: linear-gradient(135deg, rgba(126, 65, 188, 0.16), rgba(59, 130, 246, 0.1));
+      }
+
+      .column.warning {
+        background: linear-gradient(135deg, var(--warning-50), var(--primary-50));
+      }
+
+      :host-context(.dark) .column.warning {
+        border-color: rgba(245, 158, 11, 0.34);
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(126, 65, 188, 0.1));
+      }
+
+      .column header {
+        display: grid;
+        grid-template-columns: 34px 1fr 40px;
+        gap: 10px;
+        align-items: start;
+        margin-bottom: 14px;
+      }
+
+      .column header > span {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
+        background: var(--primary);
+      }
+
+      .column.warning header > span {
+        background: var(--warning);
+      }
+
+      h2 {
+        font-size: 15px;
+        margin: 0 0 4px;
+      }
+
+      .column small {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .tickets {
+        display: grid;
+        gap: 12px;
+      }
+
+      .ticket {
+        padding: 14px;
+        box-shadow: none;
+      }
+
+      :host-context(.dark) .ticket {
+        background: #1a1a1a;
+        border-color: #2d2d2d;
+      }
+
+      .ticket-head {
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .ticket-head span {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--primary), var(--primary-600));
+        color: white;
+        font-size: 12px;
+      }
+
+      .ticket p {
+        color: var(--muted-foreground);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .ticket-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .channel-icon,
+      .time {
+        gap: 4px;
+      }
+
+      .date-filter {
+        flex: 0 0 auto;
+        min-height: 42px;
+      }
+
+      @media (min-width: 1440px) {
+        .filters-row {
+          flex-wrap: nowrap;
+        }
+      }
+
+      @media (max-width: 1120px) {
+        .controls-top {
+          align-items: stretch;
+          flex-wrap: wrap;
+        }
+
+        .status-tabs {
+          margin-left: auto;
+        }
+
+        .filter-group {
+          max-width: 100%;
+          overflow-x: auto;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .workflow-page {
+          padding-top: 18px;
+        }
+
+        .workflow-controls {
+          margin-inline: 16px;
+          border-radius: 22px;
+        }
+
+        .upgrade-empty {
+          margin-inline: 16px;
+        }
+
+        .controls-top,
+        .filters-row,
+        .left-controls {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .status-tabs {
+          margin-left: 0;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .status-tabs::-webkit-scrollbar,
+        .filter-group::-webkit-scrollbar {
+          display: none;
+        }
+
+        .search-box {
+          flex-basis: auto;
+          width: 100%;
+        }
+
+        .board {
+          display: flex;
+          gap: 14px;
+          padding: 18px 16px 0;
+          overflow-x: auto;
+          scroll-snap-type: x proximity;
+          scrollbar-width: none;
+        }
+
+        .board::-webkit-scrollbar {
+          display: none;
+        }
+
+        .column {
+          flex: 0 0 min(82vw, 360px);
+          min-height: calc(100dvh - 330px);
+          scroll-snap-align: start;
+        }
+      }
+    

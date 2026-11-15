@@ -1,0 +1,12 @@
+[project]
+name = "flowkron-agent-core"
+version = "0.1.0"
+description = "Omnichannel conversational agent core for Flowkron."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["app/tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["app*"]

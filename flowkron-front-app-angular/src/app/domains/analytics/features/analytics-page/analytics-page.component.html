@@ -1,0 +1,104 @@
+
+    <section class="page-section">
+      <div class="heading">
+        <h1>Analytics Comercial</h1>
+        <p class="muted">Metricas reales sincronizadas desde el schema operacional de tu tenant.</p>
+      </div>
+
+      @if (requiresPlan()) {
+        <article class="upgrade-empty">
+          <strong>Activa un plan para ver analytics reales</strong>
+          <p class="muted">Aqui apareceran tus leads, conversaciones, tiempos de respuesta y conversiones cuando tu plan este activo.</p>
+          <a class="btn btn-primary" routerLink="/app/pricing">Contratar plan</a>
+        </article>
+      }
+
+      @if (loadError()) {
+        <article class="card empty-state">
+          <strong>No pudimos cargar analytics.</strong>
+          <p class="muted">{{ loadError() }}</p>
+        </article>
+      }
+
+      <div class="segments">
+        <button class="active" type="button">Ultimos 7 dias</button>
+        <button type="button">Ultimos 30 dias</button>
+        <button type="button">Este mes</button>
+        <button type="button"><svg lucideCalendar size="16"></svg>Personalizado</button>
+      </div>
+
+      <div class="grid grid-3">
+        @for (metric of metrics; track metric.label) {
+          <article class="card metric">
+            <span>
+              @switch (metric.icon) {
+                @case ('message-square') {
+                  <svg lucideMessageSquare size="24"></svg>
+                }
+                @case ('check-circle-2') {
+                  <svg lucideCheckCircle2 size="24"></svg>
+                }
+                @case ('x-circle') {
+                  <svg lucideXCircle size="24"></svg>
+                }
+                @case ('dollar-sign') {
+                  <svg lucideDollarSign size="24"></svg>
+                }
+                @case ('clock') {
+                  <svg lucideClock size="24"></svg>
+                }
+                @case ('users') {
+                  <svg lucideUsers size="24"></svg>
+                }
+              }
+            </span>
+            <em [class.down]="metric.trend === 'down'">{{ metric.change }}</em>
+            <small class="muted">{{ metric.label }}</small>
+            <strong>{{ metric.value }}</strong>
+          </article>
+        }
+      </div>
+
+      <div class="grid grid-2 lower">
+        <article class="card panel">
+          <h2>Rendimiento por Canal</h2>
+          @if (channelStats.length === 0) {
+            <p class="muted empty-panel">Sin datos por canal todavia.</p>
+          }
+          @for (channel of channelStats; track channel.channel) {
+            <div class="bar-row">
+              <div>
+                <strong>{{ channel.channel }}</strong>
+                <small class="muted">{{ channel.conversations }} conversaciones</small>
+              </div>
+              <div class="bar"><span [style.width]="channel.conversion"></span></div>
+              <b>{{ channel.conversion }}</b>
+            </div>
+          }
+        </article>
+
+        <article class="card panel">
+          <h2>Actividad Reciente</h2>
+          @if (recentActivity.length === 0) {
+            <p class="muted empty-panel">Sin actividad reciente.</p>
+          }
+          @for (activity of recentActivity; track activity.event) {
+            <div class="activity">
+              <i [class]="activity.type"></i>
+              <div>
+                <p>{{ activity.event }}</p>
+                <small class="muted">{{ activity.user }} · {{ activity.time }}</small>
+              </div>
+            </div>
+          }
+        </article>
+      </div>
+
+      @if (!requiresPlan() && hasLoaded() && metrics.length === 0) {
+        <article class="card empty-state">
+          <strong>No hay analytics registrados todavia.</strong>
+          <p class="muted">Cuando operational reciba conversaciones, aqui apareceran metricas reales del schema del tenant.</p>
+        </article>
+      }
+    </section>
+  

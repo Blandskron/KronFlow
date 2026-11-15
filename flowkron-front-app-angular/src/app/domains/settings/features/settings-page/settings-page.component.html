@@ -1,0 +1,262 @@
+
+    <section class="page-section">
+      <div class="heading">
+        <div>
+          <h1>Configuracion</h1>
+          <p class="muted">Empresa, perfil y equipo del tenant activo.</p>
+        </div>
+        @if (auth.currentTenant(); as tenant) {
+          <span class="badge badge-primary">{{ tenant.plan }}</span>
+        }
+      </div>
+
+      <div class="tabs">
+        @for (item of tabs; track item.id) {
+          <button type="button" [class.active]="activeTab() === item.id" (click)="setTab(item.id)">
+            {{ item.label }}
+          </button>
+        }
+      </div>
+
+      @if (activeTab() === 'company') {
+        <article class="card panel">
+          <div class="panel-title">
+            <div>
+              <h2>Empresa</h2>
+              <p class="muted">Datos visibles para el workspace y la marca interna.</p>
+            </div>
+            <button class="btn btn-primary" type="button" [disabled]="savingCompany() || !canManageTenant()" (click)="saveCompany()">
+              <svg lucideSave size="18"></svg>
+              {{ savingCompany() ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </div>
+
+          @if (companyAlert(); as alert) {
+            <p class="notice" [class.error]="alert.kind === 'error'">{{ alert.text }}</p>
+          }
+
+          @if (auth.currentTenant(); as tenant) {
+            <form class="settings-grid" [formGroup]="companyForm">
+              <div class="logo-preview">
+                @if (companyForm.controls.logo_url.value) {
+                  <img [src]="companyForm.controls.logo_url.value" alt="Logo de empresa">
+                } @else {
+                  <span>{{ tenantInitial() }}</span>
+                }
+              </div>
+              <div class="upload-block">
+                <label class="upload-button">
+                  <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadCompanyLogo($event)">
+                  <svg lucideUpload size="18"></svg>
+                  {{ uploadingLogo() ? 'Subiendo...' : 'Subir logo' }}
+                </label>
+                <small class="muted">JPG, PNG o WebP hasta 3 MB.</small>
+              </div>
+              <div class="field-grid">
+                <label>
+                  Nombre comercial
+                  <input class="field" type="text" formControlName="name">
+                </label>
+                <label>
+                  Razon social
+                  <input class="field" type="text" formControlName="legal_name">
+                </label>
+                <label>
+                  RUT
+                  <input class="field" type="text" formControlName="tax_id">
+                </label>
+                <label>
+                  Pais
+                  <input class="field" type="text" formControlName="country" maxlength="2">
+                </label>
+              </div>
+            </form>
+            <dl class="meta">
+              <dt>Estado</dt><dd>{{ tenant.status }}</dd>
+              <dt>Suscripcion</dt><dd>{{ tenant.subscription_status }}</dd>
+              <dt>Tenant</dt><dd>{{ tenant.slug }}</dd>
+            </dl>
+          } @else if (workspace.company(); as company) {
+            <dl>
+              <dt>Nombre</dt><dd>{{ company.companyName }}</dd>
+              <dt>Industria</dt><dd>{{ company.industry }}</dd>
+              <dt>Usuarios</dt><dd>{{ company.teamSize }}</dd>
+            </dl>
+          } @else {
+            <p class="muted">Aun no hay datos de empresa configurados.</p>
+          }
+        </article>
+      }
+
+      @if (activeTab() === 'profile') {
+        <article class="card panel">
+          <div class="panel-title">
+            <div>
+              <h2>Mi Perfil</h2>
+              <p class="muted">Tu identidad dentro del workspace.</p>
+            </div>
+            <button class="btn btn-primary" type="button" [disabled]="savingProfile()" (click)="saveProfile()">
+              <svg lucideSave size="18"></svg>
+              {{ savingProfile() ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </div>
+
+          @if (profileAlert(); as alert) {
+            <p class="notice" [class.error]="alert.kind === 'error'">{{ alert.text }}</p>
+          }
+
+          @if (auth.currentUser(); as user) {
+            <form class="settings-grid" [formGroup]="profileForm">
+              <div class="logo-preview avatar">
+                @if (profileForm.controls.avatar_url.value) {
+                  <img [src]="profileForm.controls.avatar_url.value" alt="Foto de perfil">
+                } @else {
+                  <span>{{ profileInitial() }}</span>
+                }
+              </div>
+              <div class="upload-block">
+                <label class="upload-button">
+                  <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadAvatar($event)">
+                  <svg lucideUpload size="18"></svg>
+                  {{ uploadingAvatar() ? 'Subiendo...' : 'Subir foto' }}
+                </label>
+                <small class="muted">JPG, PNG o WebP hasta 3 MB.</small>
+              </div>
+              <div class="field-grid">
+                <label>
+                  Nombre visible
+                  <input class="field" type="text" formControlName="display_name">
+                </label>
+                <label>
+                  Correo
+                  <input class="field" type="email" [value]="user.email" disabled>
+                </label>
+                <label>
+                  Nombre
+                  <input class="field" type="text" formControlName="first_name">
+                </label>
+                <label>
+                  Apellido
+                  <input class="field" type="text" formControlName="last_name">
+                </label>
+                <label>
+                  Telefono
+                  <input class="field" type="tel" formControlName="phone">
+                </label>
+                <label>
+                  Zona horaria
+                  <input class="field" type="text" formControlName="timezone">
+                </label>
+                <label>
+                  Locale
+                  <input class="field" type="text" formControlName="locale">
+                </label>
+              </div>
+            </form>
+            <dl class="meta">
+              <dt>Email verificado</dt><dd>{{ user.profile.email_verified_at ? 'Si' : 'No' }}</dd>
+              <dt>MFA</dt><dd>{{ user.profile.mfa_enabled ? 'Activo' : 'Inactivo' }}</dd>
+            </dl>
+          } @else {
+            <p class="muted">No hay perfil cargado.</p>
+          }
+        </article>
+      }
+
+      @if (activeTab() === 'team') {
+        <article class="card panel">
+          <div class="panel-title">
+            <div>
+              <h2>Equipo</h2>
+              <p class="muted">Invitaciones, roles y accesos del tenant.</p>
+            </div>
+            <button class="btn btn-secondary" type="button" [disabled]="teamLoading() || !canManageMembers()" (click)="loadTeam()">
+              <svg lucideRefreshCw size="18"></svg>
+              Actualizar
+            </button>
+          </div>
+
+          @if (teamAlert(); as alert) {
+            <p class="notice" [class.error]="alert.kind === 'error'">{{ alert.text }}</p>
+          }
+
+          @if (!canManageMembers()) {
+            <p class="muted">Tu rol actual no permite administrar miembros del equipo.</p>
+          } @else {
+            <form class="invite-row" [formGroup]="inviteForm" (ngSubmit)="inviteMember()">
+              <input class="field" type="email" formControlName="email" placeholder="correo@example.com">
+              <select class="field" formControlName="roleCode">
+                @for (role of roleOptions; track role.code) {
+                  <option [value]="role.code">{{ role.label }}</option>
+                }
+              </select>
+              <button class="btn btn-primary" type="submit" [disabled]="inviting()">
+                <svg lucideSend size="18"></svg>
+                {{ inviting() ? 'Enviando...' : 'Invitar' }}
+              </button>
+            </form>
+
+            @if (lastInviteUrl()) {
+              <div class="debug-link">
+                <input class="field" type="text" [value]="lastInviteUrl()" readonly>
+                <button class="icon-btn" type="button" aria-label="Copiar invitacion" (click)="copyInviteUrl()">
+                  <svg lucideCopy size="18"></svg>
+                </button>
+              </div>
+            }
+
+            <div class="team-list">
+              @if (members().length) {
+                @for (member of members(); track member.id) {
+                  <div class="member">
+                    <div class="avatar-chip">
+                      @if (member.avatar_url) {
+                        <img [src]="member.avatar_url" alt="">
+                      } @else {
+                        <span>{{ memberInitial(member) }}</span>
+                      }
+                    </div>
+                    <div class="member-main">
+                      <strong>{{ member.display_name || member.user_email }}</strong>
+                      <small class="muted">{{ member.user_email }}</small>
+                    </div>
+                    <em class="badge" [class.badge-success]="member.status === 'active'" [class.badge-warning]="member.status !== 'active'">
+                      {{ member.status }}
+                    </em>
+                    <select class="field role-select" [value]="primaryRole(member)" [disabled]="isCurrentUser(member)" (change)="setPendingRole(member.id, $event)">
+                      @for (role of roleOptions; track role.code) {
+                        <option [value]="role.code">{{ role.label }}</option>
+                      }
+                    </select>
+                    <button class="icon-btn" type="button" aria-label="Guardar rol" [disabled]="isCurrentUser(member)" (click)="saveMemberRole(member)">
+                      <svg lucideSave size="18"></svg>
+                    </button>
+                    <button class="icon-btn danger" type="button" aria-label="Revocar miembro" [disabled]="isCurrentUser(member)" (click)="removeMember(member)">
+                      <svg lucideTrash2 size="18"></svg>
+                    </button>
+                  </div>
+                }
+              } @else {
+                <p class="muted">No hay miembros visibles para este tenant.</p>
+              }
+            </div>
+
+            @if (invitations().length) {
+              <div class="invitations">
+                <h3>Invitaciones</h3>
+                @for (invite of invitations(); track invite.id) {
+                  <div class="invitation">
+                    <span>{{ invite.email }}</span>
+                    <em class="badge" [class.badge-info]="invite.status === 'pending'" [class.badge-success]="invite.status === 'accepted'" [class.badge-warning]="invite.status !== 'pending' && invite.status !== 'accepted'">
+                      {{ invite.status }}
+                    </em>
+                    <small class="muted">{{ roleLabel(invite.role_code) }}</small>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </article>
+      }
+    </section>
+  

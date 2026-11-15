@@ -1,0 +1,33 @@
+
+    <section class="page-section">
+      <h1>Notificaciones</h1>
+      <p class="muted">Alertas recientes de tus agentes, conversaciones y sistema.</p>
+      <div class="card list">
+        @if (notifications.length === 0) {
+          <p class="muted" style="padding: 24px; margin: 0; text-align: center;">No tienes notificaciones por ahora.</p>
+        }
+        @for (notification of notifications; track notification.title) {
+          <article>
+            <span>
+              @switch (notification.icon) {
+                @case ('message-square') {
+                  <svg lucideMessageSquare size="20"></svg>
+                }
+                @case ('check-circle-2') {
+                  <svg lucideCheckCircle2 size="20"></svg>
+                }
+                @case ('workflow') {
+                  <svg lucideWorkflow size="20"></svg>
+                }
+              }
+            </span>
+            <div>
+              <strong>{{ notification.title }}</strong>
+              <p class="muted">{{ notification.message }}</p>
+            </div>
+            <small class="muted">{{ notification.time }}</small>
+          </article>
+        }
+      </div>
+    </section>
+  

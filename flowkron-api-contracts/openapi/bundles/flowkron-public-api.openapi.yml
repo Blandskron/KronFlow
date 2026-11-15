@@ -1,0 +1,6 @@
+openapi: 3.1.0
+info:
+  title: Flowkron Public API Bundle
+  version: 0.2.0
+  description: Bundle de APIs publicas de la etapa de validacion.
+paths: {}

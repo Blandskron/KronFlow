@@ -1,0 +1,57 @@
+
+      .auth-page {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(420px, 1fr) minmax(420px, 0.92fr);
+        background: var(--background);
+      }
+
+      .auth-visual {
+        padding: 56px;
+        color: white;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-start;
+        background: radial-gradient(circle at 20% 20%, rgba(126, 65, 188, 0.55), transparent 30%),
+          linear-gradient(135deg, var(--brand-deep), #090909);
+      }
+
+      .auth-visual h2 {
+        font-size: 52px;
+        line-height: 1.05;
+        max-width: 620px;
+      }
+
+      .auth-visual p:not(.eyebrow) {
+        color: rgba(255, 255, 255, 0.78);
+        max-width: 560px;
+        font-size: 19px;
+        line-height: 1.7;
+      }
+
+      .auth-visual .eyebrow { color: #dbbbff; }
+
+      .auth-theme { position: absolute; top: 20px; right: 20px; }
+
+      .auth-panel {
+        position: relative;
+        display: grid;
+        place-items: center;
+        padding: 68px clamp(20px, 6vw, 44px) 40px;
+      }
+
+      .auth-panel ::ng-deep form,
+      .auth-panel ::ng-deep .auth-card {
+        width: min(460px, 100%);
+      }
+
+      @media (max-width: 920px) {
+        .auth-page {
+          grid-template-columns: 1fr;
+        }
+
+        .auth-visual {
+          display: none;
+        }
+      }
+    

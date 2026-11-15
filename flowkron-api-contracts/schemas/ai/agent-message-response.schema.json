@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Blandskron/flowkron/refs/heads/main/flowkron-api-contracts/schemas/ai/agent-message-response.schema.json",
+  "title": "AgentMessageResponse",
+  "type": "object",
+  "required": ["tenant_id", "conversation_id", "reply", "actions", "requires_human", "confidence", "sources", "next_step"],
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string" },
+    "conversation_id": { "type": "string" },
+    "reply": {
+      "type": "object",
+      "required": ["type", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["text"] },
+        "content": { "type": "string" }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "payload"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["create_lead", "schedule_meeting", "send_email", "handoff_human", "create_ticket", "none"]
+          },
+          "payload": { "type": "object" }
+        }
+      }
+    },
+    "requires_human": { "type": "boolean" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "ai-source.schema.json" }
+    },
+    "next_step": {
+      "type": "string",
+      "enum": ["continue_conversation", "wait_user", "handoff", "close"]
+    }
+  }
+}

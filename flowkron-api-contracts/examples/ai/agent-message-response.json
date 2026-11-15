@@ -1,0 +1,28 @@
+{
+  "tenant_id": "tenant-validacion",
+  "conversation_id": "conv-123",
+  "reply": {
+    "type": "text",
+    "content": "Segun el contexto disponible: atenvalidacions de lunes a viernes de 9 a 18 horas."
+  },
+  "actions": [
+    {
+      "type": "none",
+      "payload": {}
+    }
+  ],
+  "requires_human": false,
+  "confidence": 0.82,
+  "sources": [
+    {
+      "source_id": "document:12:chunk:3",
+      "document_id": "12",
+      "title": "Horarios",
+      "chunk_id": "3",
+      "score": 0.82,
+      "page": null,
+      "uri": null
+    }
+  ],
+  "next_step": "continue_conversation"
+}

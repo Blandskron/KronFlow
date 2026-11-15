@@ -1,0 +1,25 @@
+<flowkron-auth-layout>
+  <section class="auth-card">
+    <a class="back" routerLink="/login">Volver a login</a>
+    <div class="brand"><span class="app-logo"></span><strong>Flowkron</strong></div>
+
+    @if (isSuccess()) {
+      <div class="status success">Correo confirmado</div>
+      <h1>Tu cuenta esta lista</h1>
+      <p class="muted">Ya puedes iniciar sesion y continuar con tu espacio de trabajo.</p>
+      <a class="btn btn-primary" routerLink="/login">Ir a login</a>
+    } @else {
+      <div class="status">Verificacion de seguridad</div>
+      <h1>Confirma tu correo</h1>
+      <p class="muted">Estas confirmando tu correo para activar el acceso a Flowkron.</p>
+
+      @if (errorMessage()) {
+        <p class="form-error">{{ errorMessage() }}</p>
+      }
+
+      <button class="btn btn-primary" type="button" [disabled]="!token() || isSubmitting()" (click)="confirm()">
+        {{ isSubmitting() ? 'Confirmando...' : 'Confirmar email' }}
+      </button>
+    }
+  </section>
+</flowkron-auth-layout>

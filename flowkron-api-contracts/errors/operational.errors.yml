@@ -1,0 +1,32 @@
+domain: operational
+errors:
+  - code: OPERATIONAL_401_INGEST_KEY_INVALID
+    http_status: 401
+    message: X-Ingest-Key inválida o tenant no encontrado.
+  - code: OPERATIONAL_402_PLAN_FREE
+    http_status: 402
+    message: Plan Free no permite acceder a este recurso. Se requiere plan pagado.
+  - code: OPERATIONAL_403_RUNTIME_NOT_ACTIVE
+    http_status: 403
+    message: El runtime del tenant no está activo.
+  - code: OPERATIONAL_404_LEAD_NOT_FOUND
+    http_status: 404
+    message: Lead no encontrado en el schema del tenant.
+  - code: OPERATIONAL_404_CONVERSATION_NOT_FOUND
+    http_status: 404
+    message: Conversación no encontrada en el schema del tenant.
+  - code: OPERATIONAL_404_TENANT_RUNTIME_NOT_FOUND
+    http_status: 404
+    message: Runtime del tenant no encontrado en la tabla pública.
+  - code: OPERATIONAL_422_DUPLICATE_MESSAGE
+    http_status: 200
+    message: Mensaje ya procesado (duplicate=true en IngestResponse).
+  - code: OPERATIONAL_429_INGEST_RATE_LIMIT
+    http_status: 429
+    message: Rate limit de ingesta excedido para este tenant. Reducir frecuencia de envíos.
+  - code: OPERATIONAL_501_AGENT_NOT_IMPLEMENTED
+    http_status: 501
+    message: El endpoint de configuración de agente no está implementado.
+  - code: OPERATIONAL_503_DB_NOT_READY
+    http_status: 503
+    message: La base de datos no está disponible.

@@ -1,0 +1,16 @@
+{
+  "name": "Flowkron — CRM inteligente para WhatsApp",
+  "short_name": "Flowkron",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#4A148C",
+  "icons": [
+    {
+      "src": "flowkron-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

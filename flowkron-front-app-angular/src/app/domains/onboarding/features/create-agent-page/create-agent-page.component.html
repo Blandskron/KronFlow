@@ -1,0 +1,39 @@
+
+    <main class="agent-page">
+      <section class="panel card">
+        <header>
+          <div>
+            <h1>Configurar agente WhatsApp</h1>
+            <p class="muted">Asocia un agente simple al tenant operacional liberado para tu plan.</p>
+          </div>
+          <button class="btn btn-ghost" type="button" (click)="cancel()">Cancelar</button>
+        </header>
+
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <label>Nombre del agente</label>
+          <input class="field" formControlName="name" placeholder="Nombre del agente">
+
+          <label>Cargo</label>
+          <input class="field" formControlName="role" placeholder="Rol del agente">
+
+          <label>Codigo tenant</label>
+          <input class="field" formControlName="tenantCode" [placeholder]="runtimeCode() || 'xt_xxxxx'">
+
+          @if (runtimeCode()) {
+            <small class="muted">Codigo esperado para este tenant: {{ runtimeCode() }}</small>
+          }
+
+          @if (error()) {
+            <p class="error">{{ error() }}</p>
+          }
+
+          <footer>
+            <button class="btn btn-secondary" type="button" (click)="cancel()">Volver</button>
+            <button class="btn btn-primary" type="submit" [disabled]="form.invalid || isSaving()">
+              {{ isSaving() ? 'Guardando...' : 'Guardar agente' }}
+            </button>
+          </footer>
+        </form>
+      </section>
+    </main>
+  

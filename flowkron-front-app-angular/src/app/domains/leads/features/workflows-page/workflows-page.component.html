@@ -1,0 +1,114 @@
+
+    <section class="workflow-page">
+      <section class="workflow-controls card">
+        <div class="controls-top">
+          <div class="left-controls">
+            <button class="workspace-select" type="button">
+              {{ tenantName() }}
+              <svg lucideChevronDown size="16"></svg>
+            </button>
+            <div class="view-toggle" aria-label="Cambiar vista">
+              <button class="active" type="button" aria-label="Vista columnas"><svg lucideGrid3X3 size="17"></svg></button>
+              <button type="button" aria-label="Vista lista"><svg lucideList size="17"></svg></button>
+            </div>
+          </div>
+
+          <nav class="status-tabs" aria-label="Estado de tickets">
+            <button [class.active]="statusFilter() === 'open'" type="button" (click)="statusFilter.set('open')">Abiertos</button>
+            <button [class.active]="statusFilter() === 'all'" type="button" (click)="statusFilter.set('all')">Todos</button>
+            <button [class.active]="statusFilter() === 'closed'" type="button" (click)="statusFilter.set('closed')">Cerrados</button>
+          </nav>
+        </div>
+
+        <div class="filters-row">
+          <label class="search-box">
+            <input [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" placeholder="Buscar contacto">
+            <svg lucideSearch size="18"></svg>
+          </label>
+
+          <div class="filter-group origin-group" aria-label="Filtrar por origen">
+            <button [class.active]="originFilter() === 'all'" type="button" (click)="originFilter.set('all')">Todos</button>
+            <button [class.active]="originFilter() === 'inbound'" type="button" (click)="originFilter.set('inbound')"><svg lucideArrowDownUp size="14"></svg> Inbound</button>
+            <button [class.active]="originFilter() === 'outbound'" type="button" (click)="originFilter.set('outbound')"><svg lucideInfo size="14"></svg> Outbound</button>
+          </div>
+
+          <div class="filter-group temperature-group" aria-label="Filtrar por temperatura">
+            <button [class.active]="temperatureFilter() === 'all'" type="button" (click)="temperatureFilter.set('all')">Todas</button>
+            <button [class.active]="temperatureFilter() === 'cold'" type="button" (click)="temperatureFilter.set('cold')">Frio</button>
+            <button [class.active]="temperatureFilter() === 'warm'" type="button" (click)="temperatureFilter.set('warm')">Tibio</button>
+            <button [class.active]="temperatureFilter() === 'hot'" type="button" (click)="temperatureFilter.set('hot')">Caliente</button>
+            <button [class.active]="temperatureFilter() === 'unqualified'" type="button" (click)="temperatureFilter.set('unqualified')">Sin calificar</button>
+          </div>
+
+          <button class="date-filter" type="button" (click)="loadWorkflow()">
+            <svg lucideRefreshCw size="16"></svg>
+            Actualizar
+          </button>
+        </div>
+      </section>
+
+      @if (requiresPlan()) {
+        <article class="upgrade-empty">
+          <strong>Activa un plan para automatizar tus workflows</strong>
+          <p class="muted">El tablero queda listo para recibir conversaciones, leads y derivaciones cuando contrates tu plan.</p>
+          <a class="btn btn-primary" routerLink="/app/pricing">Contratar plan</a>
+        </article>
+      } @else if (isLoading()) {
+        <p class="muted board-state">Cargando workflow operacional...</p>
+      } @else if (loadError()) {
+        <p class="muted board-state">{{ loadError() }}</p>
+      }
+
+      <div class="board">
+        @for (column of visibleColumns(); track column.title) {
+          <article class="column" [class.warning]="column.accent === 'warning'">
+            <header>
+              <span></span>
+              <div>
+                <h2>{{ column.title }}</h2>
+                <small class="muted">Tickets abiertos ({{ column.tickets.length }}) <svg lucideInfo size="12"></svg></small>
+              </div>
+              <button class="icon-btn" type="button" aria-label="Configurar columna">
+                <svg lucideSettings size="16"></svg>
+              </button>
+            </header>
+
+            <div class="tickets">
+              @if (column.tickets.length === 0) {
+                <p class="muted empty-column">Sin tickets por ahora.</p>
+              }
+
+              @for (ticket of column.tickets; track ticket.id) {
+                <article class="card ticket">
+                  <div class="ticket-head">
+                    <span>{{ ticket.customerName.charAt(0) }}</span>
+                    <strong>{{ ticket.customerName }}</strong>
+                    <small class="channel-icon">
+                      @switch (ticket.channel) {
+                        @case ('whatsapp') {
+                          <svg lucidePhone size="14"></svg>
+                        }
+                        @case ('email') {
+                          <svg lucideMail size="14"></svg>
+                        }
+                        @case ('web') {
+                          <svg lucideGlobe size="14"></svg>
+                        }
+                      }
+                    </small>
+                  </div>
+                  <p>{{ ticket.message }}</p>
+                  <div class="ticket-meta">
+                    <em class="badge" [class]="temperatureClass(ticket.temperature)">{{ temperatureLabel(ticket.temperature) }}</em>
+                    <em class="badge" [class]="ticket.origin === 'inbound' ? 'badge-success' : 'badge-info'">{{ ticket.origin }}</em>
+                    <em class="badge badge-primary">{{ ticket.score }} pts</em>
+                    <small class="muted time"><svg lucideClock size="12"></svg>{{ ticket.timestamp }}</small>
+                  </div>
+                </article>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  

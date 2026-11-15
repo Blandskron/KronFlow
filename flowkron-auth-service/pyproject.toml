@@ -1,0 +1,12 @@
+[project]
+name = "flowkron-auth-service"
+version = "0.1.0"
+description = "Authentication and identity service for Flowkron."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["apps", "tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["apps*", "config*"]

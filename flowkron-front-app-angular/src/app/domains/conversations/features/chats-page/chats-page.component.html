@@ -1,0 +1,123 @@
+
+    <section class="page-section">
+      @if (selectedChat(); as selected) {
+        <button class="btn btn-ghost back-btn" type="button" (click)="selectedChat.set(null)">
+          <svg lucideArrowLeft size="18"></svg>
+          Volver a la lista
+        </button>
+
+        <div class="heading">
+          <h1>Conversacion</h1>
+          <p class="muted">Chat con {{ selected.name }}</p>
+        </div>
+
+        <article class="card conversation">
+          <header>
+            <div class="person">
+              <span>{{ selected.name.charAt(0) }}</span>
+              <div>
+                <strong>{{ selected.name }}</strong>
+                <small class="muted channel-label">
+                  @switch (selected.channel) {
+                    @case ('whatsapp') {
+                      <svg lucidePhone size="14"></svg>
+                    }
+                    @case ('email') {
+                      <svg lucideMail size="14"></svg>
+                    }
+                    @case ('web') {
+                      <svg lucideMessageSquare size="14"></svg>
+                    }
+                  }
+                  {{ channelLabel(selected.channel) }}
+                </small>
+              </div>
+            </div>
+            <span class="badge" [class]="leadClass(selected.leadStatus)">{{ leadLabel(selected.leadStatus) }}</span>
+          </header>
+
+          <div class="messages">
+            @if (messagesFor(selected.id).length === 0) {
+              <p class="muted empty">No hay mensajes registrados para esta conversacion.</p>
+            }
+            @for (message of messagesFor(selected.id); track message.id) {
+              <div class="message-row" [class.agent]="message.sender === 'agent'">
+                <div class="bubble">
+                  <p>{{ message.text }}</p>
+                  <small>{{ message.timestamp }}</small>
+                </div>
+              </div>
+            }
+          </div>
+        </article>
+      } @else {
+        <div class="heading row-heading">
+          <div>
+            <h1>Conversaciones</h1>
+            <p class="muted">Conversaciones reales sincronizadas desde el servicio operacional.</p>
+          </div>
+          <button class="btn btn-secondary" type="button" (click)="loadConversations()">
+            <svg lucideRefreshCw size="18"></svg>
+            Actualizar
+          </button>
+        </div>
+
+        <article class="card list">
+          @if (requiresPlan()) {
+            <div class="upgrade-empty">
+              <strong>Activa un plan para conectar tus conversaciones</strong>
+              <p class="muted">Aqui veras todos los chats de WhatsApp, web y email cuando tu plan este activo.</p>
+              <a class="btn btn-primary" routerLink="/app/pricing">Contratar plan</a>
+            </div>
+          }
+
+          <div class="filters">
+            <label class="search-field">
+              <svg lucideSearch size="18"></svg>
+              <input [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" placeholder="Buscar conversaciones...">
+            </label>
+            <button class="btn btn-secondary" type="button">
+              <svg lucideFilter size="18"></svg>
+              Filtros
+            </button>
+          </div>
+
+          <div class="segments">
+            @for (status of statuses; track status.id) {
+              <button type="button" [class.active]="filterStatus() === status.id" (click)="filterStatus.set(status.id)">
+                {{ status.label }}
+              </button>
+            }
+          </div>
+
+          @if (isLoading()) {
+            <p class="muted state">Cargando conversaciones...</p>
+          } @else if (loadError()) {
+            <p class="muted state">{{ loadError() }}</p>
+          } @else if (filteredChats().length === 0) {
+            <p class="muted state">Aun no hay conversaciones para este tenant.</p>
+          }
+
+          @for (chat of filteredChats(); track chat.id) {
+            <button class="chat-item" type="button" (click)="select(chat.id)">
+              <span class="avatar">{{ chat.name.charAt(0) }}</span>
+              <span class="chat-main">
+                <strong>{{ chat.name }}</strong>
+                <small class="muted">{{ chat.lastMessage }}</small>
+                <span>
+                  <em class="badge" [class]="statusClass(chat.status)">{{ statusLabel(chat.status) }}</em>
+                  <em class="badge" [class]="leadClass(chat.leadStatus)">{{ leadLabel(chat.leadStatus) }}</em>
+                </span>
+              </span>
+              <span class="chat-meta">
+                <small class="muted">{{ chat.timestamp }}</small>
+                @if (chat.unreadCount) {
+                  <b>{{ chat.unreadCount }}</b>
+                }
+              </span>
+            </button>
+          }
+        </article>
+      }
+    </section>
+  

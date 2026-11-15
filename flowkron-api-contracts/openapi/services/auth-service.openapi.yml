@@ -1,0 +1,652 @@
+openapi: 3.1.0
+info:
+  title: Flowkron Auth Service API
+  version: 0.5.0
+  description: |
+    Identity, access, tenant, session, machine credential and audit API for the
+    Flowkron platform validation stage. Public account creation and third-party
+    identity providers are not part of this contract.
+  contact:
+    name: Flowkron Engineering
+servers:
+  - url: http://localhost:8000
+    description: Local development
+tags:
+  - name: Auth
+    description: Manual login, tokens, password recovery, profile and session lifecycle.
+  - name: Tenants
+    description: Tenant, membership, invitation and runtime operations.
+  - name: RBAC
+    description: Roles, permissions and membership role assignments.
+  - name: Sessions
+    description: User session inspection and revocation.
+  - name: Security
+    description: MFA, JWKS, service accounts, API keys and token introspection.
+  - name: Contact
+    description: Public landing contact intake.
+  - name: Audit
+    description: Audit log read model.
+paths:
+  /api/v1/auth/login/:
+    post:
+      tags: [Auth]
+      operationId: authLogin
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Session issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/auth/refresh/:
+    post:
+      tags: [Auth]
+      operationId: authRefresh
+      summary: Rotate refresh token and issue a new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token pair.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/verify/:
+    post:
+      tags: [Auth]
+      operationId: authVerify
+      summary: Verify an access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token is valid.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/me/:
+    get:
+      tags: [Auth]
+      operationId: authMe
+      summary: Get current authenticated user context
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User, tenant, membership, permissions, subscription and session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/logout/:
+    post:
+      tags: [Auth]
+      operationId: authLogout
+      summary: Revoke current session
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current session revoked.
+  /api/v1/auth/logout-all/:
+    post:
+      tags: [Auth]
+      operationId: authLogoutAll
+      summary: Revoke all active sessions for current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active sessions revoked.
+  /api/v1/auth/password/forgot/:
+    post:
+      tags: [Auth]
+      operationId: authPasswordForgot
+      summary: Request password recovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Recovery request accepted.
+  /api/v1/auth/password/reset/:
+    post:
+      tags: [Auth]
+      operationId: authPasswordReset
+      summary: Reset password with a recovery token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset completed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/auth/password/change/:
+    post:
+      tags: [Auth]
+      operationId: authPasswordChange
+      summary: Change password for current user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '200':
+          description: Password changed and sessions revoked.
+  /api/v1/auth/profile/:
+    patch:
+      tags: [Auth]
+      operationId: authProfileUpdate
+      summary: Update current user profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated.
+  /api/v1/auth/profile/avatar/:
+    post:
+      tags: [Auth]
+      operationId: authProfileAvatar
+      summary: Upload current user avatar
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar updated.
+  /api/v1/auth/email/resend/:
+    post:
+      tags: [Auth]
+      operationId: authEmailResend
+      summary: Resend email verification for current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Verification email queued.
+  /api/v1/auth/email/confirm/:
+    post:
+      tags: [Auth]
+      operationId: authEmailConfirm
+      summary: Confirm email with a verification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Email confirmed.
+  /api/v1/auth/mfa/setup/:
+    post:
+      tags: [Security]
+      operationId: authMfaSetup
+      summary: Create or return TOTP setup data
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: TOTP secret and URI.
+  /api/v1/auth/mfa/confirm/:
+    post:
+      tags: [Security]
+      operationId: authMfaConfirm
+      summary: Confirm TOTP setup
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: MFA enabled.
+  /api/v1/auth/mfa/verify/:
+    post:
+      tags: [Security]
+      operationId: authMfaVerify
+      summary: Verify a TOTP code
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: MFA verified.
+  /api/v1/auth/jwks/:
+    get:
+      tags: [Security]
+      operationId: authJwks
+      summary: Get active JSON Web Keys
+      responses:
+        '200':
+          description: JWKS document.
+  /api/v1/auth/client-credentials/:
+    post:
+      tags: [Security]
+      operationId: authClientCredentials
+      summary: Issue a service account token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCredentialsRequest'
+      responses:
+        '200':
+          description: Service account bearer token.
+  /api/v1/auth/introspect/:
+    post:
+      tags: [Security]
+      operationId: authIntrospect
+      summary: Introspect a token using an authorized service account token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token introspection result.
+  /api/v1/contact/csrf/:
+    get:
+      tags: [Contact]
+      operationId: contactCsrf
+      summary: Get CSRF cookie for public contact form
+      responses:
+        '200':
+          description: CSRF cookie set.
+  /api/v1/contact/messages/:
+    post:
+      tags: [Contact]
+      operationId: contactMessageCreate
+      summary: Submit a public contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactMessageRequest'
+      responses:
+        '201':
+          description: Message received.
+  /api/v1/tenants/:
+    get:
+      tags: [Tenants]
+      operationId: tenantList
+      summary: List tenants available to current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tenant list.
+    post:
+      tags: [Tenants]
+      operationId: tenantCreate
+      summary: Create a tenant for current authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Tenant created.
+  /api/v1/tenants/{tenant_id}/:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+    get:
+      tags: [Tenants]
+      operationId: tenantRetrieve
+      summary: Retrieve tenant
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tenant detail.
+    patch:
+      tags: [Tenants]
+      operationId: tenantPatch
+      summary: Update tenant
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tenant updated.
+  /api/v1/tenants/{tenant_id}/members/:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+    get:
+      tags: [Tenants]
+      operationId: tenantMembers
+      summary: List tenant members
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Member list.
+  /api/v1/tenants/{tenant_id}/invite/:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+    post:
+      tags: [Tenants]
+      operationId: tenantInvite
+      summary: Create tenant invitation for a manually managed user
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Invitation created.
+  /api/v1/tenants/invitations/preview/:
+    get:
+      tags: [Tenants]
+      operationId: invitationPreview
+      summary: Preview a tenant invitation token
+      responses:
+        '200':
+          description: Invitation preview.
+  /api/v1/tenants/invitations/accept/:
+    post:
+      tags: [Tenants]
+      operationId: invitationAccept
+      summary: Accept an invitation for an existing manually managed user
+      responses:
+        '200':
+          description: Membership activated.
+        '400':
+          description: User must already exist.
+  /api/v1/tenants/invitations/reject/:
+    post:
+      tags: [Tenants]
+      operationId: invitationReject
+      summary: Reject an invitation
+      responses:
+        '200':
+          description: Invitation rejected.
+  /api/v1/rbac/permissions/:
+    get:
+      tags: [RBAC]
+      operationId: rbacPermissions
+      summary: List permissions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Permission list.
+  /api/v1/rbac/roles/:
+    get:
+      tags: [RBAC]
+      operationId: rbacRoles
+      summary: List roles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Role list.
+  /api/v1/sessions/:
+    get:
+      tags: [Sessions]
+      operationId: sessionList
+      summary: List current user's sessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Session list.
+  /api/v1/security/signing-keys/:
+    get:
+      tags: [Security]
+      operationId: signingKeys
+      summary: List signing keys
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Signing key list.
+  /api/v1/security/service-accounts/:
+    get:
+      tags: [Security]
+      operationId: serviceAccounts
+      summary: List service accounts
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Service account list.
+  /api/v1/security/api-keys/:
+    get:
+      tags: [Security]
+      operationId: apiKeys
+      summary: List API keys
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: API key list.
+  /api/v1/audit/:
+    get:
+      tags: [Audit]
+      operationId: auditList
+      summary: List audit events visible to current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Audit log list.
+components:
+  parameters:
+    TenantId:
+      name: tenant_id
+      in: path
+      required: true
+      schema:
+        type: integer
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Invalid request.
+    Unauthorized:
+      description: Authentication required or invalid token.
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        tenant_id:
+          type: integer
+        mfa_code:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refresh]
+      properties:
+        refresh:
+          type: string
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+        new_password:
+          type: string
+          format: password
+    PasswordChangeRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        phone:
+          type: string
+        timezone:
+          type: string
+        locale:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+    ClientCredentialsRequest:
+      type: object
+      required: [client_id, client_secret]
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+    ContactMessageRequest:
+      type: object
+      required: [name, email, message]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        company:
+          type: string
+        message:
+          type: string
+    AuthTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [access, refresh, session_id, tenant_id, roles, permissions]
+          properties:
+            access:
+              type: string
+            refresh:
+              type: string
+            session_id:
+              type: integer
+            tenant_id:
+              type: integer
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
+            subscription:
+              type: object
+    RefreshResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+    MeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+            tenant:
+              type:
+                - object
+                - 'null'
+            membership:
+              type:
+                - object
+                - 'null'
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
+            subscription:
+              type:
+                - object
+                - 'null'
+            session:
+              type:
+                - object
+                - 'null'

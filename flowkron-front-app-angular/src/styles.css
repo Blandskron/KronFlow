@@ -12,6 +12,11 @@
   --primary: #6526a4;
   --primary-button: var(--brand-purple);
   --primary-50: #f3eafa;
+  --selected: #f3eafa;
+  --error-text: #a5212b;
+  --success-text: #086344;
+  --info-text: #194f9e;
+  --warning-text: #79470c;
   --primary-100: #e8d8f7;
   --primary-300: #b782f4;
   --primary-600: #4a148c;
@@ -38,7 +43,16 @@
 
 .dark {
   color-scheme: dark;
-  --background: #090909;
+  --background: #100d16;
+  --selected: #352449;
+  --error-text: #ffb2b8;
+  --success-text: #83e7b9;
+  --info-text: #b1d0ff;
+  --warning-text: #ffdc9c;
+  --error-100: #481f2b;
+  --success-100: #143c31;
+  --info-100: #1b3051;
+  --warning-100: #452d13;
   --primary: #d0a8ff;
   --primary-button: #6730a8;
   --success: #59dba3;
@@ -152,6 +166,8 @@ a {
   outline: none;
 }
 
+.field[aria-invalid="true"] { border-color: var(--error-text); }
+
 .field:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(126, 65, 188, 0.16);
@@ -196,28 +212,28 @@ a {
 }
 
 .badge-primary {
-  background: var(--primary-50);
+  background: var(--selected);
   color: var(--primary);
 }
 
 .badge-success {
   background: var(--success-100);
-  color: var(--success-600);
+  color: var(--success-text);
 }
 
 .badge-info {
   background: var(--info-100);
-  color: var(--info-600);
+  color: var(--info-text);
 }
 
 .badge-warning {
   background: var(--warning-100);
-  color: #a16207;
+  color: var(--warning-text);
 }
 
 .badge-danger {
   background: var(--error-100);
-  color: var(--error-500);
+  color: var(--error-text);
 }
 
 .app-logo {
@@ -262,3 +278,17 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+.skip-link {
+  position: fixed;
+  z-index: 50;
+  top: 12px;
+  left: 12px;
+  transform: translateY(-150%);
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.skip-link:focus { transform: none; }

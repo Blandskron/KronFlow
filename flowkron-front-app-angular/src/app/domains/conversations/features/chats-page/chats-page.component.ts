@@ -1,9 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   LucideArrowLeft,
-  LucideFilter,
   LucideMail,
   LucideMessageSquare,
   LucidePhone,
@@ -25,7 +24,7 @@ interface ChatContact {
   status: ChatStatus;
   channel: 'whatsapp' | 'email' | 'web';
   leadStatus: LeadStatus;
-  unreadCount?: number;
+  requiresHuman: boolean;
 }
 
 interface Message {
@@ -40,7 +39,6 @@ interface Message {
   standalone: true,
   imports: [
     LucideArrowLeft,
-    LucideFilter,
     LucideMail,
     LucideMessageSquare,
     LucidePhone,
@@ -54,25 +52,27 @@ interface Message {
 export class ChatsPageComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly operational = inject(ConversationsApiService);
+  private readonly injector = inject(Injector);
+  private readonly backButton = viewChild<ElementRef<HTMLButtonElement>>('backButton');
 
   readonly searchQuery = signal('');
   readonly filterStatus = signal('all');
-  readonly selectedChat = signal<ChatContact | null>(null);
-  readonly messageInput = signal('');
+  readonly selectedChatId = signal<number | null>(null);
+  readonly selectedChat = computed(() => this.chats().find((chat) => chat.id === this.selectedChatId()) ?? null);
   readonly isLoading = signal(false);
   readonly loadError = signal('');
   readonly chats = signal<ChatContact[]>([]);
-  readonly conversations = signal<Record<number, Message[]>>({});
+  readonly threads = signal<Partial<Record<number, { state: 'loading' | 'error' | 'ready'; messages: Message[] }>>>({});
   readonly planRequired = signal(false);
   readonly hasLoaded = signal(false);
   readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan || this.planRequired()));
 
   readonly statuses = [
-    { id: 'all', label: 'Todos' },
-    { id: 'new', label: 'Nuevo' },
-    { id: 'active', label: 'Activo' },
-    { id: 'waiting', label: 'Esperando' },
-    { id: 'closed', label: 'Cerrado' }
+    { id: 'all', label: 'Todas' },
+    { id: 'new', label: 'Nuevas' },
+    { id: 'active', label: 'Activas' },
+    { id: 'waiting', label: 'En espera' },
+    { id: 'closed', label: 'Cerradas' }
   ];
 
   readonly filteredChats = computed(() => {
@@ -87,10 +87,6 @@ export class ChatsPageComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      if (!this.auth.subscription()?.requires_paid_plan && this.planRequired()) {
-        setTimeout(() => this.planRequired.set(false));
-      }
-
       if (!this.requiresPlan() && !this.isLoading() && !this.hasLoaded() && !this.loadError()) {
         setTimeout(() => this.loadConversations());
       }
@@ -107,6 +103,10 @@ export class ChatsPageComponent implements OnInit {
   }
 
   loadConversations(): void {
+    if (this.isLoading()) {
+      return;
+    }
+
     if (this.requiresPlan()) {
       this.chats.set([]);
       this.loadError.set('');
@@ -119,12 +119,17 @@ export class ChatsPageComponent implements OnInit {
     this.operational.listConversations({ limit: 100 }).subscribe({
       next: (response) => {
         this.chats.set(response.items.map((item) => this.toChatContact(item)));
+        if (!this.selectedChat()) {
+          this.selectedChatId.set(null);
+        }
         this.hasLoaded.set(true);
         this.isLoading.set(false);
       },
       error: (error) => {
         if (this.isPlanAccessError(error)) {
           this.planRequired.set(true);
+          this.selectedChatId.set(null);
+          this.threads.set({});
           this.chats.set([]);
           this.loadError.set('');
           this.hasLoaded.set(true);
@@ -136,31 +141,50 @@ export class ChatsPageComponent implements OnInit {
     });
   }
 
-  select(chatId: number): void {
-    const chat = this.chats().find((item) => item.id === chatId) ?? null;
-    this.selectedChat.set(chat);
-    if (!chat || this.conversations()[chat.id]) {
+  select(chatId: number, trigger?: HTMLButtonElement): void {
+    this.selectedChatId.set(chatId);
+    if (trigger) {
+      afterNextRender(() => {
+        if (!trigger.getClientRects().length) {
+          this.backButton()?.nativeElement.focus();
+        }
+      }, { injector: this.injector });
+    }
+    const thread = this.threads()[chatId];
+    if (thread?.state === 'ready' || thread?.state === 'loading') {
       return;
     }
-    this.operational.listMessages(chat.id).subscribe({
+
+    this.threads.update((current) => ({ ...current, [chatId]: { state: 'loading', messages: [] } }));
+    this.operational.listMessages(chatId).subscribe({
       next: (response) => {
-        this.conversations.update((current) => ({
+        this.threads.update((current) => ({
           ...current,
-          [chat.id]: response.items.map((message) => this.toMessage(message))
+          [chatId]: { state: 'ready', messages: response.items.map((message) => this.toMessage(message)) }
         }));
       },
       error: () => {
-        this.conversations.update((current) => ({ ...current, [chat.id]: [] }));
+        this.threads.update((current) => ({ ...current, [chatId]: { state: 'error', messages: [] } }));
       }
     });
   }
 
-  messagesFor(chatId: number): Message[] {
-    return this.conversations()[chatId] ?? [];
+  closeThread(): void {
+    const chatId = this.selectedChatId();
+    this.selectedChatId.set(null);
+    afterNextRender(() => {
+      const trigger = document.getElementById(`conversation-${chatId}`);
+      (trigger ?? document.getElementById('conversation-search'))?.focus();
+    }, { injector: this.injector });
+  }
+
+  clearFilters(): void {
+    this.searchQuery.set('');
+    this.filterStatus.set('all');
   }
 
   channelLabel(channel: ChatContact['channel']): string {
-    return channel === 'web' ? 'Web Chat' : channel === 'email' ? 'Email' : 'WhatsApp';
+    return channel === 'web' ? 'Chat web' : channel === 'email' ? 'Correo' : 'WhatsApp';
   }
 
   statusLabel(status: ChatStatus): string {
@@ -168,7 +192,7 @@ export class ChatsPageComponent implements OnInit {
   }
 
   leadLabel(status: LeadStatus): string {
-    return { cold: 'Frio', warm: 'Tibio', hot: 'Caliente', converted: 'Convertido' }[status];
+    return { cold: 'Frío', warm: 'Tibio', hot: 'Caliente', converted: 'Convertido' }[status];
   }
 
   statusClass(status: ChatStatus): string {
@@ -182,13 +206,13 @@ export class ChatsPageComponent implements OnInit {
   private toChatContact(conversation: Conversation): ChatContact {
     return {
       id: conversation.id,
-      name: conversation.lead_name || conversation.lead_phone || 'Lead sin nombre',
+      name: conversation.lead_name || conversation.lead_phone || 'Contacto sin nombre',
       lastMessage: conversation.last_message || 'Sin mensajes registrados',
       timestamp: this.formatRelative(conversation.last_message_at || conversation.updated_at),
       status: this.mapConversationStatus(conversation),
       channel: this.mapChannel(conversation.channel),
       leadStatus: this.mapLeadStatus(conversation.temperature),
-      unreadCount: conversation.requires_human ? 1 : undefined
+      requiresHuman: conversation.requires_human
     };
   }
 
@@ -257,17 +281,17 @@ export class ChatsPageComponent implements OnInit {
 
   private operationalErrorMessage(error: unknown): string {
     if (!(error instanceof HttpErrorResponse)) {
-      return 'No pudimos cargar las conversaciones del servicio operacional.';
+      return 'No pudimos cargar las conversaciones.';
     }
     if (error.status === 401) {
-      return 'Tu sesion expiro o no pudo validarse con operational. Vuelve a iniciar sesion.';
+      return 'Tu sesión expiró. Vuelve a iniciar sesión.';
     }
     if (error.status === 403) {
-      return 'El tenant no tiene acceso operacional activo o esta suspendido.';
+      return 'Tu espacio de trabajo tiene el acceso suspendido o pendiente.';
     }
     if (error.status === 404) {
-      return 'El entorno operacional del tenant aun no esta provisionado.';
+      return 'Tu espacio de trabajo aún está pendiente de configuración.';
     }
-    return 'No pudimos cargar las conversaciones del servicio operacional.';
+    return 'No pudimos cargar las conversaciones.';
   }
 }

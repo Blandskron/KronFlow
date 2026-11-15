@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, inject, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { RouterLink } from '@angular/router';
@@ -50,7 +50,7 @@ export class LandingComponent {
 
   readonly loginUrl = `${environment.appUrl}/login`;
 
-  showTerms = false;
+  private readonly contactFields = viewChild.required<ElementRef<HTMLFormElement>>('contactFields');
   submitting = false;
   contactStatus: ContactStatus = 'idle';
 
@@ -71,8 +71,13 @@ export class LandingComponent {
   }
 
   submitContact(): void {
+    if (this.submitting) {
+      return;
+    }
+
     if (this.contactForm.invalid) {
       this.contactForm.markAllAsTouched();
+      this.contactFields().nativeElement.querySelector<HTMLElement>('.ng-invalid')?.focus();
       return;
     }
 

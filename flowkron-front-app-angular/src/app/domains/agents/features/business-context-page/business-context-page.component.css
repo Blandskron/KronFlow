@@ -91,7 +91,7 @@
 
       .tabs button.active {
         color: white;
-        background: var(--primary);
+        background: var(--primary-button);
       }
 
       .alert {
@@ -126,7 +126,7 @@
 
       .summary-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 20px;
       }
 
@@ -331,7 +331,7 @@
 
       .upload-grid {
         display: grid;
-        grid-template-columns: 350px 1fr;
+        grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
         gap: 20px;
       }
 
@@ -561,7 +561,7 @@
 
       .chat-bubble.user {
         align-self: flex-end;
-        background: var(--primary);
+        background: var(--primary-button);
         color: white;
         border-top-right-radius: 4px;
       }
@@ -613,7 +613,7 @@
       }
       .simulator-layout {
         display: grid;
-        grid-template-columns: 1fr 400px;
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr);
         gap: 20px;
       }
 
@@ -758,7 +758,7 @@
       }
 
       .btn-primary {
-        background: var(--primary);
+        background: var(--primary-button);
         color: white;
       }
 
@@ -831,4 +831,31 @@
         font-size: 13px;
         color: var(--foreground);
       }
-    
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.file-drop-area:focus-within { outline: 2px solid var(--primary); outline-offset: 3px; }
+
+.tab-content > *, .title-area > div, .chat-input-area input { min-width: 0; }
+.tabs { max-width: 100%; flex-wrap: wrap; }
+.alert { overflow-wrap: anywhere; }
+.title-area .icon-badge, .alert > svg { flex-shrink: 0; }
+.alert-error { color: var(--error-text); }
+
+@media (max-width: 960px) {
+  .context-container { padding-inline: 16px; }
+  .summary-grid, .upload-grid, .simulator-layout { grid-template-columns: minmax(0, 1fr); }
+  .col-span-2 { grid-column: auto; }
+}
+
+@media (max-width: 440px) {
+  .context-container { gap: 12px; }
+  .context-container .card { padding: 16px; }
+  .tabs button { padding-inline: 10px; }
+  .title-area { align-items: flex-start; gap: 10px; }
+}

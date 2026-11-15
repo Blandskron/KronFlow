@@ -6,25 +6,25 @@
             <svg lucideBookOpen size="24"></svg>
           </span>
           <div>
-            <h1>Contexto Empresarial</h1>
+            <h1>Contexto empresarial</h1>
             <p class="subtitle">Administra los conocimientos, documentos y reglas del agente conversacional de IA.</p>
           </div>
         </div>
-        <div class="tabs">
-          <button [class.active]="activeTab === 'summary'" (click)="setTab('summary')">
+        <div class="tabs" role="group" aria-label="Secciones de contexto empresarial">
+          <button [class.active]="activeTab === 'summary'" [attr.aria-pressed]="activeTab === 'summary'" (click)="setTab('summary')">
             Resumen
           </button>
-          <button [class.active]="activeTab === 'upload'" (click)="setTab('upload')">
-            Métodos de Carga
+          <button [class.active]="activeTab === 'upload'" [attr.aria-pressed]="activeTab === 'upload'" (click)="setTab('upload')">
+            Documentos
           </button>
-          <button [class.active]="activeTab === 'simulator'" (click)="setTab('simulator')">
-            Prueba del Agente
+          <button [class.active]="activeTab === 'simulator'" [attr.aria-pressed]="activeTab === 'simulator'" (click)="setTab('simulator')">
+            Simulador
           </button>
         </div>
       </header>
 
       @if (errorMsg) {
-        <div class="alert alert-error card">
+        <div class="alert alert-error card" role="alert">
           <svg lucideAlertTriangle size="20"></svg>
           <div class="alert-content">
             <strong>Error de integración:</strong>
@@ -38,12 +38,12 @@
         @case ('summary') {
           <div class="tab-content summary-grid">
             @if (statusLoading) {
-              <div class="alert card col-span-2">
+              <div class="alert card col-span-2" role="status">
                 <svg lucideInfo size="18"></svg>
-                <p>Consultando estado real del contexto empresarial...</p>
+                <p>Cargando el contexto empresarial…</p>
               </div>
             } @else if (statusError) {
-              <div class="alert alert-error card col-span-2">
+              <div class="alert alert-error card col-span-2" role="alert">
                 <svg lucideAlertTriangle size="18"></svg>
                 <p>{{ statusError }}</p>
               </div>
@@ -192,7 +192,7 @@
                       <strong>Arrastra tu archivo aquí o haz clic</strong>
                       <small>Formatos admitidos: .txt, .md, .docx, .pdf</small>
                     }
-                    <input id="file-input" type="file" (change)="onFileSelected($event)" accept=".txt,.md,.docx,.pdf" style="display: none;">
+                    <input id="file-input" type="file" (change)="onFileSelected($event)" accept=".txt,.md,.docx,.pdf" class="file-input">
                   </label>
                 </div>
                 <div class="upload-status" [class.error]="uploadState === 'error'" [class.success]="uploadState === 'success'">
@@ -267,12 +267,12 @@
                 @if (!aiSessionId) {
                   <div class="ai-start-card card border">
                     <div class="form-group">
-                      <label>Nombre de la Empresa</label>
-                      <input type="text" [(ngModel)]="aiCompanyName" placeholder="Ej: BLANDSKRON">
+                      <label for="context-company">Nombre de la empresa</label>
+                      <input id="context-company" type="text" [(ngModel)]="aiCompanyName" placeholder="Ej: BLANDSKRON">
                     </div>
                     <div class="form-group">
-                      <label>Industria / Sector</label>
-                      <input type="text" [(ngModel)]="aiIndustry" placeholder="Ej: Tecnología y Desarrollo">
+                      <label for="context-industry">Industria o sector</label>
+                      <input id="context-industry" type="text" [(ngModel)]="aiIndustry" placeholder="Ej: Tecnología y Desarrollo">
                     </div>
                     <button class="btn btn-primary" [disabled]="!aiCompanyName || !aiIndustry" (click)="startAiSession()">
                       Iniciar Conversación
@@ -295,8 +295,8 @@
                       }
                     </div>
                     <div class="chat-input-area">
-                      <input type="text" [(ngModel)]="aiInput" (keyup.enter)="sendAiMessage()" placeholder="Escribe tu respuesta aquí...">
-                      <button class="btn btn-primary btn-icon" (click)="sendAiMessage()" [disabled]="!aiInput || aiLoading">
+                      <input type="text" [(ngModel)]="aiInput" aria-label="Respuesta al asistente" (keyup.enter)="sendAiMessage()" placeholder="Escribe tu respuesta aquí...">
+                      <button class="btn btn-primary btn-icon" aria-label="Enviar respuesta" (click)="sendAiMessage()" [disabled]="!aiInput || aiLoading">
                         <svg lucideSend size="18"></svg>
                       </button>
                     </div>
@@ -354,8 +354,8 @@
                 }
               </div>
               <div class="chat-input-area">
-                <input type="text" [(ngModel)]="simInput" (keyup.enter)="sendSimMessage()" placeholder="Hazle una pregunta al agente sobre la empresa...">
-                <button class="btn btn-primary btn-icon" (click)="sendSimMessage()" [disabled]="!simInput || simLoading">
+                <input type="text" [(ngModel)]="simInput" aria-label="Pregunta para el simulador" (keyup.enter)="sendSimMessage()" placeholder="Hazle una pregunta al agente sobre la empresa...">
+                <button class="btn btn-primary btn-icon" aria-label="Enviar pregunta" (click)="sendSimMessage()" [disabled]="!simInput || simLoading">
                   <svg lucideSend size="18"></svg>
                 </button>
               </div>
@@ -417,12 +417,12 @@
             <h3>Corregir Respuesta del Agente</h3>
             <p class="desc">Añade una regla específica de atención conversacional para que el agente responda correctamente en el futuro.</p>
             <div class="form-group">
-              <label>Pregunta / Frase clave</label>
-              <input type="text" [(ngModel)]="newRuleName" placeholder="Ej: Preguntas sobre horarios extendidos">
+              <label for="context-rule-name">Pregunta o frase clave</label>
+              <input id="context-rule-name" type="text" [(ngModel)]="newRuleName" placeholder="Ej: Preguntas sobre horarios extendidos">
             </div>
             <div class="form-group">
-              <label>Regla / Respuesta correcta deseada</label>
-              <textarea [(ngModel)]="newRuleContent" rows="5" placeholder="Ej: La empresa atiende emergencias de forma remota 24/7 mediante el canal oficial..."></textarea>
+              <label for="context-rule-body">Regla o respuesta esperada</label>
+              <textarea id="context-rule-body" [(ngModel)]="newRuleContent" rows="5" placeholder="Ej: La empresa atiende emergencias de forma remota 24/7 mediante el canal oficial..."></textarea>
             </div>
             <div class="modal-actions">
               <button class="btn btn-secondary" (click)="correctionOpen = false">Cancelar</button>
@@ -432,4 +432,3 @@
         </div>
       }
     </div>
-  

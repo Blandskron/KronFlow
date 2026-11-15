@@ -2,7 +2,7 @@
     <section class="page-section">
       <div class="heading">
         <div>
-          <h1>Configuracion</h1>
+          <h1>Configuración</h1>
           <p class="muted">Empresa, perfil y equipo del tenant activo.</p>
         </div>
         @if (auth.currentTenant(); as tenant) {
@@ -10,9 +10,9 @@
         }
       </div>
 
-      <div class="tabs">
+      <div class="tabs" role="group" aria-label="Secciones de configuración">
         @for (item of tabs; track item.id) {
-          <button type="button" [class.active]="activeTab() === item.id" (click)="setTab(item.id)">
+          <button type="button" [class.active]="activeTab() === item.id" [attr.aria-pressed]="activeTab() === item.id" (click)="setTab(item.id)">
             {{ item.label }}
           </button>
         }
@@ -92,7 +92,7 @@
         <article class="card panel">
           <div class="panel-title">
             <div>
-              <h2>Mi Perfil</h2>
+              <h2>Mi perfil</h2>
               <p class="muted">Tu identidad dentro del workspace.</p>
             </div>
             <button class="btn btn-primary" type="button" [disabled]="savingProfile()" (click)="saveProfile()">
@@ -184,7 +184,7 @@
             <p class="muted">Tu rol actual no permite administrar miembros del equipo.</p>
           } @else {
             <form class="invite-row" [formGroup]="inviteForm" (ngSubmit)="inviteMember()">
-              <input class="field" type="email" formControlName="email" placeholder="correo@example.com">
+              <input class="field" type="email" formControlName="email" aria-label="Correo de la persona invitada" autocomplete="off" placeholder="correo@example.com">
               <select class="field" formControlName="roleCode">
                 @for (role of roleOptions; track role.code) {
                   <option [value]="role.code">{{ role.label }}</option>
@@ -198,8 +198,8 @@
 
             @if (lastInviteUrl()) {
               <div class="debug-link">
-                <input class="field" type="text" [value]="lastInviteUrl()" readonly>
-                <button class="icon-btn" type="button" aria-label="Copiar invitacion" (click)="copyInviteUrl()">
+                <input class="field" type="text" [value]="lastInviteUrl()" aria-label="Enlace de invitación" readonly>
+                <button class="icon-btn" type="button" aria-label="Copiar invitación" (click)="copyInviteUrl()">
                   <svg lucideCopy size="18"></svg>
                 </button>
               </div>

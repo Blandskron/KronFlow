@@ -106,7 +106,7 @@
         display: grid;
         place-items: center;
         overflow: hidden;
-        background: linear-gradient(135deg, var(--primary), var(--primary-600));
+        background: linear-gradient(135deg, var(--primary-button), var(--brand-deep));
         color: white;
         font-weight: 800;
       }
@@ -165,7 +165,7 @@
 
       .notice.error {
         background: var(--error-100);
-        color: var(--error-500);
+        color: var(--error-text);
       }
 
       .invite-row,
@@ -231,7 +231,7 @@
       }
 
       .icon-btn.danger {
-        color: var(--error-500);
+        color: var(--error-text);
       }
 
       .invitations {

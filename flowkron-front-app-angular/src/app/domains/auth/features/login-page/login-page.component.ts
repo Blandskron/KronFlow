@@ -31,14 +31,19 @@ export class LoginComponent {
   });
 
   login(): void {
+    if (this.auth.isLoading()) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.errorMessage.set('Ingresa un correo electrónico válido y tu contraseña.');
       return;
     }
 
     const value = this.form.getRawValue();
     if (this.mfaRequired() && !value.mfaCode.trim()) {
-      this.errorMessage.set('Ingresa el codigo MFA para continuar.');
+      this.errorMessage.set('Ingresa el código MFA para continuar.');
       return;
     }
 
@@ -54,14 +59,14 @@ export class LoginComponent {
         error: (error: AuthError) => {
           if (error.code === 'MFA_REQUIRED' || error.code?.endsWith('_MFA_REQUIRED')) {
             this.mfaRequired.set(true);
-            this.errorMessage.set('Ingresa tu codigo MFA para completar el ingreso.');
+            this.errorMessage.set('Ingresa tu código MFA para completar el ingreso.');
             return;
           }
           if (error.code === 'AUTH_EMAIL_NOT_VERIFIED' || error.code?.endsWith('_AUTH_EMAIL_NOT_VERIFIED')) {
-            this.errorMessage.set('Debes verificar tu correo antes de iniciar sesion.');
+            this.errorMessage.set('Debes verificar tu correo antes de iniciar sesión.');
             return;
           }
-          this.errorMessage.set(error.message || 'No pudimos iniciar sesion.');
+          this.errorMessage.set(error.message || 'No pudimos iniciar sesión.');
         }
       });
   }

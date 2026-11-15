@@ -33,7 +33,10 @@
         top: 50%;
         right: 10px;
         transform: translateY(-50%);
+        width: 42px;
+        min-height: 36px;
         border: 0;
+        border-radius: 8px;
         background: transparent;
         color: var(--muted-foreground);
       }
@@ -53,13 +56,14 @@
         font: inherit;
       }
 
-      small {
-        text-align: center;
+      .brand small {
+        display: block;
+        letter-spacing: 0.08em;
       }
 
       .form-error {
         margin: 0;
-        color: var(--error-500);
+        color: var(--error-text);
         font-weight: 700;
       }
     

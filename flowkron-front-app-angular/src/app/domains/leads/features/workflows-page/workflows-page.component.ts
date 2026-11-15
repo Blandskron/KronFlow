@@ -4,16 +4,12 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   LucideArrowDownUp,
-  LucideChevronDown,
   LucideClock,
-  LucideGrid3X3,
   LucideGlobe,
   LucideInfo,
-  LucideList,
   LucideMail,
   LucidePhone,
-  LucideSearch,
-  LucideSettings
+  LucideSearch
 } from '@lucide/angular';
 import { Lead } from '@domains/leads/domain/lead.model';
 import { Conversation } from '@domains/conversations/domain/conversation.model';
@@ -45,16 +41,12 @@ interface TicketColumn {
   standalone: true,
   imports: [
     LucideArrowDownUp,
-    LucideChevronDown,
     LucideClock,
-    LucideGrid3X3,
     LucideGlobe,
     LucideInfo,
-    LucideList,
     LucideMail,
     LucidePhone,
     LucideSearch,
-    LucideSettings,
     RouterLink
   ],
   templateUrl: './workflows-page.component.html',
@@ -65,8 +57,8 @@ export class WorkflowsPageComponent {
   private readonly operational = inject(LeadsApiService);
   private readonly conversationsService = inject(ConversationsApiService);
 
-  readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan));
-  readonly tenantName = computed(() => this.auth.currentTenant()?.name || 'Workspace');
+  readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan || this.planRequired()));
+  readonly tenantName = computed(() => this.auth.currentTenant()?.name || 'Espacio de trabajo');
   readonly searchQuery = signal('');
   readonly statusFilter = signal<'open' | 'all' | 'closed'>('open');
   readonly originFilter = signal<'all' | 'inbound' | 'outbound'>('all');
@@ -85,14 +77,6 @@ export class WorkflowsPageComponent {
       { title: 'Ayuda humana', accent: 'warning', tickets: tickets.filter((ticket) => ticket.progress === 'human') }
     ];
   });
-  readonly visibleColumns = computed(() => {
-    if (!this.requiresPlan()) {
-      return this.columns();
-    }
-
-    return this.columns().map((column) => ({ ...column, tickets: [] }));
-  });
-
   readonly filteredTickets = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const status = this.statusFilter();
@@ -112,10 +96,6 @@ export class WorkflowsPageComponent {
 
   constructor() {
     effect(() => {
-      if (!this.auth.subscription()?.requires_paid_plan && this.planRequired()) {
-        setTimeout(() => this.planRequired.set(false));
-      }
-
       if (!this.requiresPlan() && !this.isLoading() && !this.hasLoaded() && !this.loadError()) {
         setTimeout(() => this.loadWorkflow());
       }
@@ -129,6 +109,10 @@ export class WorkflowsPageComponent {
   }
 
   loadWorkflow(): void {
+    if (this.isLoading()) {
+      return;
+    }
+
     if (this.requiresPlan()) {
       this.tickets.set([]);
       this.loadError.set('');
@@ -163,7 +147,7 @@ export class WorkflowsPageComponent {
   }
 
   temperatureLabel(temperature: Ticket['temperature']): string {
-    return { cold: 'Frio', warm: 'Tibio', hot: 'Caliente', unqualified: 'Sin calificar' }[temperature];
+    return { cold: 'Frío', warm: 'Tibio', hot: 'Caliente', unqualified: 'Sin calificar' }[temperature];
   }
 
   temperatureClass(temperature: Ticket['temperature']): string {

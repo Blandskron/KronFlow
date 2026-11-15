@@ -24,23 +24,15 @@
         border-bottom: 1px solid var(--border);
       }
 
-      .left-controls,
-      .view-toggle,
       .status-tabs,
       .filter-group,
       .date-filter,
-      .workspace-select,
       .channel-icon,
       .time {
         display: inline-flex;
         align-items: center;
       }
 
-      .left-controls {
-        gap: 12px;
-      }
-
-      .workspace-select,
       .date-filter {
         gap: 8px;
         border: 1px solid var(--border);
@@ -51,14 +43,12 @@
         font-weight: 700;
       }
 
-      .view-toggle,
       .filter-group {
         border-radius: 14px;
         background: var(--muted);
         padding: 4px;
       }
 
-      .view-toggle button,
       .filter-group button,
       .status-tabs button {
         border: 0;
@@ -67,15 +57,6 @@
         font-weight: 700;
       }
 
-      .view-toggle button {
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
-        display: grid;
-        place-items: center;
-      }
-
-      .view-toggle button.active,
       .filter-group button.active {
         color: var(--foreground);
         background: var(--card);
@@ -114,7 +95,7 @@
 
       .search-box {
         flex: 1 1 420px;
-        min-width: 260px;
+        min-width: min(100%, 260px);
         border: 1px solid var(--border);
         border-radius: 14px;
         background: var(--input-background);
@@ -222,7 +203,7 @@
 
       .column header {
         display: grid;
-        grid-template-columns: 34px 1fr 40px;
+        grid-template-columns: 34px minmax(0, 1fr);
         gap: 10px;
         align-items: start;
         margin-bottom: 14px;
@@ -278,7 +259,7 @@
         border-radius: 999px;
         display: grid;
         place-items: center;
-        background: linear-gradient(135deg, var(--primary), var(--primary-600));
+        background: linear-gradient(135deg, var(--primary-button), var(--brand-deep));
         color: white;
         font-size: 12px;
       }
@@ -344,12 +325,7 @@
 
         .controls-top,
         .filters-row,
-        .left-controls {
-          align-items: stretch;
-          flex-direction: column;
-        }
-
-        .status-tabs {
+          .status-tabs {
           margin-left: 0;
           overflow-x: auto;
           scrollbar-width: none;
@@ -380,8 +356,11 @@
 
         .column {
           flex: 0 0 min(82vw, 360px);
-          min-height: calc(100dvh - 330px);
+          min-height: 215px;
           scroll-snap-align: start;
         }
       }
-    
+
+.workflow-heading { margin: 0 clamp(16px, 3vw, 32px) 16px; }
+.workflow-heading h1 { margin: 0; font-size: clamp(1.75rem, 4vw, 2.125rem); }
+.workflow-heading p { margin: 6px 0 0; }

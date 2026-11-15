@@ -3,7 +3,6 @@ import {
   LucideBarChart3,
   LucideBell,
   LucideBookOpen,
-  LucideBot,
   LucideHome,
   LucideLogOut,
   LucideMessageSquare,
@@ -24,7 +23,6 @@ import { ThemeToggleComponent } from '@shared/ui/theme-toggle.component';
     RouterLinkActive,
     ThemeToggleComponent,
     LucideHome,
-    LucideBot,
     LucideMessageSquare,
     LucideWorkflow,
     LucideBarChart3,
@@ -47,18 +45,14 @@ export class DashboardShellComponent implements OnInit {
 
   readonly navItems = [
     { path: '/app/home', label: 'Inicio', icon: 'home' },
+    { path: '/app/conversations', label: 'Bandeja', icon: 'message-square' },
     { path: '/app/business-context', label: 'Contexto', icon: 'book-open' },
-    { path: '/app/conversations', label: 'Chats', icon: 'message-square' },
-    { path: '/app/workflows', label: 'Workflows', icon: 'workflow' },
-    { path: '/app/analytics', label: 'Analytics', icon: 'bar-chart-3' }
+    { path: '/app/workflows', label: 'Oportunidades', icon: 'workflow' },
+    { path: '/app/analytics', label: 'Métricas', icon: 'bar-chart-3' }
   ];
 
   ngOnInit(): void {
     this.auth.loadCurrentUser().subscribe({ error: () => undefined });
-  }
-
-  openProfile(): void {
-    void this.router.navigate(['/app/settings'], { queryParams: { tab: 'profile' } });
   }
 
   logout(): void {

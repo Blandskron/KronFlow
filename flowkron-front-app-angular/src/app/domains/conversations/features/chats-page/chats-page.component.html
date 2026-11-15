@@ -1,123 +1,132 @@
+<section class="page-section">
+  <header class="heading">
+    <div>
+      <h1>Conversaciones</h1>
+      <p class="muted">Busca contactos, revisa sus mensajes y consulta el estado de cada conversación.</p>
+    </div>
+    @if (!requiresPlan()) {
+      <button class="btn btn-secondary" type="button" [disabled]="isLoading()" (click)="loadConversations()">
+        <svg lucideRefreshCw size="18" aria-hidden="true"></svg>
+        {{ isLoading() ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    }
+  </header>
 
-    <section class="page-section">
-      @if (selectedChat(); as selected) {
-        <button class="btn btn-ghost back-btn" type="button" (click)="selectedChat.set(null)">
-          <svg lucideArrowLeft size="18"></svg>
-          Volver a la lista
-        </button>
-
-        <div class="heading">
-          <h1>Conversacion</h1>
-          <p class="muted">Chat con {{ selected.name }}</p>
+  @if (requiresPlan()) {
+    <article class="card state">
+      <h2>Activa el acceso a conversaciones</h2>
+      <p class="muted">Consulta el estado de tu plan para acceder a la bandeja.</p>
+      <a class="btn btn-primary" routerLink="/app/pricing">Ver plan</a>
+    </article>
+  } @else {
+    <div class="inbox" [class.thread-open]="selectedChat()">
+      <section class="card list" aria-label="Lista de conversaciones">
+        <div class="filters">
+          <label class="search-field">
+            <svg lucideSearch size="18" aria-hidden="true"></svg>
+            <input #search id="conversation-search" type="search" aria-label="Buscar conversaciones"
+              [value]="searchQuery()" (input)="searchQuery.set(search.value)" placeholder="Buscar contactos o mensajes">
+          </label>
+          <div class="segments" role="group" aria-label="Filtrar por estado">
+            @for (status of statuses; track status.id) {
+              <button type="button" [attr.aria-pressed]="filterStatus() === status.id" (click)="filterStatus.set(status.id)">
+                {{ status.label }}
+              </button>
+            }
+          </div>
         </div>
 
-        <article class="card conversation">
+        @if (isLoading()) {
+          <p class="muted state" role="status">Cargando conversaciones…</p>
+        } @else if (loadError()) {
+          <p class="muted state" role="alert">{{ loadError() }}</p>
+        } @else if (filteredChats().length === 0) {
+          <div class="state">
+            @if (searchQuery().trim() || filterStatus() !== 'all') {
+              <p class="muted" role="status">No encontramos conversaciones con estos filtros.</p>
+              <button class="btn btn-secondary" type="button" (click)="clearFilters(); search.focus()">Limpiar filtros</button>
+            } @else {
+              <p class="muted" role="status">Aún no hay conversaciones en tu espacio de trabajo.</p>
+            }
+          </div>
+        }
+
+        @for (chat of filteredChats(); track chat.id) {
+          <button #chatButton class="chat-item" type="button" [id]="'conversation-' + chat.id"
+            [attr.aria-pressed]="selectedChatId() === chat.id" (click)="select(chat.id, chatButton)">
+            <span class="avatar" aria-hidden="true">{{ chat.name.charAt(0) }}</span>
+            <span class="chat-main">
+              <strong>{{ chat.name }}</strong>
+              <small class="muted excerpt">{{ chat.lastMessage }}</small>
+              <span class="labels">
+                <span class="badge" [class]="statusClass(chat.status)">{{ statusLabel(chat.status) }}</span>
+                <span class="badge" [class]="leadClass(chat.leadStatus)">{{ leadLabel(chat.leadStatus) }}</span>
+              </span>
+            </span>
+            <span class="chat-meta">
+              <small class="muted">{{ chat.timestamp }}</small>
+              @if (chat.requiresHuman) {
+                <span class="attention">Requiere atención</span>
+              }
+            </span>
+          </button>
+        }
+      </section>
+
+      <section class="card conversation" aria-label="Historial de la conversación">
+        @if (selectedChat(); as selected) {
           <header>
             <div class="person">
-              <span>{{ selected.name.charAt(0) }}</span>
+              <span class="avatar" aria-hidden="true">{{ selected.name.charAt(0) }}</span>
               <div>
-                <strong>{{ selected.name }}</strong>
+                <h2>{{ selected.name }}</h2>
                 <small class="muted channel-label">
                   @switch (selected.channel) {
-                    @case ('whatsapp') {
-                      <svg lucidePhone size="14"></svg>
-                    }
-                    @case ('email') {
-                      <svg lucideMail size="14"></svg>
-                    }
-                    @case ('web') {
-                      <svg lucideMessageSquare size="14"></svg>
-                    }
+                    @case ('whatsapp') { <svg lucidePhone size="14" aria-hidden="true"></svg> }
+                    @case ('email') { <svg lucideMail size="14" aria-hidden="true"></svg> }
+                    @case ('web') { <svg lucideMessageSquare size="14" aria-hidden="true"></svg> }
                   }
                   {{ channelLabel(selected.channel) }}
                 </small>
               </div>
             </div>
-            <span class="badge" [class]="leadClass(selected.leadStatus)">{{ leadLabel(selected.leadStatus) }}</span>
+            <button #backButton class="btn btn-secondary" type="button" (click)="closeThread()">
+              <svg lucideArrowLeft size="16" aria-hidden="true"></svg>
+              Volver a la lista
+            </button>
           </header>
 
           <div class="messages">
-            @if (messagesFor(selected.id).length === 0) {
-              <p class="muted empty">No hay mensajes registrados para esta conversacion.</p>
-            }
-            @for (message of messagesFor(selected.id); track message.id) {
-              <div class="message-row" [class.agent]="message.sender === 'agent'">
-                <div class="bubble">
-                  <p>{{ message.text }}</p>
-                  <small>{{ message.timestamp }}</small>
-                </div>
-              </div>
-            }
-          </div>
-        </article>
-      } @else {
-        <div class="heading row-heading">
-          <div>
-            <h1>Conversaciones</h1>
-            <p class="muted">Conversaciones reales sincronizadas desde el servicio operacional.</p>
-          </div>
-          <button class="btn btn-secondary" type="button" (click)="loadConversations()">
-            <svg lucideRefreshCw size="18"></svg>
-            Actualizar
-          </button>
-        </div>
-
-        <article class="card list">
-          @if (requiresPlan()) {
-            <div class="upgrade-empty">
-              <strong>Activa un plan para conectar tus conversaciones</strong>
-              <p class="muted">Aqui veras todos los chats de WhatsApp, web y email cuando tu plan este activo.</p>
-              <a class="btn btn-primary" routerLink="/app/pricing">Contratar plan</a>
-            </div>
-          }
-
-          <div class="filters">
-            <label class="search-field">
-              <svg lucideSearch size="18"></svg>
-              <input [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" placeholder="Buscar conversaciones...">
-            </label>
-            <button class="btn btn-secondary" type="button">
-              <svg lucideFilter size="18"></svg>
-              Filtros
-            </button>
-          </div>
-
-          <div class="segments">
-            @for (status of statuses; track status.id) {
-              <button type="button" [class.active]="filterStatus() === status.id" (click)="filterStatus.set(status.id)">
-                {{ status.label }}
-              </button>
-            }
-          </div>
-
-          @if (isLoading()) {
-            <p class="muted state">Cargando conversaciones...</p>
-          } @else if (loadError()) {
-            <p class="muted state">{{ loadError() }}</p>
-          } @else if (filteredChats().length === 0) {
-            <p class="muted state">Aun no hay conversaciones para este tenant.</p>
-          }
-
-          @for (chat of filteredChats(); track chat.id) {
-            <button class="chat-item" type="button" (click)="select(chat.id)">
-              <span class="avatar">{{ chat.name.charAt(0) }}</span>
-              <span class="chat-main">
-                <strong>{{ chat.name }}</strong>
-                <small class="muted">{{ chat.lastMessage }}</small>
-                <span>
-                  <em class="badge" [class]="statusClass(chat.status)">{{ statusLabel(chat.status) }}</em>
-                  <em class="badge" [class]="leadClass(chat.leadStatus)">{{ leadLabel(chat.leadStatus) }}</em>
-                </span>
-              </span>
-              <span class="chat-meta">
-                <small class="muted">{{ chat.timestamp }}</small>
-                @if (chat.unreadCount) {
-                  <b>{{ chat.unreadCount }}</b>
+            @if (threads()[selected.id]; as thread) {
+              @switch (thread.state) {
+                @case ('loading') { <p class="muted" role="status">Cargando mensajes…</p> }
+                @case ('error') {
+                  <p class="muted" role="alert">No pudimos cargar los mensajes de esta conversación.</p>
+                  <button class="btn btn-secondary" type="button" (click)="select(selected.id)">Reintentar</button>
                 }
-              </span>
-            </button>
-          }
-        </article>
-      }
-    </section>
-  
+                @case ('ready') {
+                  @for (message of thread.messages; track message.id) {
+                    <div class="message-row" [class.agent]="message.sender === 'agent'">
+                      <div class="bubble">
+                        <p>{{ message.text }}</p>
+                        <small>{{ message.timestamp }}</small>
+                      </div>
+                    </div>
+                  } @empty {
+                    <p class="muted" role="status">Aún no hay mensajes en esta conversación.</p>
+                  }
+                }
+              }
+            }
+          </div>
+        } @else {
+          <div class="thread-empty">
+            <span class="avatar"><svg lucideMessageSquare size="22" aria-hidden="true"></svg></span>
+            <h2>Historial de mensajes</h2>
+            <p class="muted">Selecciona una conversación para ver sus mensajes.</p>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</section>

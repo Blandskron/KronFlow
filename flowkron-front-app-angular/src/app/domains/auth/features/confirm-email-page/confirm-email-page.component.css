@@ -37,6 +37,6 @@
 
       .form-error {
         margin: 0;
-        color: var(--error-500);
+        color: var(--error-text);
         font-weight: 700;
       }

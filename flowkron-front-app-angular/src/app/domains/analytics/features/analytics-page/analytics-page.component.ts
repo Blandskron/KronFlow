@@ -2,10 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
-  LucideCalendar,
   LucideCheckCircle2,
   LucideClock,
-  LucideDollarSign,
   LucideMessageSquare,
   LucideUsers,
   LucideXCircle
@@ -17,10 +15,8 @@ import { AnalyticsApiService } from '@domains/analytics/data-access/analytics-ap
   selector: 'flowkron-analytics-page',
   standalone: true,
   imports: [
-    LucideCalendar,
     LucideCheckCircle2,
     LucideClock,
-    LucideDollarSign,
     LucideMessageSquare,
     LucideUsers,
     LucideXCircle,
@@ -39,19 +35,13 @@ export class AnalyticsPageComponent implements OnInit {
 
   readonly requiresPlan = computed(() => Boolean(this.auth.subscription()?.requires_paid_plan || this.planRequired()));
 
-  metrics: { label: string; value: string; change: string; trend: string; icon: string }[] = [];
+  metrics: { label: string; value: string; icon: string }[] = [];
 
-  channelStats: { channel: string; conversations: number; conversion: string }[] = [];
-
-  recentActivity: { time: string; event: string; user: string; type: string }[] = [];
+  leadStats: { label: string; count: number; share: string }[] = [];
 
   constructor() {
     effect(() => {
-      if (!this.auth.subscription()?.requires_paid_plan && this.planRequired()) {
-        setTimeout(() => this.planRequired.set(false));
-      }
-
-      if (!this.requiresPlan() && !this.hasLoaded() && !this.isLoading()) {
+      if (!this.requiresPlan() && !this.hasLoaded() && !this.isLoading() && !this.loadError()) {
         setTimeout(() => this.loadAnalytics());
       }
     });
@@ -66,7 +56,7 @@ export class AnalyticsPageComponent implements OnInit {
     this.loadAnalytics();
   }
 
-  private loadAnalytics(): void {
+  loadAnalytics(): void {
     if (this.isLoading() || this.hasLoaded()) {
       return;
     }
@@ -76,17 +66,17 @@ export class AnalyticsPageComponent implements OnInit {
     this.operational.analyticsSummary().subscribe({
       next: (summary) => {
         this.metrics = [
-          { label: 'Leads Totales', value: String(summary.total_leads), change: 'Real', trend: 'up', icon: 'users' },
-          { label: 'Leads Calientes', value: String(summary.hot_leads), change: 'Real', trend: 'up', icon: 'check-circle-2' },
-          { label: 'Requieren Ejecutivo', value: String(summary.requires_human), change: 'Real', trend: 'down', icon: 'x-circle' },
-          { label: 'Conversaciones Abiertas', value: String(summary.open_conversations), change: 'Real', trend: 'up', icon: 'message-square' },
-          { label: 'Mensajes Hoy', value: String(summary.messages_today), change: 'Real', trend: 'up', icon: 'clock' },
-          { label: 'Mensajes 7 Dias', value: String(summary.messages_last_7_days), change: 'Real', trend: 'up', icon: 'message-square' }
+          { label: 'Total de oportunidades', value: String(summary.total_leads), icon: 'users' },
+          { label: 'Oportunidades calientes', value: String(summary.hot_leads), icon: 'check-circle-2' },
+          { label: 'Requieren atención', value: String(summary.requires_human), icon: 'x-circle' },
+          { label: 'Conversaciones abiertas', value: String(summary.open_conversations), icon: 'message-square' },
+          { label: 'Mensajes de hoy', value: String(summary.messages_today), icon: 'clock' },
+          { label: 'Mensajes en los últimos 7 días', value: String(summary.messages_last_7_days), icon: 'message-square' }
         ];
-        this.channelStats = [
-          { channel: 'Leads Frios', conversations: summary.cold_leads, conversion: this.percent(summary.cold_leads, summary.total_leads) },
-          { channel: 'Leads Tibios', conversations: summary.warm_leads, conversion: this.percent(summary.warm_leads, summary.total_leads) },
-          { channel: 'Leads Calientes', conversations: summary.hot_leads, conversion: this.percent(summary.hot_leads, summary.total_leads) }
+        this.leadStats = [
+          { label: 'Frías', count: summary.cold_leads, share: this.percent(summary.cold_leads, summary.total_leads) },
+          { label: 'Tibias', count: summary.warm_leads, share: this.percent(summary.warm_leads, summary.total_leads) },
+          { label: 'Calientes', count: summary.hot_leads, share: this.percent(summary.hot_leads, summary.total_leads) }
         ];
         this.hasLoaded.set(true);
         this.isLoading.set(false);
@@ -113,8 +103,7 @@ export class AnalyticsPageComponent implements OnInit {
 
   private setEmptyAnalytics(): void {
     this.metrics = [];
-    this.channelStats = [];
-    this.recentActivity = [];
+    this.leadStats = [];
   }
 
   private isPlanAccessError(error: unknown): boolean {

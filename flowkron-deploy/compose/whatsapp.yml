@@ -1,0 +1,18 @@
+services:
+  flowkron-baileys-services:
+    profiles: [whatsapp-lab]
+    build:
+      context: ../../flowkron-baileys-services
+    environment:
+      BAILEYS_INTERNAL_TOKEN: ${BAILEYS_INTERNAL_TOKEN:-}
+      BAILEYS_INGEST_TENANT_CODE: ${BAILEYS_INGEST_TENANT_CODE:-}
+      BAILEYS_INGEST_KEY: ${BAILEYS_INGEST_KEY:-}
+      BAILEYS_SESSIONS_DIR: /app/sessions
+      OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://flowkron-operational-service:8001}
+    volumes:
+      - baileys-lab-sessions:/app/sessions
+    networks:
+      - flowkron-network
+
+volumes:
+  baileys-lab-sessions:

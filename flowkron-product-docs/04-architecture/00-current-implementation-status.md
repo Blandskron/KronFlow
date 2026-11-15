@@ -18,7 +18,7 @@ Esta es la vista transversal del sistema ejecutable. El código, la configuraci�
 | Agentes de Operational | `STUB` | Operational | Rutas `/api/v1/agents`; configuración no persistida | Debe converger con Agent Core o implementarse |
 | Contexto empresarial y simulación IA | `PARTIAL` | Agent Core + Operational + App | Plantillas, carga documental, retrieval y simulación | Persistencia integrada parcial; no hay evaluación/costos ni vector store productivo |
 | Landing y contacto público | `PARTIAL` | Landing + Auth | CSRF y `POST /contact/messages/` | Textos legales y pruebas browser-integradas pendientes |
-| Adaptador WhatsApp | `NOT_IMPLEMENTED` | Externo | Operational acepta eventos normalizados | Requiere implementar o configurar un adaptador compatible |
+| Adaptador WhatsApp | `PARTIAL` | Baileys (laboratorio) | Vínculo QR e ingesta opcional de texto con consentimiento registrado | Onboarding, respuestas del agente y campañas quedan pendientes |
 | Ingesta HTTP tenant-aware | `IMPLEMENTED` | Operational | Rutas `/api/v1/ingest/whatsapp/*` y OpenAPI | Requiere credenciales y runtime habilitado |
 | Contratos compartidos | `PARTIAL` | API Contracts | OpenAPI Auth v0.5.0, Operational y Agent Core v0.3.1; schemas y errores | Gateway WhatsApp sin paths formales y adopción endpoint a endpoint pendiente |
 | Compose local | `IMPLEMENTED` | Deploy | Modelos Compose de infraestructura, backend, frontend y correo | Entorno local |

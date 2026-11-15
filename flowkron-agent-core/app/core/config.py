@@ -1,8 +1,8 @@
 from functools import lru_cache
 import json
-from typing import Annotated, List
+from typing import Annotated, List, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -30,6 +30,9 @@ class Settings(BaseSettings):
         default_factory=lambda: [".pdf", ".docx", ".csv", ".xlsx", ".txt", ".md"]
     )
     low_confidence_threshold: float = 0.35
+    chat_provider: Literal["auto", "groq", "azure", "local"] = "auto"
+    groq_api_key: SecretStr = SecretStr("")
+    groq_model: str = "openai/gpt-oss-20b"
     azure_openai_enabled: bool = False
     azure_openai_api_version: str = "2024-02-01"
     azure_openai_api_key: str = ""

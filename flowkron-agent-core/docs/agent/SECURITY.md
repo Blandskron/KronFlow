@@ -37,8 +37,9 @@ Acciones:
 - Las acciones externas son preparadas, no ejecutadas.
 - Integraciones reales requieren permisos, contrato y adapter dedicado.
 
-Azure OpenAI:
+Proveedores de IA:
 
 - La API key solo debe vivir en `.env` local, secretos de despliegue o gestor de secretos.
+- Groq recibe la pregunta y los extractos recuperados mediante HTTPS. La clave se lee del entorno y se oculta en las representaciones de configuración.
 - No loguear prompts completos si contienen PII.
 - Si el proveedor falla, responder con fallback seguro y handoff.

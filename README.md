@@ -52,8 +52,8 @@ Set a valid provider key and replace the example sender with an address on your 
 
 ## Connect a channel or AI provider
 
-- **WhatsApp** uses an external adapter that owns Meta credentials, webhook authentication, consent and outbound delivery. Forward normalized events to the [tenant-scoped ingest interface](flowkron-operational-service/docs/API.md) using the provisioned tenant code and ingest key. The inbox is read-only. The previous bundled automation also handled calendar events and consent flows. Those features require an external implementation.
-- **AI** in Agent Core can run its local fallback or use the optional Azure OpenAI configuration in [the environment example](.env.example). Verify the provider settings against the [Agent Core configuration guide](flowkron-agent-core/docs/CONFIGURATION.md).
+- **WhatsApp** accepts normalized events through the [tenant-scoped ingest interface](flowkron-operational-service/docs/API.md). The optional [Baileys lab connector](flowkron-baileys-services/README.md) pairs one account via QR and can forward text from contacts with recorded consent. See the [integration research](flowkron-product-docs/04-architecture/14-whatsapp-connection-and-campaigns.md) for the onboarding, agent and campaign design.
+- **AI** in Agent Core can use Groq, Azure OpenAI or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](flowkron-agent-core/docs/CONFIGURATION.md) for model selection and other providers.
 - **Operating costs** depend on the infrastructure, messaging, email and AI providers selected by the instance operator.
 
 ## Develop and contribute

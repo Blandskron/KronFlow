@@ -40,6 +40,7 @@
 - Los documentos completados desde plantillas Word/PDF se deben subir por `POST /api/v1/context/documents/upload-file` como `multipart/form-data`; el core extrae texto antes de indexarlo para simulacion/RAG.
 - El estado agregado de Contexto Empresarial se expone por `GET /api/v1/context/status`; el frontend no debe inferir progreso, estado del agente, ultima actualizacion ni capacidades de acciones documentales.
 - En modo operacional, Agent Core consume `/internal/tenants/{tenant_id}/context/*` y desempaqueta el envelope estandar de Operational antes de validar sus propios `response_model`.
+- Agent Core selecciona Groq para generación de texto cuando `CHAT_PROVIDER=auto` y existe una clave. La recuperación de contexto conserva su implementación actual. El runtime usa los mismos contratos independientemente del proveedor.
 - Operational debe versionar documentos repetidos por `(tenant_id, filename)` para evitar violar `uniq_document_tenant_filename_version`; una segunda carga del mismo archivo debe retornar una nueva `version`.
 
 ## Contratos API encontrados

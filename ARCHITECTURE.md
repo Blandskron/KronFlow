@@ -7,6 +7,7 @@
 | Operational | [FastAPI and PostgreSQL](flowkron-operational-service/README.md) | Tenant provisioning, per-tenant schemas, ingest, leads, conversations and statistics |
 | Agent Core | [FastAPI](flowkron-agent-core/README.md) | Channel-agnostic agent API, business context, simulation and optional LLM calls |
 | Email | [Blandskron gateway](smtp-http-blandskron/README.md) | Bearer authentication, scoped sender keys, idempotency using Redis and delivery through Resend |
+| WhatsApp lab | [Baileys connector](flowkron-baileys-services/README.md) | Optional private QR pairing and consent-gated text ingestion for one tenant per instance |
 | Interfaces | [API contracts](flowkron-api-contracts/README.md) | Canonical specifications with partial runtime adoption |
 
 ```mermaid

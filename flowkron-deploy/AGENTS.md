@@ -4,6 +4,7 @@ Fuente única de contexto e instrucciones agenticas para `flowkron-deploy`. Los 
 
 ## Propósito y límites
 
+El stack base integra IAM, Operational, Agent Core, frontends, correo, PostgreSQL y Redis. El perfil opcional `whatsapp-lab` añade el conector Baileys de laboratorio.
 
 ## Mapa
 
@@ -13,6 +14,7 @@ Fuente única de contexto e instrucciones agenticas para `flowkron-deploy`. Los 
 | `compose/infrastructure.yml` | PostgreSQL 18, Redis 7, named volumes y red |
 | `compose/backend.yml` | Auth/operational, healthchecks, dependencias y bind mounts |
 | `compose/frontend.yml` | Landing/app y build args públicos |
+| `compose/whatsapp.yml` | Conector interno, perfil de laboratorio y volumen privado de sesión |
 | `.env.example` | Contrato de configuración local sin secretos reales |
 | `data/jwt-keys/` | Claves generadas locales, ignoradas; no leer |
 | `data/auth-media/` | Media persistente del auth, ignorada; no leer |
@@ -20,11 +22,11 @@ Fuente única de contexto e instrucciones agenticas para `flowkron-deploy`. Los 
 
 ## Topología real
 
-- Todos los contenedores usan `flowkron-network` y publican puerto al host.
+- Los contenedores usan `flowkron-network`. Los gateways de correo y WhatsApp permanecen en la red interna.
 - PostgreSQL/Redis persisten en named volumes.
 - Auth monta `data/jwt-keys` RW y `data/auth-media` RW.
 - Operational monta las claves JWT RO y declara dependencia Compose de auth saludable; usa PostgreSQL por `OPERATIONAL_DATABASE_URL`.
-- Auth declara dependencia Compose solo de Redis saludable; su entrypoint espera PostgreSQL usando `DATABASE_URL`.
+- Auth declara dependencias de Redis y PostgreSQL saludables; su entrypoint espera PostgreSQL usando `DATABASE_URL`.
 - App depende solo de auth saludable; landing no declara dependencias.
 - Agent Core declara dependencia Compose de auth y operational saludables.
 - No hay dependencia de salud que garantice operational o agent-core antes de iniciar la app frontend.
@@ -35,7 +37,7 @@ Fuente única de contexto e instrucciones agenticas para `flowkron-deploy`. Los 
 - Preservar nombres DNS/servicio `flowkron-*`, red compartida y healthchecks cuando afecten `depends_on`.
 - Distinguir puerto interno del contenedor y puerto publicado configurable.
 - URLs de frontend son build args públicos y deben ser alcanzables por el navegador; no usar DNS interno de Compose para ellas.
-- Secretos obligatorios usan `${VAR:?mensaje}` y deben seguir siendo placeholders en `.env.example`.
+- Los secretos obligatorios del stack base usan `${VAR:?mensaje}`. El conector opcional valida su Bearer al arrancar, con valores vacíos en `.env.example`.
 - No fijar credenciales/defaults personales ni usar `latest`.
 - Cambios de DB/volumen/JWT/startup deben contemplar migración, rollback y pérdida de datos.
 

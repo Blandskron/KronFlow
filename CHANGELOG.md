@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Agent Core supports Groq chat completions with a configurable model.
+- The optional Baileys lab profile adds private QR pairing and consent-gated text ingestion.
+
 ## Initial release
 
 - Flowkron by BLANDSKRON includes a CRM, public landing, dark and light themes, and reusable brand assets.

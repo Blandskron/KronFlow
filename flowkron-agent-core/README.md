@@ -91,9 +91,9 @@ Los tests activan `PERSISTENCE_MODE=local` y `ALLOW_LOCAL_DB_BOOTSTRAP=true` par
 
 La suite actual cubre healthcheck, formularios locales, catalogo de plantillas Word/PDF, fallback al catalogo empaquetado, status real sin documentos sinteticos, carga JSON, extraccion DOCX en `upload-file`, respuesta contextual, handoff sin contexto, proteccion cross-tenant y desempaquetado del envelope estandar de Operational.
 
-## Azure OpenAI
+## Proveedores de chat
 
-El adapter `AzureOpenAIClient` usa `api-key` y URLs completas de Azure OpenAI. En modo integrado, si chat esta habilitado, `/api/v1/agent/messages` puede responder con GPT usando fuentes obtenidas desde Operational. Si el proveedor falla, el core responde con fallback seguro y handoff.
+Groq usa `GROQ_API_KEY` y el modelo configurable `GROQ_MODEL`. Azure OpenAI usa su propia clave y URL de despliegue. En modo integrado, el agente genera respuestas con las fuentes obtenidas desde Operational y solicita traspaso si falla el proveedor. Consulta la [configuración de proveedores](docs/CONFIGURATION.md).
 
 ## Modelo de datos
 

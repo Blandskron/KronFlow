@@ -24,6 +24,8 @@ No usar:
 - `DEMO_IN_MEMORY_CONTEXT_ENABLED`: no existe en `Settings`; la ruta in-memory de documentos empresariales fue retirada del modo integrado.
 
 LLM y vector store:
+- `CHAT_PROVIDER=auto`: selecciona Groq con clave disponible o Azure cuando está habilitado. También admite selección explícita con `groq`, `azure` y `local`.
+- `GROQ_API_KEY` y `GROQ_MODEL`: clave del proveedor y modelo de chat. El modelo predeterminado es `openai/gpt-oss-20b`.
 - `AZURE_OPENAI_ENABLED`: habilita Azure OpenAI.
 - `AZURE_OPENAI_API_VERSION`: versión de la API de Azure OpenAI (ej. `2024-02-01`).
 - `CHAT_COMPLETION_URL`, `CHAT_COMPLETION_MODEL_NAME`, `CHAT_COMPLETION_MAX_TOKENS`, `CHAT_COMPLETION_TEMPERATURE`, `CHAT_COMPLETION_TIMEOUT_SECONDS`.

@@ -7,7 +7,7 @@ from app.api.v1.schemas.agent import AgentActionPayload, AgentMessageRequest, Ag
 from app.core.config import get_settings
 from app.domain.ports.llm import ChatMessage
 from app.infrastructure.external_tools.mock_tools import prepare_action
-from app.infrastructure.llm.azure_openai import AzureOpenAIClient
+from app.infrastructure.llm.chat_provider import chat_client
 from app.infrastructure.operational_context import operational_context_client
 from app.infrastructure.vector_store.simple_retriever import retrieve_sources
 from app.models.agent import AgentResponseTrace
@@ -19,7 +19,7 @@ GREETING_RE = re.compile(r"^\s*(hola|buenas|buenos dias|buenos días|buenas tard
 
 def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest) -> AgentMessageResponse:
     settings = get_settings()
-    llm = AzureOpenAIClient(settings)
+    llm = chat_client(settings)
     sources = operational_context_client.retrieve_sources(tenant_id, payload.message.content)
     confidence = sources[0].score if sources else 0.0
     source_payloads = [
@@ -32,7 +32,8 @@ def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest
         )
         for source in sources
     ]
-    if sources and llm.enabled_for_chat:
+    handoff_reason = None if sources else "insufficient_context"
+    if sources and llm and llm.enabled_for_chat:
         try:
             context = "\n\n".join(source.content for source in sources[:3])
             user_content = payload.message.content if not context else f"Contexto:\n{context}\n\nPregunta:\n{payload.message.content}"
@@ -49,11 +50,15 @@ def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest
                     ChatMessage(role="user", content=user_content),
                 ]
             )
-        except (httpx.HTTPError, KeyError, ValueError, RuntimeError):
+        except (httpx.HTTPError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
+            handoff_reason = "chat_provider_unavailable"
+            confidence = 0.0
             reply_content = (
                 "No pude consultar el proveedor de IA en este momento. "
                 "Puedo derivar la conversacion a un humano."
             )
+    elif sources:
+        reply_content = f"Segun el contexto disponible: {sources[0].content[:700]}"
     else:
         reply_content = (
             "No cuento con información suficiente para responder tu solicitud de forma precisa. "
@@ -81,11 +86,11 @@ def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest
         tenant_id=tenant_id,
         conversation_id=payload.conversation_id,
         reply=ReplyPayload(content=reply_content),
-        actions=[prepare_action("none", {})] if sources else [prepare_action("handoff_human", {"reason": "operational_context_adapter_pending"})],
-        requires_human=not bool(sources),
+        actions=[prepare_action("handoff_human", {"reason": handoff_reason})] if handoff_reason else [prepare_action("none", {})],
+        requires_human=handoff_reason is not None,
         confidence=confidence,
         sources=source_payloads,
-        next_step="continue_conversation" if sources else "handoff",
+        next_step="handoff" if handoff_reason else "continue_conversation",
     )
 
 
@@ -129,11 +134,11 @@ def process_agent_message(db: Session, tenant_id: str, payload: AgentMessageRequ
     sources = retrieve_sources(db, tenant_id, payload.message.content)
     confidence = sources[0].score if sources else 0.0
     settings = get_settings()
-    llm = AzureOpenAIClient(settings)
+    llm = chat_client(settings)
     requires_human = confidence < settings.low_confidence_threshold
     if sources:
         source_text = sources[0].content[:700]
-        if llm.enabled_for_chat:
+        if llm and llm.enabled_for_chat:
             try:
                 reply_content = llm.complete(
                     [
@@ -147,7 +152,7 @@ def process_agent_message(db: Session, tenant_id: str, payload: AgentMessageRequ
                         ChatMessage(role="user", content=f"Contexto:\n{source_text}\n\nPregunta:\n{payload.message.content}"),
                     ]
                 )
-            except (httpx.HTTPError, KeyError, ValueError, RuntimeError):
+            except (httpx.HTTPError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
                 reply_content = f"Segun el contexto disponible: {source_text}"
         else:
             reply_content = f"Segun el contexto disponible: {source_text}"

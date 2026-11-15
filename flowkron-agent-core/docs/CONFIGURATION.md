@@ -16,6 +16,8 @@ Variables principales:
 - `MAX_UPLOAD_BYTES`: limite de carga, por defecto `5242880`.
 - `ALLOWED_UPLOAD_EXTENSIONS`: por defecto `.pdf`, `.docx`, `.csv`, `.xlsx`, `.txt`, `.md`; el extractor implementado lee texto desde `.pdf`, `.docx`, `.csv`, `.txt` y `.md`.
 - `LOW_CONFIDENCE_THRESHOLD`: umbral para handoff/fallback.
+- `CHAT_PROVIDER=auto`: usa Groq cuando hay clave, luego Azure si está configurado y, en su defecto, el contexto local. Los valores `groq`, `azure` y `local` seleccionan el modo explícitamente.
+- `GROQ_API_KEY`: secreto de Groq. `GROQ_MODEL`: identificador de modelo, con `openai/gpt-oss-20b` por defecto.
 - `AZURE_OPENAI_ENABLED`: habilita Azure OpenAI.
 - `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_KEY`: version y secreto de Azure OpenAI.
 - `CHAT_COMPLETION_URL`, `CHAT_COMPLETION_MODEL_NAME`, `CHAT_COMPLETION_MAX_TOKENS`, `CHAT_COMPLETION_TEMPERATURE`, `CHAT_COMPLETION_TIMEOUT_SECONDS`: chat completion.

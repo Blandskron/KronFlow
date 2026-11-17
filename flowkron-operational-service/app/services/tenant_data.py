@@ -61,7 +61,7 @@ def lead_to_dict(lead: Lead) -> dict[str, Any]:
         "cliente_id": lead.cliente_id,
         "rut": cliente.rut if cliente else "",
         "nombre": cliente.nombre if cliente else "",
-        "email": cliente.email if cliente else "",
+        "email": (cliente.email or "") if cliente else "",
         "telefono": cliente.telefono if cliente else "",
         "whatsapp_id": cliente.whatsapp_id if cliente else "",
         "tipo_cliente": cliente.tipo_cliente if cliente else "prospecto",

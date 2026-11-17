@@ -87,6 +87,7 @@
                     <em class="badge badge-primary">{{ ticket.score }} pts</em>
                     <small class="muted time"><svg lucideClock size="12"></svg>{{ ticket.timestamp }}</small>
                   </div>
+                  <a routerLink="/app/conversations" [queryParams]="{ conversation: ticket.id }">Ver conversación</a>
                 </article>
               }
             </div>
@@ -95,4 +96,3 @@
       </div>
       }
     </section>
-  

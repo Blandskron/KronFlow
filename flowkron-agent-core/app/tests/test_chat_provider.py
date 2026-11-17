@@ -70,3 +70,18 @@ def test_operational_mode_requests_human_when_groq_fails(monkeypatch):
     assert response.next_step == "handoff"
     assert response.actions[0].type == "handoff_human"
     assert response.sources
+
+
+def test_simple_whatsapp_turns_work_without_documents(monkeypatch):
+    def unexpected_retrieval(*_args):
+        raise AssertionError("A greeting, thanks or explicit handoff does not need business documents.")
+
+    monkeypatch.setattr(agent_runtime, "get_settings", lambda: Settings(_env_file=None, chat_provider="local"))
+    monkeypatch.setattr(agent_runtime.operational_context_client, "retrieve_sources", unexpected_retrieval)
+    for message, expected_handoff in [("¡Hola!", False), ("Gracias", False), ("Quiero hablar con una persona", True)]:
+        request = AgentMessageRequest(
+            channel="whatsapp", conversation_id="synthetic", customer={"external_id": "synthetic"},
+            message={"content": message},
+        )
+        response = agent_runtime.process_stateless_agent_message("tenant-a", request)
+        assert response.requires_human is expected_handoff

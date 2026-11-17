@@ -1,33 +1,30 @@
-
-    <section class="page-section">
-      <h1>Notificaciones</h1>
-      <p class="muted">Alertas recientes de tus agentes, conversaciones y sistema.</p>
-      <div class="card list">
-        @if (notifications.length === 0) {
-          <p class="muted" style="padding: 24px; margin: 0; text-align: center;">No tienes notificaciones por ahora.</p>
-        }
-        @for (notification of notifications; track notification.title) {
-          <article>
-            <span>
-              @switch (notification.icon) {
-                @case ('message-square') {
-                  <svg lucideMessageSquare size="20"></svg>
-                }
-                @case ('check-circle-2') {
-                  <svg lucideCheckCircle2 size="20"></svg>
-                }
-                @case ('workflow') {
-                  <svg lucideWorkflow size="20"></svg>
-                }
-              }
-            </span>
-            <div>
-              <strong>{{ notification.title }}</strong>
-              <p class="muted">{{ notification.message }}</p>
-            </div>
-            <small class="muted">{{ notification.time }}</small>
-          </article>
-        }
-      </div>
-    </section>
-  
+<section class="page-section">
+  <h1>Notificaciones</h1>
+  <p class="muted">Conversaciones que el agente dejó pendientes de atención.</p>
+  <div class="card list">
+    @if (loading()) {
+      <p class="muted" role="status">Consultando solicitudes pendientes…</p>
+    } @else if (failed()) {
+      <p role="alert">No pudimos consultar las solicitudes.</p>
+      <button class="btn btn-secondary" type="button" (click)="refresh()">Reintentar</button>
+    } @else {
+      @for (conversation of conversations(); track conversation.id) {
+        <article>
+          <span aria-hidden="true"><svg lucideMessageSquare size="20"></svg></span>
+          <div>
+            <a routerLink="/app/conversations" [queryParams]="{ conversation: conversation.id }">
+              {{ conversation.lead_name || 'Contacto sin nombre' }}
+            </a>
+            <p class="muted">Requiere atención</p>
+          </div>
+          <small class="muted">{{ (conversation.last_message_at || conversation.updated_at) | date:'dd/MM HH:mm' }}</small>
+        </article>
+      } @empty {
+        <p class="muted">No hay conversaciones pendientes de atención.</p>
+      }
+      @if (total() > conversations().length) {
+        <p><a routerLink="/app/conversations">Ver todas en Conversaciones</a></p>
+      }
+    }
+  </div>
+</section>

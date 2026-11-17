@@ -16,6 +16,10 @@
           <img class="qr" [src]="current.qr" width="256" height="256" alt="Código QR para vincular esta cuenta con WhatsApp">
           <p class="muted">El código se renueva automáticamente.</p>
         }
+        @if (current.status === 'connected') {
+          <p class="muted">Los mensajes de contactos que acepten el aviso aparecerán en Conversaciones.</p>
+          <a class="btn btn-primary" routerLink="/app/conversations">Ver conversaciones</a>
+        }
         @if (current.status === 'disconnected') {
           <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="update('POST')">
             Generar código QR

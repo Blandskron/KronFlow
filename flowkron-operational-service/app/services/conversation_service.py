@@ -135,13 +135,21 @@ def get_conversation(db: Session, tenant: TenantContext, conversation_id: int) -
     return conversation_to_dict(conversation, lead, resumen.ultimo_mensaje, resumen.ultimo_mensaje_en)
 
 
-def list_messages(db: Session, tenant: TenantContext, conversation_id: int, limit: int, offset: int) -> tuple[list[dict[str, Any]], int]:
+def list_messages(
+    db: Session, tenant: TenantContext, conversation_id: int, limit: int, offset: int,
+    *, recent: bool = False, before_id: int | None = None,
+) -> tuple[list[dict[str, Any]], int]:
     session_id = scalar_for_tenant(db, tenant.schema_name, select(Conversation.session_id).where(Conversation.id == conversation_id))
     if not session_id:
         return [], 0
     base_statement = select(Message).where(Message.whatsapp_id == session_id)
+    if before_id is not None:
+        base_statement = base_statement.where(Message.id < before_id)
     total = count_for_tenant(db, tenant.schema_name, base_statement)
-    statement = base_statement.order_by(Message.creado_en.asc()).limit(limit).offset(offset)
+    # The inbox follows the order in which turns were saved. WhatsApp and the
+    # server can stamp the same turn with different clocks.
+    ordering = (Message.id.desc(),) if recent else (Message.creado_en.asc(), Message.id.asc())
+    statement = base_statement.order_by(*ordering).limit(limit).offset(offset)
     messages = execute_for_tenant(db, tenant.schema_name, statement).scalars().all()
     return [message_to_dict(message, conversation_id) for message in messages], total
 

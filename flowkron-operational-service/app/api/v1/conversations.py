@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -39,11 +41,13 @@ def messages(
     conversation_id: int,
     limit: int = Query(default=100, ge=1),
     offset: int = Query(default=0, ge=0),
+    order: Literal["chronological", "recent"] = "chronological",
+    before_id: int | None = Query(default=None, gt=0),
     tenant: TenantContext = Depends(resolve_tenant_from_jwt),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     limit = min(limit, settings.max_page_size)
-    items, total = list_messages(db, tenant, conversation_id, limit, offset)
+    items, total = list_messages(db, tenant, conversation_id, limit, offset, recent=order == "recent", before_id=before_id)
     return MessageListResponse(items=items, total=total, limit=limit, offset=offset)
 

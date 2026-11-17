@@ -14,11 +14,27 @@ from app.models.agent import AgentResponseTrace
 from app.models.conversation import ConversationMessage, ConversationSession, RetrievalTrace
 
 
-GREETING_RE = re.compile(r"^\s*(hola|buenas|buenos dias|buenos días|buenas tardes|buenas noches|hello|hi)\s*[!.?¿¡]*\s*$", re.IGNORECASE)
+GREETING_RE = re.compile(r"^[¡¿\s]*(hola|buenas|buenos dias|buenos días|buenas tardes|buenas noches|hello|hi)\s*[!.?¿¡]*\s*$", re.IGNORECASE)
+THANKS_RE = re.compile(r"^[¡¿\s]*(muchas gracias|gracias|muchísimas gracias)\s*[!.?¿¡]*\s*$", re.IGNORECASE)
+HANDOFF_RE = re.compile(
+    r"^[¡¿\s]*(?:(?:quiero|necesito|quisiera|puedo|me gustaría)\s+)?hablar con\s+"
+    r"(?:(?:un|una|alguien de)\s+)?(?:persona|humano|humana|ejecutiv[oa]|asesor[ao]|tu equipo|el equipo)\b",
+    re.IGNORECASE,
+)
 
 
 def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest) -> AgentMessageResponse:
     settings = get_settings()
+    message = payload.message.content
+    if _is_greeting(message):
+        return _simple_stateless_reply(tenant_id, payload, "¡Hola! Soy el asistente de este espacio. ¿En qué te puedo ayudar?")
+    if THANKS_RE.fullmatch(message):
+        return _simple_stateless_reply(tenant_id, payload, "¡De nada! Si tienes otra consulta, estoy aquí para ayudarte.")
+    if HANDOFF_RE.match(message):
+        return _simple_stateless_reply(
+            tenant_id, payload, "Claro. Dejaré tu solicitud pendiente para que la revise el equipo.",
+            handoff_reason="customer_requested_human",
+        )
     llm = GroqClient(settings)
     sources = operational_context_client.retrieve_sources(tenant_id, payload.message.content)
     confidence = sources[0].score if sources else 0.0
@@ -62,26 +78,8 @@ def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest
     else:
         reply_content = (
             "No cuento con información suficiente para responder tu solicitud de forma precisa. "
-            "Te transferiré con uno de nuestros ejecutivos para que pueda ayudarte correctamente."
+            "Dejaré tu solicitud pendiente para que la revise el equipo."
         )
-    if not sources and _is_greeting(payload.message.content):
-        status_payload = operational_context_client.get_status(tenant_id)
-        if int(status_payload.get("active_documents_count") or 0) > 0:
-            return AgentMessageResponse(
-                tenant_id=tenant_id,
-                conversation_id=payload.conversation_id,
-                reply=ReplyPayload(
-                    content=(
-                        "Hola. Ya tengo contexto empresarial cargado. "
-                        "Puedes preguntarme sobre la empresa, servicios, politicas o preguntas frecuentes."
-                    )
-                ),
-                actions=[prepare_action("none", {})],
-                requires_human=False,
-                confidence=max(settings.low_confidence_threshold, 0.4),
-                sources=[],
-                next_step="continue_conversation",
-            )
     return AgentMessageResponse(
         tenant_id=tenant_id,
         conversation_id=payload.conversation_id,
@@ -90,6 +88,20 @@ def process_stateless_agent_message(tenant_id: str, payload: AgentMessageRequest
         requires_human=handoff_reason is not None,
         confidence=confidence,
         sources=source_payloads,
+        next_step="handoff" if handoff_reason else "continue_conversation",
+    )
+
+
+def _simple_stateless_reply(tenant_id, payload, content, *, handoff_reason=None) -> AgentMessageResponse:
+    action = prepare_action("handoff_human", {"reason": handoff_reason}) if handoff_reason else prepare_action("none", {})
+    return AgentMessageResponse(
+        tenant_id=tenant_id,
+        conversation_id=payload.conversation_id,
+        reply=ReplyPayload(content=content),
+        actions=[action],
+        requires_human=handoff_reason is not None,
+        confidence=1.0,
+        sources=[],
         next_step="handoff" if handoff_reason else "continue_conversation",
     )
 

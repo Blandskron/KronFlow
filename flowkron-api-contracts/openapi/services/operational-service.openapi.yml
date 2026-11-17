@@ -595,6 +595,19 @@ paths:
           schema:
             type: integer
             default: 0
+        - name: order
+          in: query
+          description: Orden cronológico por fecha del mensaje o desde el último mensaje registrado.
+          schema:
+            type: string
+            enum: [chronological, recent]
+            default: chronological
+        - name: before_id
+          in: query
+          description: En modo recent, usa el ID del último resultado para pedir los mensajes anteriores.
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '200':
           description: Lista paginada de mensajes

@@ -24,11 +24,11 @@ export class ConversationsApiService {
       .pipe(map((response) => response.data));
   }
 
-  listMessages(conversationId: number, limit = 100, offset = 0): Observable<PaginatedResponse<ConversationMessage>> {
+  listMessages(conversationId: number, beforeId?: number): Observable<PaginatedResponse<ConversationMessage>> {
     return this.http
       .get<ApiResponse<PaginatedResponse<ConversationMessage>>>(
         `${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/messages`,
-        { params: toParams({ limit, offset }) }
+        { params: toParams({ limit: 50, order: 'recent', before_id: beforeId }) }
       )
       .pipe(map((response) => response.data));
   }

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import jwt
+from datetime import datetime, timezone
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from fastapi import HTTPException
@@ -17,9 +18,12 @@ from app.core.tenant_resolver import resolve_tenant_from_ingest_headers
 from app.core import admission
 from app.main import app
 from app.schemas.ingest import ConsentIn
+from app.schemas.lead import LeadListResponse
 from app.schemas.tenant import TenantProvisionRequest
 from app.services.ingest_service import save_consent
+from app.services.tenant_data import lead_to_dict
 from app.services.tenant_provisioning_service import provision_tenant
+from app.tenant_models.operations import Cliente, Lead
 
 
 def request(path="/api/v1/leads", method="GET"):
@@ -115,3 +119,13 @@ class SecurityTests(unittest.TestCase):
             provision_tenant(db, TenantProvisionRequest(auth_tenant_id=1, tenant_slug="test", tenant_name="Test", plan="free"))
         apply_schema.assert_not_called()
         self.assertEqual(runtime.status, "suspended")
+
+    def test_whatsapp_lead_without_email_keeps_the_list_available(self):
+        now = datetime.now(timezone.utc)
+        contact = Cliente(id=1, rut="synthetic", nombre="Contacto", email=None, telefono="12025550138",
+                          canal_origen="whatsapp", whatsapp_id="12025550138")
+        lead = Lead(id=1, cliente_id=1, cliente=contact, score_lead=0, clasificacion="frio",
+                    estado="nuevo", creado_en=now, actualizado_en=now)
+        result = LeadListResponse(items=[lead_to_dict(lead)], total=1, limit=50, offset=0)
+        self.assertEqual(result.items[0].email, "")
+        self.assertEqual(result.items[0].phone, "12025550138")

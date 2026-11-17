@@ -1,5 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
+import { timer } from 'rxjs';
 import {
   LucideArrowLeft,
   LucideMail,
@@ -32,6 +35,13 @@ interface Message {
   timestamp: string;
 }
 
+interface Thread {
+  loading: boolean;
+  error: boolean;
+  hasOlder: boolean;
+  messages: Message[];
+}
+
 @Component({
   selector: 'flowkron-chats-page',
   standalone: true,
@@ -49,6 +59,8 @@ interface Message {
 export class ChatsPageComponent implements OnInit {
   private readonly operational = inject(ConversationsApiService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
   private readonly backButton = viewChild<ElementRef<HTMLButtonElement>>('backButton');
 
   readonly searchQuery = signal('');
@@ -58,13 +70,13 @@ export class ChatsPageComponent implements OnInit {
   readonly isLoading = signal(false);
   readonly loadError = signal('');
   readonly chats = signal<ChatContact[]>([]);
-  readonly threads = signal<Partial<Record<number, { state: 'loading' | 'error' | 'ready'; messages: Message[] }>>>({});
+  readonly threads = signal<Partial<Record<number, Thread>>>({});
 
   readonly statuses = [
     { id: 'all', label: 'Todas' },
     { id: 'new', label: 'Nuevas' },
     { id: 'active', label: 'Activas' },
-    { id: 'waiting', label: 'En espera' },
+    { id: 'waiting', label: 'Necesitan atención' },
     { id: 'closed', label: 'Cerradas' }
   ];
 
@@ -79,7 +91,18 @@ export class ChatsPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    const requested = Number(this.route.snapshot.queryParamMap.get('conversation'));
+    if (Number.isSafeInteger(requested) && requested > 0) this.selectedChatId.set(requested);
     this.loadConversations();
+    timer(10000, 10000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (!document.hidden) this.refresh();
+    });
+  }
+
+  refresh(): void {
+    this.loadConversations();
+    const selected = this.selectedChatId();
+    if (selected !== null) this.loadThread(selected);
   }
 
   loadConversations(): void {
@@ -89,11 +112,14 @@ export class ChatsPageComponent implements OnInit {
 
     this.isLoading.set(true);
     this.loadError.set('');
-    this.operational.listConversations({ limit: 100 }).subscribe({
+    this.operational.listConversations({ limit: 100 }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         this.chats.set(response.items.map((item) => this.toChatContact(item)));
-        if (!this.selectedChat()) {
+        const selected = this.selectedChat();
+        if (!selected) {
           this.selectedChatId.set(null);
+        } else if (!this.threads()[selected.id]) {
+          this.loadThread(selected.id);
         }
         this.isLoading.set(false);
       },
@@ -113,21 +139,34 @@ export class ChatsPageComponent implements OnInit {
         }
       }, { injector: this.injector });
     }
-    const thread = this.threads()[chatId];
-    if (thread?.state === 'ready' || thread?.state === 'loading') {
-      return;
-    }
+    this.loadThread(chatId);
+  }
 
-    this.threads.update((current) => ({ ...current, [chatId]: { state: 'loading', messages: [] } }));
-    this.operational.listMessages(chatId).subscribe({
+  loadThread(chatId: number, older = false): void {
+    const current = this.threads()[chatId] ?? { loading: false, error: false, hasOlder: false, messages: [] };
+    if (current.loading) return;
+    const beforeId = older ? current.messages[0]?.id : undefined;
+    if (older && beforeId === undefined) return;
+    this.threads.update((threads) => ({ ...threads, [chatId]: { ...current, loading: true, error: false } }));
+    this.operational.listMessages(chatId, beforeId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
-        this.threads.update((current) => ({
-          ...current,
-          [chatId]: { state: 'ready', messages: response.items.map((message) => this.toMessage(message)) }
+        const oldestReceived = response.items.at(-1)?.id;
+        const missedPage = !older && oldestReceived !== undefined && current.messages.length > 0
+          && oldestReceived > current.messages[current.messages.length - 1].id;
+        const messages = new Map((missedPage ? [] : current.messages).map((message) => [message.id, message]));
+        for (const item of response.items) messages.set(item.id, this.toMessage(item));
+        this.threads.update((threads) => ({
+          ...threads,
+          [chatId]: {
+            loading: false,
+            error: false,
+            hasOlder: response.total > (older ? response.items.length : messages.size),
+            messages: [...messages.values()].sort((a, b) => a.id - b.id)
+          }
         }));
       },
       error: () => {
-        this.threads.update((current) => ({ ...current, [chatId]: { state: 'error', messages: [] } }));
+        this.threads.update((threads) => ({ ...threads, [chatId]: { ...current, loading: false, error: true } }));
       }
     });
   }

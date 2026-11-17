@@ -4,7 +4,7 @@
       <h1>Conversaciones</h1>
       <p class="muted">Busca contactos, revisa sus mensajes y consulta el estado de cada conversación.</p>
     </div>
-      <button class="btn btn-secondary" type="button" [disabled]="isLoading()" (click)="loadConversations()">
+      <button class="btn btn-secondary" type="button" [disabled]="isLoading()" (click)="refresh()">
         <svg lucideRefreshCw size="18" aria-hidden="true"></svg>
         {{ isLoading() ? 'Actualizando…' : 'Actualizar' }}
       </button>
@@ -27,7 +27,7 @@
           </div>
         </div>
 
-        @if (isLoading()) {
+        @if (isLoading() && !chats().length) {
           <p class="muted state" role="status">Cargando conversaciones…</p>
         } @else if (loadError()) {
           <p class="muted state" role="alert">{{ loadError() }}</p>
@@ -89,25 +89,28 @@
 
           <div class="messages">
             @if (threads()[selected.id]; as thread) {
-              @switch (thread.state) {
-                @case ('loading') { <p class="muted" role="status">Cargando mensajes…</p> }
-                @case ('error') {
-                  <p class="muted" role="alert">No pudimos cargar los mensajes de esta conversación.</p>
-                  <button class="btn btn-secondary" type="button" (click)="select(selected.id)">Reintentar</button>
+                @if (thread.error) {
+                  <p class="muted" role="alert">No pudimos actualizar los mensajes de esta conversación.</p>
+                  <button class="btn btn-secondary" type="button" (click)="loadThread(selected.id)">Reintentar</button>
+                } @else if (thread.loading && !thread.messages.length) {
+                  <p class="muted" role="status">Cargando mensajes…</p>
                 }
-                @case ('ready') {
+                @if (thread.hasOlder) {
+                  <button class="btn btn-secondary" type="button" [disabled]="thread.loading" (click)="loadThread(selected.id, true)">
+                    Ver mensajes anteriores
+                  </button>
+                }
                   @for (message of thread.messages; track message.id) {
                     <div class="message-row" [class.agent]="message.sender === 'agent'">
                       <div class="bubble">
                         <p>{{ message.text }}</p>
-                        <small>{{ message.timestamp }}</small>
+                        <small>{{ message.sender === 'agent' ? 'Agente' : 'Contacto' }} · {{ message.timestamp }}</small>
                       </div>
                     </div>
-                  } @empty {
+                  }
+                  @if (!thread.messages.length && !thread.loading && !thread.error) {
                     <p class="muted" role="status">Aún no hay mensajes en esta conversación.</p>
                   }
-                }
-              }
             }
           </div>
         } @else {

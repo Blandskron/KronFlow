@@ -76,13 +76,13 @@ export function tenantIngest(
   const prompted = new Map<string, number>();
   const timeout = 70000;
 
-  async function request(url: URL, payload?: object) {
+  async function request(url: URL, payload?: object, requestTimeout = timeout) {
     const result = await fetch(url, {
       method: payload ? "POST" : "GET",
       headers,
       body: payload ? JSON.stringify(payload) : undefined,
       redirect: "error",
-      signal: AbortSignal.timeout(timeout)
+      signal: AbortSignal.timeout(requestTimeout)
     });
     if (!result.ok) throw new Error(`WhatsApp pipeline HTTP ${result.status}`);
     const json = await result.json();
@@ -93,7 +93,16 @@ export function tenantIngest(
     const consentUrl = new URL("consent", base);
     const command = message.body.trim().toUpperCase();
     if (command === "ACEPTO" || command === "BAJA") {
-      await request(consentUrl, { phone: message.phone, accepted: command === "ACEPTO", policy_version: "flowkron-whatsapp-v1" });
+      // Transient downstream overload must not silently discard a withdrawal.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await request(consentUrl, { phone: message.phone, accepted: command === "ACEPTO", policy_version: "flowkron-whatsapp-v1" }, 5000);
+          break;
+        } catch (error) {
+          if (command !== "BAJA" || attempt >= 2) throw error;
+          await new Promise(resolve => setTimeout(resolve, 250 * 2 ** attempt));
+        }
+      }
       await reply(command === "ACEPTO"
         ? "Gracias. Ya puedes enviar tu consulta. Escribe BAJA si quieres retirar tu autorización."
         : "Tu autorización fue retirada. Si quieres volver a consultar, escribe ACEPTO.");

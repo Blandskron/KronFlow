@@ -6,6 +6,9 @@ info:
     Servicio operacional multi-tenant de la plataforma Flowkron.
     Gestiona ingesta de mensajes WhatsApp desde un adaptador de WhatsApp, leads, conversaciones,
     analíticas, contexto de agente y aprovisionamiento de schemas por tenant.
+    Los endpoints de usuario requieren un JWT de acceso. Las lecturas CRM requieren users.read;
+    la edición de leads requiere crm.manage, los agentes requieren agents.create y las lecturas
+    de auditoría requieren audit.read. La ingesta aplica límites antes de verificar credenciales.
   contact:
     name: Flowkron Engineering
 servers:

@@ -64,7 +64,7 @@ def require_internal_token(
     x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
     settings: Settings = Depends(get_settings),
 ) -> None:
-    if not x_internal_token or not hmac.compare_digest(x_internal_token, settings.internal_token):
+    if not settings.internal_token or not x_internal_token or not hmac.compare_digest(x_internal_token, settings.internal_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal token")
 
 
@@ -88,12 +88,15 @@ def get_current_principal(
             algorithms=[settings.jwt_algorithm],
             audience=settings.jwt_audience,
             issuer=settings.jwt_issuer,
+            options={"require": ["exp", "iat", "jti", "token_type", "user_id", "tenant_id"]},
         )
+        if claims["token_type"] != "access":
+            raise jwt.InvalidTokenError("Expected an access token")
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token") from exc
 
     tenant_id = claims.get("tenant_id")
-    if not tenant_id:
+    if not str(tenant_id).isascii() or not str(tenant_id).isdecimal() or int(tenant_id) < 1:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token has no tenant")
 
     principal = CurrentPrincipal(

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.core.tenant_resolver import TenantContext, resolve_tenant_from_jwt
+from app.core.tenant_resolver import TenantContext, resolve_audit_reader, resolve_tenant_from_jwt
 from app.services.operational_read_service import (
     list_clientes,
     list_conversaciones,
@@ -83,7 +83,7 @@ def mensajes_dashboard(
 def solicitudes_derechos(
     limit: int = Query(default=50, ge=1),
     offset: int = Query(default=0, ge=0),
-    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    tenant: TenantContext = Depends(resolve_audit_reader),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -105,7 +105,7 @@ def ejecutivos(
 def log_limpiezas(
     limit: int = Query(default=50, ge=1),
     offset: int = Query(default=0, ge=0),
-    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    tenant: TenantContext = Depends(resolve_audit_reader),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):

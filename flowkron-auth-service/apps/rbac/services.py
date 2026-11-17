@@ -27,6 +27,20 @@ BASE_ROLES = {
 }
 
 
+def assert_delegable(actor, role, permission_code=None):
+    from rest_framework.exceptions import PermissionDenied
+
+    owner = actor.membership_roles.filter(role__tenant_id=actor.tenant_id, role__code="TENANT_OWNER").exists()
+    if role.tenant_id != actor.tenant_id:
+        raise PermissionDenied("Role belongs to another workspace.")
+    if not owner:
+        granted = set(role.permissions.values_list("code", flat=True))
+        if permission_code:
+            granted.add(permission_code)
+        if role.code == "TENANT_OWNER" or not granted.issubset(set(role_permissions_for_membership(actor))):
+            raise PermissionDenied("Cannot grant or modify authority above your own role.")
+
+
 def seed_permissions():
     from .models import Permission
 
@@ -52,7 +66,7 @@ def seed_roles_for_tenant(tenant):
 def roles_for_membership(membership):
     if not membership:
         return []
-    return list(membership.membership_roles.select_related("role").values_list("role__code", flat=True))
+    return list(membership.membership_roles.filter(role__tenant_id=membership.tenant_id).values_list("role__code", flat=True))
 
 
 def role_permissions_for_membership(membership):

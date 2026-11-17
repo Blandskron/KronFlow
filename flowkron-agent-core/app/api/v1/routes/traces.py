@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.config import get_settings
-from app.core.tenant import TenantContext, resolve_tenant
+from app.core.tenant import TenantContext, resolve_audit_reader
 from app.models.agent import AgentResponseTrace
 from app.models.conversation import ConversationSession, RetrievalTrace
 
@@ -17,7 +17,7 @@ def require_local_persistence() -> None:
 
 
 @router.get("/traces/{trace_id}")
-def get_trace(trace_id: int, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
+def get_trace(trace_id: int, tenant: TenantContext = Depends(resolve_audit_reader), db: Session = Depends(get_db)):
     require_local_persistence()
     trace = db.get(AgentResponseTrace, trace_id)
     if not trace or trace.tenant_id != tenant.tenant_id:
@@ -26,7 +26,7 @@ def get_trace(trace_id: int, tenant: TenantContext = Depends(resolve_tenant), db
 
 
 @router.get("/conversations/{conversation_id}/traces")
-def get_conversation_traces(conversation_id: str, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
+def get_conversation_traces(conversation_id: str, tenant: TenantContext = Depends(resolve_audit_reader), db: Session = Depends(get_db)):
     require_local_persistence()
     conversation = db.scalar(select(ConversationSession).where(ConversationSession.tenant_id == tenant.tenant_id, ConversationSession.external_conversation_id == conversation_id))
     if not conversation:

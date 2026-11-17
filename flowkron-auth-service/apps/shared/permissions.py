@@ -42,12 +42,16 @@ class HasTenantPermission(permissions.BasePermission):
             return False
 
         query_params = getattr(request, "query_params", {})
-        requested_tenant_id = request.headers.get("X-Tenant-ID") or query_params.get("tenant_id")
-        if not requested_tenant_id and hasattr(request, "data"):
-            requested_tenant_id = request.data.get("tenant_id")
         token_tenant_id = str(request.auth.get("tenant_id")) if request.auth and request.auth.get("tenant_id") else None
-        tenant_id = str(requested_tenant_id or token_tenant_id or "")
-        if not tenant_id:
+        supplied = [request.headers.get("X-Tenant-ID"), query_params.get("tenant_id"), token_tenant_id]
+        if hasattr(request, "data") and isinstance(request.data, dict):
+            supplied.append(request.data.get("tenant_id"))
+            supplied.append(request.data.get("tenant"))
+        tenant_ids = {str(value) for value in supplied if value is not None and value != ""}
+        if len(tenant_ids) != 1:
+            return False
+        tenant_id = tenant_ids.pop()
+        if len(tenant_id) > 19 or not tenant_id.isascii() or not tenant_id.isdecimal() or not 0 < int(tenant_id) <= 2**63 - 1:
             return False
         if token_tenant_id and tenant_id != token_tenant_id:
             return False
@@ -57,7 +61,11 @@ class HasTenantPermission(permissions.BasePermission):
 
         from apps.rbac.services import permissions_for_membership
 
-        return required in permissions_for_membership(membership)
+        allowed = required in permissions_for_membership(membership)
+        if allowed:
+            request.authorized_tenant_id = membership.tenant_id
+            request.authorized_membership = membership
+        return allowed
 
 
 class IsTenantAdmin(HasTenantPermission):

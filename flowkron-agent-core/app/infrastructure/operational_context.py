@@ -76,6 +76,11 @@ class OperationalContextClient:
             for item in payload
         ]
 
+    def require_active_workspace(self, tenant_id: str) -> None:
+        runtime = self._request("GET", f"/internal/tenants/{int(tenant_id)}/runtime")
+        if runtime.get("status") != "active":
+            raise HTTPException(status_code=403, detail="Workspace is not active")
+
     def _request(self, method: str, path: str, **kwargs):
         settings = get_settings()
         url = f"{settings.operational_service_url.rstrip('/')}{path}"

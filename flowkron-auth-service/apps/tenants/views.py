@@ -8,11 +8,13 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import decorators, parsers, permissions, response, status, viewsets
 from rest_framework.views import APIView
+from rest_framework.exceptions import APIException, ValidationError
 
 from apps.audit.models import AuditLog
 from apps.audit.services import audit
 from apps.accounts.tokens import issue_tokens
-from apps.rbac.services import permissions_for_membership, roles_for_membership
+from apps.rbac.models import TenantRole
+from apps.rbac.services import assert_delegable, permissions_for_membership, roles_for_membership
 from apps.shared.permissions import HasTenantPermission
 from apps.shared.responses import api_error, ok
 from apps.shared.image_uploads import absolute_media_url, save_uploaded_image
@@ -29,7 +31,7 @@ from .serializers import (
     TenantSerializer,
     get_pending_invitation,
 )
-from .services import activate_subscription, create_owned_tenant, ensure_open_workspace, provision_operational_runtime, rotate_operational_ingest_key, sync_operational_runtime_status
+from .services import activate_subscription, create_owned_tenant, ensure_open_workspace, provision_operational_runtime, rotate_operational_ingest_key, sync_operational_runtime_status, stop_workspace
 
 
 @extend_schema_view(
@@ -53,6 +55,20 @@ from .services import activate_subscription, create_owned_tenant, ensure_open_wo
 )
 class TenantViewSet(viewsets.ModelViewSet):
     serializer_class = TenantSerializer
+
+    def perform_update(self, serializer):
+        if "status" in self.request.data:
+            raise ValidationError({"status": "Use the suspend or activate action."})
+        serializer.save()
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        instance = Tenant.objects.select_for_update().get(pk=instance.pk)
+        try:
+            stop_workspace(instance)
+        except requests.RequestException as exc:
+            raise APIException("Could not stop the workspace; deletion was not completed.") from exc
+        instance.delete()
 
     def get_permissions(self):
         permission_by_action = {
@@ -87,11 +103,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             return Tenant.objects.none()
         queryset = Tenant.objects.filter(memberships__user=self.request.user).distinct()
         if getattr(self, "required_permission", None):
-            tenant_id = (
-                self.request.headers.get("X-Tenant-ID")
-                or self.request.query_params.get("tenant_id")
-                or (self.request.auth.get("tenant_id") if self.request.auth else None)
-            )
+            tenant_id = getattr(self.request, "authorized_tenant_id", None)
             if tenant_id:
                 queryset = queryset.filter(id=tenant_id)
             else:
@@ -99,8 +111,11 @@ class TenantViewSet(viewsets.ModelViewSet):
         return queryset
 
     @decorators.action(detail=True, methods=["get", "post", "delete"], url_path="whatsapp")
+    @transaction.atomic
     def whatsapp(self, request, pk=None):
-        tenant = self.get_object()
+        tenant = Tenant.objects.select_for_update().get(pk=self.get_object().pk)
+        if tenant.status != Tenant.Status.ACTIVE:
+            return api_error(status=409, error_code="WORKSPACE_INACTIVE", detail="El espacio de trabajo está inactivo.")
         if not settings.BAILEYS_INTERNAL_TOKEN:
             return api_error(status=503, error_code="WHATSAPP_DISABLED", detail="El conector de WhatsApp no está configurado.")
         endpoint = f"{settings.BAILEYS_SERVICE_URL.rstrip('/')}/internal/baileys/tenants/{tenant.pk}/session"
@@ -200,20 +215,21 @@ class TenantViewSet(viewsets.ModelViewSet):
         )
 
     @decorators.action(detail=True, methods=["post"])
+    @transaction.atomic
     def suspend(self, request, pk=None):
-        tenant = self.get_object()
-        if TenantOperationalRuntime.objects.filter(tenant=tenant).exists():
-            try:
-                sync_operational_runtime_status(tenant, "suspend")
-            except requests.RequestException:
-                return api_error(status=503, error_code="WORKSPACE_UNAVAILABLE", detail="No pudimos suspender el espacio operativo.")
+        tenant = Tenant.objects.select_for_update().get(pk=self.get_object().pk)
+        try:
+            stop_workspace(tenant)
+        except requests.RequestException:
+            return api_error(status=503, error_code="WORKSPACE_UNAVAILABLE", detail="No pudimos detener el espacio operativo y su conexión.")
         tenant.status = Tenant.Status.SUSPENDED
         tenant.save(update_fields=["status", "updated_at"])
         return ok(TenantSerializer(tenant).data)
 
     @decorators.action(detail=True, methods=["post"])
+    @transaction.atomic
     def activate(self, request, pk=None):
-        tenant = self.get_object()
+        tenant = Tenant.objects.select_for_update().get(pk=self.get_object().pk)
         if TenantOperationalRuntime.objects.filter(tenant=tenant, status=TenantOperationalRuntime.Status.SUSPENDED).exists():
             try:
                 sync_operational_runtime_status(tenant, "activate")
@@ -235,9 +251,13 @@ class TenantViewSet(viewsets.ModelViewSet):
         return response.Response({"success": True, "data": TenantMembershipSerializer(membership).data}, status=status.HTTP_201_CREATED)
 
     @decorators.action(detail=True, methods=["patch", "delete"], url_path=r"members/(?P<membership_id>[^/.]+)")
+    @transaction.atomic
     def update_member(self, request, pk=None, membership_id=None):
         tenant = self.get_object()
+        Tenant.objects.select_for_update().get(pk=tenant.pk)
         membership = tenant.memberships.select_related("user").get(id=membership_id)
+        for assigned in membership.membership_roles.select_related("role"):
+            assert_delegable(request.authorized_membership, assigned.role)
         if membership.user_id == request.user.id and request.method == "DELETE":
             return response.Response(
                 {"success": False, "code": "MEMBER_SELF_REMOVE_DENIED", "message": "No puedes remover tu propia membresia.", "details": {}},
@@ -256,6 +276,10 @@ class TenantViewSet(viewsets.ModelViewSet):
             return ok(TenantMembershipSerializer(membership).data)
         serializer = MemberUpdateSerializer(data=request.data, context={"membership": membership})
         serializer.is_valid(raise_exception=True)
+        for code in serializer.validated_data.get("role_codes", []):
+            assert_delegable(request.authorized_membership, TenantRole.objects.get(tenant=tenant, code=code))
+        if serializer.validated_data.get("status", membership.status) != TenantMembership.Status.ACTIVE and _is_last_owner(membership):
+            raise ValidationError("The workspace must retain an active owner.")
         if "role_codes" in serializer.validated_data and _would_remove_last_owner(membership, serializer.validated_data["role_codes"]):
             return response.Response(
                 {"success": False, "code": "LAST_OWNER_ROLE_CHANGE_DENIED", "message": "El tenant debe conservar al menos un owner activo.", "details": {}},
@@ -417,11 +441,12 @@ def _active_owner_count(tenant):
         tenant=tenant,
         status=TenantMembership.Status.ACTIVE,
         membership_roles__role__code="TENANT_OWNER",
+        membership_roles__role__tenant=tenant,
     ).distinct().count()
 
 
 def _is_last_owner(membership):
-    has_owner_role = membership.membership_roles.filter(role__code="TENANT_OWNER").exists()
+    has_owner_role = membership.membership_roles.filter(role__code="TENANT_OWNER", role__tenant_id=membership.tenant_id).exists()
     return has_owner_role and _active_owner_count(membership.tenant) <= 1
 
 

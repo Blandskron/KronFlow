@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.core.tenant_resolver import TenantContext, resolve_tenant_from_jwt
+from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
 from app.schemas.lead import LeadListResponse, LeadOut, LeadUpdate
 from app.services.lead_service import get_lead, list_leads, update_lead
 
@@ -35,7 +35,7 @@ def retrieve(lead_id: int, tenant: TenantContext = Depends(resolve_tenant_from_j
 
 
 @router.patch("/{lead_id}", response_model=LeadOut)
-def update(lead_id: int, payload: LeadUpdate, tenant: TenantContext = Depends(resolve_tenant_from_jwt), db: Session = Depends(get_db)):
+def update(lead_id: int, payload: LeadUpdate, tenant: TenantContext = Depends(resolve_crm_editor), db: Session = Depends(get_db)):
     lead = update_lead(db, tenant, lead_id, payload)
     if not lead:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")

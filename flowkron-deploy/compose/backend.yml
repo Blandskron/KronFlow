@@ -56,7 +56,7 @@ services:
       - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${AUTH_PORT:-8000}:8000"
     volumes:
       - ${FLOWKRON_JWT_MOUNT:-flowkron-jwt-keys}:/app/keys
-      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-${FLOWKRON_JWT_MOUNT:-flowkron-jwt-public}}:/jwt-public
+      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-flowkron-jwt-public}:/jwt-public
       - ${FLOWKRON_MEDIA_MOUNT:-flowkron-auth-media}:/app/media
       - flowkron-iam-config:/run/flowkron:ro
     depends_on:
@@ -95,7 +95,7 @@ services:
       flowkron-postgres:
         condition: service_healthy
     volumes:
-      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-${FLOWKRON_JWT_MOUNT:-flowkron-jwt-public}}:/keys:ro
+      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-flowkron-jwt-public}:/keys:ro
       - flowkron-operational-config:/run/flowkron:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/readyz', timeout=4).read()"]
@@ -136,7 +136,7 @@ services:
       flowkron-operational-service:
         condition: service_healthy
     volumes:
-      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-${FLOWKRON_JWT_MOUNT:-flowkron-jwt-public}}:/keys:ro
+      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-flowkron-jwt-public}:/keys:ro
       - flowkron-agent-config:/run/flowkron:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/ready', timeout=4).read()"]

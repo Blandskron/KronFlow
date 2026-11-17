@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 
 
 class DocumentCreate(BaseModel):
-    title: str
-    filename: str
-    content: str
+    title: str = Field(max_length=256)
+    filename: str = Field(max_length=256)
+    content: str = Field(max_length=5_242_880)
     content_type: str = "text/plain"
     status: str = "active"
     priority: int = 100

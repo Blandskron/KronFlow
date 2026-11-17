@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type ServerResponse } from "node:http";
 import QRCode from "qrcode";
-import type { WhatsAppConnection } from "./connection.js";
+import { InactiveWorkspaceError, type WhatsAppConnection } from "./connection.js";
 
 function json(response: ServerResponse, status: number, payload: object) {
   response.writeHead(status, {
@@ -50,7 +50,8 @@ export function createHttpServer(
         return json(res, 200, { status, qr: qr ? await QRCode.toDataURL(qr) : undefined });
       }
       return json(res, 404, { error: "not_found" });
-    } catch {
+    } catch (error) {
+      if (error instanceof InactiveWorkspaceError) return json(res, 409, { error: "workspace_inactive" });
       return json(res, 503, { error: "whatsapp_session_unavailable" });
     }
   });

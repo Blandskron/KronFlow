@@ -6,6 +6,8 @@ Flowkron brings a conversation inbox, lead tracking, operational metrics, team m
 
 Flowkron is independent and has no affiliation with or endorsement from Meta or WhatsApp. Flowkron is open source under [Apache License 2.0](LICENSE). See the [release review](RELEASE_READINESS.md) for verification and deployment scope.
 
+The repository currently provides a source preview and local demo. Before hosting it for other organizations, follow the [deployment security guide](flowkron-deploy/docs/SECURITY.md). See [third-party components](THIRD_PARTY.md) before distributing container images.
+
 ## Start locally
 
 Use Docker Desktop or Docker Engine with the Docker Compose plugin. From the repository root, start the full local stack:
@@ -15,6 +17,8 @@ docker compose up --build --wait
 ```
 
 A fresh checkout can start without an `.env`. The init job generates instance credentials and keeps them in Docker volumes. Add a private `.env` based on [the example](.env.example) only for overrides or external providers.
+
+On Windows, clone into a short directory path if Git reports `Filename too long` while checking out the Angular sources.
 
 | Surface | Default address |
 | --- | --- |

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.rate_limit import enforce_ingest_rate_limit
-from app.core.tenant_resolver import TenantContext
+from app.core.tenant_resolver import TenantContext, resolve_tenant_from_ingest_headers
 from app.schemas.ingest import (
     ClientUpsertIn,
     ClientUpsertResponse,
@@ -42,6 +42,11 @@ from app.services.ingest_service import (
 )
 
 router = APIRouter(prefix="/api/v1/ingest/whatsapp", tags=["WhatsApp Ingest"])
+
+
+@router.get("/runtime-ready", include_in_schema=False)
+def runtime_ready(_tenant: TenantContext = Depends(resolve_tenant_from_ingest_headers)):
+    return {"status": "active"}
 
 
 @router.post("/message", response_model=IngestResponse)
@@ -96,7 +101,7 @@ def consent(
 
 
 @router.post("/consent", response_model=ConsentOut)
-def consent_update(payload: ConsentIn, tenant: TenantContext = Depends(enforce_ingest_rate_limit), db: Session = Depends(get_db)):
+def consent_update(payload: ConsentIn, tenant: TenantContext = Depends(resolve_tenant_from_ingest_headers), db: Session = Depends(get_db)):
     return ConsentOut(**save_consent(db, tenant, payload))
 
 

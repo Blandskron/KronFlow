@@ -376,6 +376,7 @@ paths:
       tags: [Tenants]
       operationId: tenantInvite
       summary: Create tenant invitation for a manually managed user
+      description: The inviter must be authorized to delegate the selected role in this tenant.
       security:
         - BearerAuth: []
       responses:
@@ -422,6 +423,7 @@ paths:
       tags: [RBAC]
       operationId: rbacRoles
       summary: List roles
+      description: Lists roles in the authorized tenant. Conflicting tenant selectors are rejected.
       security:
         - BearerAuth: []
       responses:

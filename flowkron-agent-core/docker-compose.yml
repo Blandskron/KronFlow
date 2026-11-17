@@ -8,7 +8,7 @@ services:
       PERSISTENCE_MODE: operational
       ALLOW_LOCAL_DB_BOOTSTRAP: "false"
       OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://flowkron-operational-service:8001}
-      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-change-me-local-internal-token}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN must be configured}
       JWT_PUBLIC_KEY_PATH: ${AGENT_CORE_JWT_PUBLIC_KEY_PATH:-/keys/jwt_public.pem}
       ALLOW_INSECURE_TENANT_HEADER: ${AGENT_CORE_ALLOW_INSECURE_TENANT_HEADER:-false}
       CHAT_PROVIDER: ${CHAT_PROVIDER:-auto}
@@ -20,4 +20,4 @@ services:
     ports:
       - "8002:8002"
     volumes:
-      - ../flowkron-deploy/data/jwt-keys:/keys:ro
+      - ${AGENT_CORE_JWT_PUBLIC_MOUNT:-../flowkron-deploy/data/jwt-public}:/keys:ro

@@ -4,9 +4,11 @@ import argparse
 import json
 import os
 import re
+import secrets
 import subprocess
 from http.cookiejar import CookieJar
-from urllib.parse import urlencode
+from urllib.parse import unquote_plus, urlencode
+from urllib.error import HTTPError
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 
@@ -14,7 +16,7 @@ def endpoint(variable, default):
     return f"http://localhost:{os.getenv(variable, default)}"
 
 
-def main(project):
+def main(project, standard=False):
     opener = build_opener(HTTPCookieProcessor(CookieJar()))
     auth = endpoint("AUTH_PORT", "8000")
     operational = endpoint("OPERATIONAL_PORT", "8001")
@@ -38,10 +40,39 @@ def main(project):
             data = json.load(response)
             return data.get("data", data)
 
+    def expect_rejected(code, url, payload=None, headers=None):
+        try:
+            fetch(url, payload, headers)
+        except HTTPError as error:
+            assert error.code == code, (url, error.code)
+        else:
+            raise AssertionError(f"Expected HTTP {code} for {url}")
+
     assert "Flowkron" in fetch(landing)
     assert "Flowkron" in fetch(crm + "/login")
     assert fetch(operational + "/readyz")["status"] == "ready"
     assert fetch(agent + "/ready")["status"] == "ready"
+
+    if standard:
+        compose = ["docker", "compose", "-p", project]
+        check = "from django.contrib.auth import get_user_model; assert not get_user_model().objects.filter(is_superuser=True).exists()"
+        subprocess.run(compose + ["exec", "-T", "flowkron-auth-service", "python", "manage.py", "shell", "-c", check], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        email = f"smoke-{secrets.token_hex(5)}@example.com"
+        password = f"Synthetic-{secrets.token_urlsafe(24)}"
+        assert fetch(auth + "/api/v1/auth/signup/", {"email": email})["accepted"]
+        # Console mail in this disposable instance only. Never print tokens or logs.
+        mail = subprocess.check_output(compose + ["logs", "--no-color", "--tail", "80", "flowkron-auth-service"], text=True, encoding="utf-8", errors="replace")
+        match = re.search(r"/registrarse#token=([^\s]+)", mail)
+        assert match, "No test verification mail was emitted"
+        assert fetch(auth + "/api/v1/auth/signup/complete/", {"token": unquote_plus(match.group(1)), "password": password})["created"]
+        session = fetch(auth + "/api/v1/auth/login/", {"email": email, "password": password})
+        assert session["onboarding_required"]
+        onboarded = fetch(auth + "/api/v1/tenants/onboarding/", {"name": "Synthetic Open Workspace"}, {"Authorization": f"Bearer {session['access']}"})
+        headers = {"Authorization": f"Bearer {onboarded['access']}", "X-Tenant-ID": str(onboarded["tenant_id"])}
+        assert "TENANT_OWNER" in onboarded["roles"]
+        assert isinstance(fetch(operational + "/api/v1/leads", headers=headers), dict)
+        print("Verified clean standard stack, no superuser, account verification, first workspace and access to its Operational data.")
+        return
 
     compose = ["docker", "compose", "-f", "compose.demo.yaml", "-p", project, "exec", "-T"]
     password = subprocess.check_output(
@@ -89,6 +120,9 @@ def main(project):
     assert whatsapp["status"] == "disconnected"
     documents = fetch(agent + "/api/v1/context/documents", headers=headers)
     assert "agente-demo-blandskron.txt" in json.dumps(documents)
+    refresh_headers = {**headers, "Authorization": f"Bearer {session['refresh']}"}
+    expect_rejected(401, operational + "/api/v1/leads", headers=refresh_headers)
+    expect_rejected(401, agent + "/api/v1/context/documents", headers=refresh_headers)
     fetch(
         agent + "/api/v1/context/documents/upload",
         {
@@ -123,10 +157,18 @@ def main(project):
         {"Origin": landing, "X-CSRFToken": csrf["csrfToken"]},
     )
     assert contact["id"]
-    print("Verified landing, Flowkron and Django admin login, BLANDSKRON owner access, tenant data, agent simulation and contact.")
+    tenant = f"{auth}/api/v1/tenants/{session['tenant_id']}"
+    assert fetch(tenant + "/suspend/", {}, headers)["status"] == "suspended"
+    expect_rejected(403, operational + "/api/v1/leads", headers=headers)
+    expect_rejected(403, agent + "/api/v1/context/documents", headers=headers)
+    assert fetch(tenant + "/activate/", {}, headers)["status"] == "active"
+    assert isinstance(fetch(operational + "/api/v1/leads", headers=headers), dict)
+    print("Verified landing, sign in, admin, tenant data, agent simulation, contact, refresh rejection and workspace suspension/reactivation.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project")
-    main(parser.parse_args().project)
+    parser.add_argument("--standard", action="store_true", help="Exercise a clean, disposable standard Compose project.")
+    args = parser.parse_args()
+    main(args.project, args.standard)

@@ -71,4 +71,4 @@
 - Contrato interno implementado para documentos, status y retrieval RAG mediante `/internal/tenants/{tenant_id}/context/*`; quedan pendientes memoria conversacional productiva, trazas persistidas en Operational, action logs y mutaciones documentales productivas.
 - Definir proveedor de embeddings y vector store.
 - Definir contrato final para acciones externas con operational/IAM.
-- Definir permisos RBAC especificos para administrar contexto, reglas y simulaciones.
+- El contexto, las reglas y las simulaciones usan el permiso IAM existente `agents.create`. Las lecturas de conversación requieren `users.read` y las trazas requieren `audit.read`. El conector interno conserva su credencial independiente.

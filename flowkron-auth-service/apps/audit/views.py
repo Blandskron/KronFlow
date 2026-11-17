@@ -17,5 +17,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [HasTenantPermission]
 
     def get_queryset(self):
-        tenant_id = self.request.headers.get("X-Tenant-ID") or self.request.query_params.get("tenant_id")
+        tenant_id = getattr(self.request, "authorized_tenant_id", None)
+        if tenant_id is None:
+            return AuditLog.objects.none()
         return AuditLog.objects.filter(tenant_id=tenant_id).order_by("-created_at")

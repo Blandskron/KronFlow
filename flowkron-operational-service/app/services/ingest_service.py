@@ -210,7 +210,7 @@ def get_consent(db: Session, tenant: TenantContext, phone: str) -> dict:
 
 def save_consent(db: Session, tenant: TenantContext, payload: ConsentIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
-    cliente = _get_or_create_cliente(db, phone=payload.phone, full_name="pendiente", source="whatsapp_directo")
+    cliente = _get_or_create_cliente(db, phone=payload.phone, source="whatsapp_directo")
     cliente.telefono = payload.phone
     cliente.whatsapp_id = payload.phone
     cliente.consentimiento_datos = payload.accepted

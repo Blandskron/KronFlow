@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.core.contracts import api_contract_middleware, http_exception_handler, validation_exception_handler
 from app.core.database import check_database, create_tables
 from app.core.logging import configure_logging
+from app.core.request_limits import ContextBodyLimitMiddleware
 
 
 @asynccontextmanager
@@ -29,6 +30,7 @@ settings = get_settings()
 configure_logging()
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(ContextBodyLimitMiddleware)
 app.middleware("http")(api_contract_middleware)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)

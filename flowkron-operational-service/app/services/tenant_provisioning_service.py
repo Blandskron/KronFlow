@@ -252,9 +252,19 @@ def register_migration(db: Session, schema_name: str, status: str, error_message
     migration.error_message = error_message
 
 
+def _lock_runtime_transition(db: Session, auth_tenant_id: int) -> None:
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"flowkron-runtime:{auth_tenant_id}"})
+
+
 def provision_tenant(db: Session, request: TenantProvisionRequest) -> tuple[TenantRuntime, str | None, bool]:
-    existing = db.scalar(select(TenantRuntime).where(TenantRuntime.auth_tenant_id == request.auth_tenant_id))
+    _lock_runtime_transition(db, request.auth_tenant_id)
+    existing = db.scalar(select(TenantRuntime).where(TenantRuntime.auth_tenant_id == request.auth_tenant_id).with_for_update())
     if existing:
+        # Neither a successful provisioning attempt nor a failed retry may
+        # erase suspension. Schema maintenance has separate internal routes.
+        if existing.status == "suspended":
+            return existing, None, False
         auth_tenant_id = existing.auth_tenant_id
         schema_name = existing.schema_name
         try:
@@ -346,6 +356,7 @@ def provision_tenant(db: Session, request: TenantProvisionRequest) -> tuple[Tena
 
 
 def set_tenant_status(db: Session, auth_tenant_id: int, status: str) -> TenantRuntime | None:
+    _lock_runtime_transition(db, auth_tenant_id)
     runtime = db.scalar(select(TenantRuntime).where(TenantRuntime.auth_tenant_id == auth_tenant_id))
     if not runtime:
         return None

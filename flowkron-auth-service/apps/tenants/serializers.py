@@ -5,12 +5,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password as django_validate_password
 from django.core.mail import send_mail
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.rbac.models import MembershipRole, TenantRole
+from apps.rbac.services import assert_delegable, permissions_for_membership
 
 from .models import Tenant, TenantInvitation, TenantMembership
 from .entitlements import subscription_summary
@@ -45,6 +47,7 @@ class TenantSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "slug",
+            "status",
             "plan",
             "subscription_status",
             "subscription_provider",
@@ -146,6 +149,7 @@ class InviteSerializer(serializers.Serializer):
         tenant = self.context["tenant"]
         if not TenantRole.objects.filter(tenant=tenant, code=value).exists():
             raise serializers.ValidationError("Rol no existe en este tenant.", code="ROLE_NOT_FOUND")
+        assert_delegable(self.context["request"].authorized_membership, TenantRole.objects.get(tenant=tenant, code=value))
         return value
 
     def create(self, validated_data):
@@ -182,9 +186,17 @@ class AcceptInvitationSerializer(serializers.Serializer):
         django_validate_password(value)
         return value
 
+    @transaction.atomic
     def save(self, **kwargs):
         request = self.context["request"]
         invitation = get_pending_invitation(self.validated_data["token"])
+        tenant = Tenant.objects.select_for_update().get(pk=invitation.tenant_id)
+        invitation = get_pending_invitation(self.validated_data["token"])
+        inviter = tenant.memberships.filter(user=invitation.invited_by, status=TenantMembership.Status.ACTIVE).first()
+        role = tenant.roles.filter(code=invitation.role_code).first()
+        if tenant.status != Tenant.Status.ACTIVE or not inviter or not role or "members.manage" not in permissions_for_membership(inviter):
+            raise serializers.ValidationError("La invitacion ya no puede conceder acceso.", code="INVITATION_INVALID")
+        assert_delegable(inviter, role)
 
         email = invitation.email
         user = request.user if request.user and request.user.is_authenticated else None
@@ -215,17 +227,22 @@ class AcceptInvitationSerializer(serializers.Serializer):
         if self.validated_data.get("display_name") and not user.profile.display_name:
             user.profile.display_name = self.validated_data["display_name"]
             user.profile.save(update_fields=["display_name", "updated_at"])
-        membership, _ = TenantMembership.objects.update_or_create(
+        membership, created = TenantMembership.objects.get_or_create(
             user=user,
             tenant=invitation.tenant,
             defaults={"status": TenantMembership.Status.ACTIVE, "joined_at": timezone.now()},
         )
+        if not created and membership.status != TenantMembership.Status.ACTIVE:
+            # A new invitation grants only its selected role, never the revoked grants.
+            membership.membership_roles.all().delete()
+            membership.status = TenantMembership.Status.ACTIVE
+            membership.joined_at = timezone.now()
+            membership.revoked_at = None
+            membership.save(update_fields=["status", "joined_at", "revoked_at", "updated_at"])
         if not user.profile.onboarding_completed_at:
             user.profile.onboarding_completed_at = timezone.now()
             user.profile.save(update_fields=["onboarding_completed_at", "updated_at"])
-        role = TenantRole.objects.filter(tenant=invitation.tenant, code=invitation.role_code).first()
-        if role:
-            MembershipRole.objects.get_or_create(membership=membership, role=role)
+        MembershipRole.objects.get_or_create(membership=membership, role=role)
         invitation.status = TenantInvitation.Status.ACCEPTED
         invitation.accepted_at = timezone.now()
         invitation.accepted_by = user

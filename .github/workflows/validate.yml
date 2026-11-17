@@ -26,7 +26,17 @@ jobs:
           cache-dependency-path: ${{ matrix.service }}/package-lock.json
       - run: npm ci
       - run: npm run build
-      - run: npm audit --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Review development advisories
+        run: |
+          report=$(mktemp)
+          if npm audit --json > "$report"; then
+            node ../.github/scripts/check-dev-audit.mjs < "$report"
+          else
+            status=$?
+            [ "$status" -eq 1 ] || exit "$status"
+            node ../.github/scripts/check-dev-audit.mjs < "$report"
+          fi
 
   whatsapp-lab:
     runs-on: ubuntu-latest
@@ -58,8 +68,10 @@ jobs:
               python manage.py check
               python manage.py test
           - service: flowkron-operational-service
-            requirements: requirements.txt
-            checks: python -c 'from app.main import app; assert app.openapi()["paths"]'
+            requirements: requirements-dev.txt
+            checks: |
+              python -m unittest discover -s tests -v
+              python -c 'from app.main import app; assert app.openapi()["paths"]'
           - service: flowkron-agent-core
             requirements: requirements-dev.txt
             checks: python -m pytest -q
@@ -96,17 +108,27 @@ jobs:
 
   compose-startup:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: demo
+            compose: compose.demo.yaml
+            smoke_args: ''
+          - mode: standard
+            compose: compose.yaml
+            smoke_args: --standard
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: docker compose -f compose.demo.yaml -p flowkron-smoke up --build --wait --wait-timeout 180
-      - run: python flowkron-deploy/bootstrap/smoke.py flowkron-smoke
+      - run: docker compose -f ${{ matrix.compose }} -p flowkron-smoke up --build --wait --wait-timeout 180
+      - run: python flowkron-deploy/bootstrap/smoke.py flowkron-smoke ${{ matrix.smoke_args }}
       - if: failure()
-        run: docker compose -f compose.demo.yaml -p flowkron-smoke ps --all
+        run: docker compose -f ${{ matrix.compose }} -p flowkron-smoke ps --all
       - if: always()
-        run: docker compose -f compose.demo.yaml -p flowkron-smoke down
+        run: docker compose -f ${{ matrix.compose }} -p flowkron-smoke down
 
   secrets:
     runs-on: ubuntu-latest

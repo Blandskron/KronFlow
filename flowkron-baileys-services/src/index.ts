@@ -16,10 +16,19 @@ const sessions = new Map<string, WhatsAppConnection>();
 function tenantSession(id: string) {
   let session = sessions.get(id);
   if (!session) {
-    session = new WhatsAppConnection(join(directory, `tenant-${id}`), tenantIngest(id, token, operational, agent));
+    session = new WhatsAppConnection(join(directory, `tenant-${id}`), tenantIngest(id, token, operational, agent), undefined, () => canConnect(id));
     sessions.set(id, session);
   }
   return session;
+}
+
+async function canConnect(id: string) {
+  const response = await fetch(new URL("/api/v1/ingest/whatsapp/runtime-ready", operational), {
+    headers: { "X-Flowkron-Tenant": id, "X-Baileys-Token": token },
+    redirect: "error",
+    signal: AbortSignal.timeout(5000)
+  });
+  return response.ok;
 }
 
 const server = createHttpServer(legacy, token, tenantSession);

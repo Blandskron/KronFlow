@@ -1,32 +1,19 @@
 # Release readiness
 
-**Status** · Initial Flowkron source distribution.
+Flowkron is available as an Apache-2.0 source preview. The Compose modes are intended for local use with synthetic data. A stable production release needs a fresh CI run on the release commit and the checks below.
 
-## Repository and dependencies
+## Validate the release candidate
 
-The repository contains two Angular SPAs, Django IAM, Operational and Agent Core on FastAPI, the Blandskron mail gateway, contracts and Docker Compose. Postgres and Redis are local services. Groq and Resend are configured separately. Meta credentials and webhook handling belong to an external WhatsApp adapter.
+- Run [Validate](.github/workflows/validate.yml) from a clean checkout. It builds the SPAs, runs service tests and contract checks, audits dependencies and Git history, and starts both Compose variants with isolated, synthetic instances.
+- The demo smoke covers CRM and Django admin logins, the demo workspace, document upload and simulation, contact submission, rejection of refresh tokens used as access credentials, and suspension/reactivation. The standard smoke verifies that no superuser exists on first start, uses the console verification email, and creates a new login and workspace.
+- Verify the exact archive contains only intended versioned files. Never publish `.env`, signing keys, WhatsApp credentials, local logs, backups or databases. Use [the private security form](https://github.com/Blandskron/flowkron/security/advisories/new) to report problems.
+- Both SPA production dependency trees are audited separately from the development toolchain. CI temporarily tracks [the unpatched development advisory for picomatch](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) through an exception scoped to that advisory and expiring on 18 December 2026. Critical and other high-severity findings still fail. Do not expose Angular development servers or accept arbitrary glob patterns in build jobs. Remove the exception when a compatible fix is available.
+- Review [third-party licenses and redistribution](THIRD_PARTY.md) and generate inventory and notices for the exact artifact. A preview tag can ship source only. The Baileys image needs a separate distribution review.
 
-The Python manifests use PyPI packages and the Angular lockfiles resolve to npm registry packages. No private package registry is required by the integrated stack. Flowkron is distributed by BLANDSKRON under Apache-2.0. Third-party packages retain their own license and attribution terms. The brand artwork follows the palette and requirements supplied in the brief. The separate Blandskron Brand Guidelines v1.0 was unavailable for review.
+## Before hosting or announcing a stable release
 
-## Secrets and data
-
-- Gitleaks 8.30.1 scanned the locally reachable Git history across refs. It found no recognized secret patterns in the single available commit.
-- A separate scan of the proposed change was run using a temporary Git index. The final staged-content scan reported no matches. Example mail keys and idempotency values are synthetic. Service configuration, keys, local databases and other generated data are excluded by ignore rules.
-- Development examples use reserved addresses, synthetic lead records and non-routable numbers. The sample mail backend logs messages to the IAM console, which is suitable for synthetic local data only.
-- Pattern scanning may miss custom credentials or personal data. Review the specific archive intended for publication, including any assets, history and database fixtures.
-
-## Validated locally
-
-- Both Angular applications built. The CRM reports a pre-existing style budget warning for the business-context page.
-- IAM passed 23 tests, including the HTTP mail backend. Agent Core and the gateway passed 10 tests each. Operational imported and generated its OpenAPI document. The synthetic seed ran against a disposable PostgreSQL schema, which the validation script rolled back.
-- Ruff syntax and undefined-name checks, the three contract validators and Docker Compose configuration passed.
-- Python dependency audits reported no known vulnerabilities after the dependency updates. Both Angular production dependency audits reported zero findings. A full npm audit of the shared dependency tree reported 21 moderate development-toolchain findings and zero high or critical findings.
-
-- Docker Compose brought all eight services to healthy in an isolated project. Chromium verified the landing and login in both themes at desktop and mobile widths, submitted the real contact form and opened the dashboard and access page with a synthetic signed-in account. Both apps served the favicon and manifest.
-- A local provider mock verified Django → HTTP gateway → Resend request construction for a multipart message.
-
-## Release gaps
-
-- Review the privacy and terms text for each hosted deployment, and configure a monitored vulnerability reporting channel.
-- Verify Resend delivery with tenant-owned test sender credentials. Verify any WhatsApp adapter with approved Meta test credentials, including webhook signature, consent, reply delivery, handoff and retry behavior. The stack still needs an external adapter to provide those channel flows.
-- Assess platform-specific production hardening, existing authorization gaps and remaining development dependency advisories before a public release.
+- Validate a backup restore and a migration in an isolated deployment. Ensure the IAM private PEM is never mounted into validators. For installations previously running the vulnerable version, inspect archived/deleted workspaces for orphaned Operational runtimes and WhatsApp sessions before re-exposing services. Review old role assignments and invitations, and rotate the JWT key if it may have been exposed.
+- Configure TLS, exposed origins and hosts, secrets, Redis/PostgreSQL grants, telemetry and a recovery process. The per-process admission controls complement ingress limits; they do not constitute distributed rate limiting.
+- Refresh credentials no longer authenticate to backends. Previously issued access JWTs can keep their claims until expiration in services that verify them locally; plan logout/revocation and role changes with the configured access lifetime in mind.
+- Confirm sandbox delivery with authorized Resend, Google and Groq configurations. Test a dedicated WhatsApp account for linking, automatic replies, consent withdrawal, overload and disconnect. The bounded connector queue is in memory and does not guarantee durable delivery of pending requests when it crashes or its bounded retry fails.
+- Use deployment-specific privacy and retention terms. Workspace deletion stops integrations; it is not a purge of the separately stored CRM data. Define who may authorize retention, export and deletion of that data.

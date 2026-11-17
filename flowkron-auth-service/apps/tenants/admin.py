@@ -11,8 +11,12 @@ class TenantAdmin(admin.ModelAdmin):
     list_display = ["name", "slug", "country", "status", "plan", "subscription_status", "created_at"]
     search_fields = ["name", "legal_name", "tax_id", "slug"]
     list_filter = ["status", "plan", "subscription_status", "country"]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["status", "created_at", "updated_at"]
     actions = ["activate_standard_plan", "activate_advanced_plan", "activate_corporate_plan", "set_free_plan"]
+
+    def has_delete_permission(self, request, obj=None):
+        # Workspace deletion must also stop its external runtime and connector.
+        return False
 
     def save_model(self, request, obj, form, change):
         if self._should_have_manual_subscription(obj):

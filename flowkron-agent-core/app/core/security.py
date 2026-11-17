@@ -43,7 +43,10 @@ def get_current_principal(
                 algorithms=[settings.jwt_algorithm],
                 audience=settings.jwt_audience,
                 issuer=settings.jwt_issuer,
+                options={"require": ["exp", "iat", "jti", "token_type", "user_id", "tenant_id"]},
             )
+            if claims["token_type"] != "access":
+                raise jwt.InvalidTokenError("Expected an access token")
         except jwt.PyJWTError as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token") from exc
         tenant_id = claims.get("tenant_id")
@@ -59,7 +62,7 @@ def get_current_principal(
         request.state.user = principal
         return principal
 
-    if settings.allow_insecure_tenant_header and x_tenant_id:
+    if not authorization and settings.environment == "local" and settings.allow_insecure_tenant_header and x_tenant_id:
         principal = CurrentPrincipal(user_id="local-dev", tenant_id=x_tenant_id, roles=["local"], permissions=["*"], raw_claims={})
         request.state.user = principal
         return principal

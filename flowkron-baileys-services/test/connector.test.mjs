@@ -1,10 +1,74 @@
 import assert from "node:assert/strict";
 import { EventEmitter, once } from "node:events";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createServer } from "node:http";
 import test from "node:test";
 import { WhatsAppConnection } from "../dist/connection.js";
 import { createHttpServer } from "../dist/http.js";
 import { normalizeInbound, operationalIngest, tenantIngest } from "../dist/ingest.js";
+import { InboundQueue } from "../dist/inbound-queue.js";
+
+test("bounds queued work, reserves withdrawals and keeps other senders running", async () => {
+  let release;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const handled = [];
+  const queue = new InboundQueue(() => assert.fail("unexpected job error"), 24);
+  queue.enqueue("slow", false, () => blocked);
+  for (let i = 0; i < 1000; i++) queue.enqueue("flood", false, async () => { handled.push("flood"); });
+  assert.equal(queue.size, 4);
+  assert.equal(queue.enqueue("other", false, async () => { handled.push("other"); }), true);
+  assert.equal(queue.enqueue("flood", true, async () => { handled.push("withdrawal"); }), true);
+  assert.equal(queue.size, 2);
+  release();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(handled, ["withdrawal", "other"]);
+  assert.equal(queue.size, 0);
+});
+
+test("queue capacity is bounded across distinct senders and clearing cancels pending work", async () => {
+  let release;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const queue = new InboundQueue(() => {}, 24);
+  queue.enqueue("slow", false, () => blocked);
+  for (let i = 0; i < 1000; i++) queue.enqueue(String(i), false, async () => {});
+  assert.equal(queue.size, 8);
+  queue.clear();
+  assert.equal(queue.size, 0);
+  release();
+});
+
+test("normal jobs progress even under continuous withdrawals", async () => {
+  const queue = new InboundQueue(() => assert.fail("unexpected job error"), 24);
+  let release;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const handled = [];
+  const withdraw = async () => {
+    handled.push("withdrawal");
+    if (handled.length < 10) queue.enqueue("same-sender", true, withdraw);
+  };
+  queue.enqueue("slow", false, () => blocked);
+  queue.enqueue("other", false, async () => { handled.push("ordinary"); });
+  queue.enqueue("same-sender", true, withdraw);
+  release();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(handled.indexOf("ordinary"), 4);
+});
+
+test("stop invalidates a delayed positive workspace check", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "flowkron-queue-test-"));
+  let allow;
+  const authorized = new Promise(resolve => { allow = resolve; });
+  let connections = 0;
+  const connection = new WhatsAppConnection(directory, undefined, async () => { connections++; }, () => authorized);
+  const starting = connection.start();
+  const stopping = connection.stop();
+  allow(true);
+  await Promise.all([starting, stopping]);
+  assert.equal(connections, 0);
+  assert.equal(connection.snapshot().status, "disconnected");
+});
 
 function inbound(key = {}) {
   return {

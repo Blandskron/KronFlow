@@ -262,11 +262,11 @@ class APIKeyViewSet(viewsets.ModelViewSet):
     required_permission = "api_keys.manage"
 
     def get_queryset(self):
-        tenant_id = self.request.headers.get("X-Tenant-ID") or self.request.query_params.get("tenant_id")
+        tenant_id = getattr(self.request, "authorized_tenant_id", None)
         return APIKey.objects.filter(tenant_id=tenant_id).order_by("-created_at")
 
     def create(self, request):
-        tenant_id = request.headers.get("X-Tenant-ID") or request.data.get("tenant_id")
+        tenant_id = request.authorized_tenant_id
         tenant = Tenant.objects.get(id=tenant_id, memberships__user=request.user, memberships__status="active")
         serializer = APIKeyCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

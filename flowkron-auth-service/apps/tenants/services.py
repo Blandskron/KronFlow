@@ -21,6 +21,8 @@ def create_owned_tenant(user, name, **extra_fields):
 
 
 def activate_subscription(tenant, plan, provider="", external_id="", current_period_end=None):
+    if tenant.status != Tenant.Status.ACTIVE:
+        raise requests.RequestException("Activate the workspace before changing its subscription.")
     tenant.plan = plan
     tenant.subscription_status = Tenant.SubscriptionStatus.ACTIVE
     tenant.subscription_provider = provider
@@ -49,6 +51,19 @@ def ensure_open_workspace(tenant):
 
 
 def provision_operational_runtime(tenant):
+    with transaction.atomic():
+        tenant = Tenant.objects.select_for_update().get(pk=tenant.pk)
+        if tenant.status != Tenant.Status.ACTIVE:
+            raise requests.RequestException("Inactive workspaces cannot be provisioned.")
+        try:
+            return _provision_operational_runtime(tenant)
+        except requests.RequestException as exc:
+            # Preserve the failed mirror and retry information for later reconciliation.
+            error = exc
+    raise error
+
+
+def _provision_operational_runtime(tenant):
     runtime, _ = TenantOperationalRuntime.objects.get_or_create(
         tenant=tenant,
         defaults={"status": TenantOperationalRuntime.Status.PENDING, "plan": tenant.plan},
@@ -98,6 +113,8 @@ def sync_operational_runtime_status(tenant, action):
         headers={"X-Internal-Token": settings.OPERATIONAL_INTERNAL_TOKEN},
         timeout=15,
     )
+    if action == "suspend" and response.status_code == 404 and not runtime:
+        return None
     response.raise_for_status()
     data = _unwrap_operational_response(response.json())
     if runtime:
@@ -107,6 +124,23 @@ def sync_operational_runtime_status(tenant, action):
         runtime.last_error = ""
         runtime.save()
     return data
+
+
+def disconnect_whatsapp(tenant):
+    if not settings.BAILEYS_SERVICE_URL or not settings.BAILEYS_INTERNAL_TOKEN:
+        return
+    result = requests.delete(
+        f"{settings.BAILEYS_SERVICE_URL.rstrip('/')}/internal/baileys/tenants/{tenant.id}/session",
+        headers={"Authorization": f"Bearer {settings.BAILEYS_INTERNAL_TOKEN}"},
+        timeout=15,
+    )
+    result.raise_for_status()
+
+
+def stop_workspace(tenant):
+    # Block data processing first; a connector failure must not reactivate it.
+    sync_operational_runtime_status(tenant, "suspend")
+    disconnect_whatsapp(tenant)
 
 
 def rotate_operational_ingest_key(tenant):

@@ -1,6 +1,13 @@
 # Validation
 
-From the repository root run `docker compose config --quiet`. Start a disposable project with `docker compose -p flowkron-smoke up --build --wait`, then run `python flowkron-deploy/bootstrap/smoke.py flowkron-smoke`. The test requires the default local user and inserts synthetic data into the disposable workspace.
+From the repository root run `docker compose config --quiet`. Use one disposable project at a time, or give each separate host ports. Do not run these checks against an existing instance.
+
+| Cold start | Start command | Smoke command |
+| --- | --- | --- |
+| Standard | `docker compose -p flowkron-smoke-standard up --build --wait` | `python flowkron-deploy/bootstrap/smoke.py flowkron-smoke-standard --standard` |
+| Demo | `docker compose -f compose.demo.yaml -p flowkron-smoke-demo up --build --wait` | `python flowkron-deploy/bootstrap/smoke.py flowkron-smoke-demo` |
+
+The standard smoke uses console email and both variants insert synthetic data. Stop each project using the same Compose file and project name with `down`.
 
 - Use `docker compose ps` to confirm health of IAM, Operational, Agent Core, the two frontends and the mail gateway.
 - Verify IAM at `/healthz/`, Operational at `/readyz` and Agent Core at `/ready`.

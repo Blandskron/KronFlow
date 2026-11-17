@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
+from starlette.concurrency import run_in_threadpool
 
 from app.api.v1.schemas.context import (
     BusinessContextStatusRead,
@@ -193,11 +194,11 @@ async def upload_document_file(
     extension = f".{filename.rsplit('.', 1)[-1].lower()}" if "." in filename else ""
     if extension not in get_settings().allowed_upload_extensions:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported context document extension")
-    raw_content = await file.read()
+    raw_content = await file.read(get_settings().max_upload_bytes + 1)
     if len(raw_content) > get_settings().max_upload_bytes:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Context document exceeds max upload size")
     try:
-        content = extract_text_from_upload(filename, raw_content)
+        content = await run_in_threadpool(extract_text_from_upload, filename, raw_content)
     except DocumentExtractionError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     if not content.strip():

@@ -89,6 +89,7 @@ test("normalizes incoming text and only derives a LID phone from an alternate ph
   const message = normalizeInbound(inbound());
   assert.equal(message.external_message_id, "baileys:12025550138:example-id");
   assert.equal(message.phone, "12025550138");
+  assert.equal(message.provider_message_id, "example-id");
   assert.equal(message.sent_at, "2025-10-09T08:53:20.000Z");
   assert.equal(normalizeInbound(inbound({ remoteJid: "123@lid" })), undefined);
   assert.equal(normalizeInbound(inbound({
@@ -226,7 +227,10 @@ test("requires consent, stores each conversation and relays its agent response o
   const url = await listen(t, backend);
   const handler = tenantIngest("15", "synthetic", url, url);
   const message = normalizeInbound(inbound());
-  const reply = async (content) => replies.push(content);
+  const reply = async (content) => {
+    replies.push(content);
+    return { provider_message_id: "outgoing-provider-id" };
+  };
   await handler(message, reply);
   await handler(message, reply);
   assert.equal(replies.length, 1);
@@ -238,8 +242,14 @@ test("requires consent, stores each conversation and relays its agent response o
   assert.equal(agentRequest.body.message.content, message.body);
   assert.equal(replies.at(-1), "Respuesta de prueba");
   assert.equal(requests.at(-1).body.direction, "outbound");
+  assert.equal(requests.at(-1).body.provider_message_id, "outgoing-provider-id");
+  assert.equal(requests.at(-1).body.delivery_status, "sent");
   assert.ok(requests.some((request) => request.url.endsWith("/handoff")));
   duplicate = true;
   await handler(message, reply);
   assert.equal(replies.length, 3);
+  duplicate = false;
+  await handler({ ...message, external_message_id: "second-message" }, async () => {});
+  assert.equal(requests.at(-1).body.provider_message_id, null);
+  assert.equal(requests.at(-1).body.delivery_status, "sent");
 });

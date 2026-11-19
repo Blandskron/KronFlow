@@ -127,7 +127,15 @@ def message_to_dict(message, conversation_id: int | None = None) -> dict[str, An
     return {
         "id": message.id,
         "conversation_id": conversation_id or 0,
-        "external_message_id": str(message.id),
+        # Preserve the historical API fallback without fabricating provider IDs.
+        "external_message_id": message.external_message_id or str(message.id),
+        "connection_id": message.connection_id,
+        "channel": message.channel,
+        "provider_message_id": message.provider_message_id,
+        "direction": message.direction,
+        "message_type": message.message_type,
+        "delivery_status": message.delivery_status,
+        "recorded_at": message.recorded_at,
         "sender_type": "lead" if message.rol == "usuario" else "agent",
         "body": message.mensaje,
         "raw_payload": {},

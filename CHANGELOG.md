@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added the cross-project evolution analysis and 26 prioritized Flowkron tasks, including supervised agent actions, effective AI controls, conversation memory, confirmed lead updates, scheduling, business email, delegated integrations, notifications and agent evaluation. Reference implementations are excluded from the repository.
+
+- FK-01 persists external/provider message identity, direction, channel, type, reported status and recording time in the active inbox table. Operational contracts advance to `v0.4.0`. Existing installations must apply the additive `tenant_schema_v3` migration before serving the new message model; see the [migration and rollback procedure](flowkron-operational-service/docs/MESSAGE_IDENTITY.md). Historical IDs are not reconstructed, and concurrent retries no longer create duplicate messages.
+
 - IAM binds role and API key writes to the authorized workspace and protects system roles and the last active owner. A workspace must be explicitly suspended or activated; changing `status` through a normal update now returns 400.
 - Operational and Agent Core accept IAM access tokens only. CRM reads require `users.read`, lead edits require `crm.manage`, agent configuration and context require `agents.create`, and sensitive audit routes require `audit.read`.
 - Suspending or deleting a workspace blocks its Operational runtime and disconnects a configured WhatsApp session. A suspended workspace must be activated before provisioning, and its WhatsApp device must be paired again.

@@ -2,7 +2,22 @@
 
 ## Estado real
 
-No existen archivos `test_*.py`/`tests.py` ni dependencias de testing en `requirements.txt`. `pyproject.toml` conserva una configuracion pytest placeholder (`testpaths = ["app/tests", "tests"]`), pero esas rutas no tienen specs versionados. Los scripts bajo `scripts/` son utilidades manuales con DB real, no tests automatizados y algunos ejecutan DDL destructivo sobre schemas temporales.
+Existen pruebas `unittest` en `tests/test_security.py` y `tests/test_message_identity.py`. La segunda valida FK-01 con PostgreSQL descartable; no necesita pytest. La dependencia de cliente HTTP declarada está en `requirements-dev.txt`.
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+Para incluir las pruebas PostgreSQL, definir `FLOWKRON_TEST_POSTGRES_BIN` con el directorio de binarios instalados (`initdb` y `pg_ctl`) y ejecutar el mismo comando. La suite crea un cluster nuevo temporal en loopback y lo elimina al terminar; no usa `DATABASE_URL`. Sin esa variable se omiten explícitamente las ocho pruebas de integración, no se reportan como aprobadas.
+
+```powershell
+$env:FLOWKRON_TEST_POSTGRES_BIN = 'C:\Program Files\PostgreSQL\18\bin'
+python -m unittest discover -s tests -p test_message_identity.py -v
+```
+
+Validación FK-01: 9 pruebas aprobadas (8 con PostgreSQL 18.3 y 1 de contrato de entrada). La suite del conector también aprobó sus 10 pruebas. El intento de ejecutar toda la suite Operational encontró una limitación previa del entorno: `test_security.py` no se pudo importar porque la versión instalada de Starlette solicita `httpx2`, mientras `requirements-dev.txt` declara `httpx`. No se cambiaron dependencias en FK-01. Esta suite completa queda sin validar hasta resolver esa compatibilidad.
+
+Los scripts bajo `scripts/` son utilidades manuales y no deben ejecutarse contra una base compartida por inspección. La [decisión FK-01](MESSAGE_IDENTITY.md) detalla las verificaciones de migración, compatibilidad y concurrencia.
 
 ## Validaciones read-only
 

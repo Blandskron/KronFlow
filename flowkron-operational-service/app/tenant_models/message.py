@@ -1,3 +1,10 @@
+"""Inactive historical blueprint; not imported by provisioning or message APIs.
+
+Canonical Message: app.tenant_models.operations.Message (mensajes_dashboard).
+Do not import this module into runtime metadata or migrate its separate table.
+See docs/MESSAGE_IDENTITY.md for the FK-01 decision.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func

@@ -19,6 +19,7 @@ export function normalizeInbound(message: WAMessage) {
 
   return {
     external_message_id: `baileys:${match[1]}:${key.id}`,
+    provider_message_id: key.id,
     external_thread_id: match[1],
     phone: match[1],
     direction: "inbound",
@@ -61,7 +62,7 @@ export function operationalIngest(env: NodeJS.ProcessEnv) {
 
 
 type Inbound = NonNullable<ReturnType<typeof normalizeInbound>>;
-type SendText = (text: string) => Promise<void>;
+type SendText = (text: string) => Promise<{ provider_message_id?: string } | void>;
 export type InboundHandler = (message: Inbound, reply: SendText) => Promise<void>;
 
 export function tenantIngest(
@@ -139,11 +140,13 @@ export function tenantIngest(
       await request(new URL("handoff", base), { phone: message.phone, reason: "agent_requires_human" });
     }
     const body = response.slice(0, 4000);
-    await reply(body);
+    const sent = await reply(body);
     await request(messageUrl, {
       ...message,
       external_message_id: `${message.external_message_id}:reply`,
       direction: "outbound",
+      provider_message_id: sent?.provider_message_id ?? null,
+      delivery_status: "sent",
       body,
       sent_at: new Date().toISOString()
     });

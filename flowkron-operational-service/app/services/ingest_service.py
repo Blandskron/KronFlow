@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+import json
 
-from sqlalchemy import select
+from fastapi import HTTPException
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
@@ -84,6 +86,34 @@ def _message_already_processed(db: Session, external_message_id: str) -> bool:
 def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAppMessageIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
     session_id = payload.external_thread_id or payload.phone
+    # Lock before any read/upsert. The unique index is the final invariant;
+    # locks also prevent races creating contacts, leads and conversations.
+    # Scope comes from the authenticated tenant, never from request schema input.
+    for identity in (
+        [tenant.schema_name, payload.connection_id, payload.channel, "message", payload.external_message_id],
+        [tenant.schema_name, "phone", payload.phone],
+        [tenant.schema_name, "thread", session_id],
+    ):
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                   {"key": json.dumps(identity, separators=(",", ":"))})
+
+    existing = db.scalar(select(Message).where(
+        Message.connection_id == payload.connection_id,
+        Message.channel == payload.channel,
+        Message.external_message_id == payload.external_message_id,
+    ))
+    if existing and (existing.whatsapp_id != session_id or existing.direction != payload.direction):
+        raise HTTPException(status_code=409, detail="Message identity belongs to another thread or direction")
+    if existing or _message_already_processed(db, payload.external_message_id):
+        # Old markers have no reliable link to historical message rows. Retain
+        # their deduplication behavior without guessing a message ID or mutating
+        # the contact/conversation when receiving a duplicate.
+        lead_id = db.scalar(select(Lead.id).join(Cliente).where(Cliente.whatsapp_id == payload.phone))
+        conversation_id = db.scalar(select(Conversation.id).where(Conversation.session_id == session_id))
+        message_id = existing.id if existing else None
+        db.commit()
+        return {"lead_id": lead_id, "conversation_id": conversation_id,
+                "message_id": message_id, "duplicate": True}
     raw_payload = payload.raw_payload or {}
     conversation_payload = {
         **payload.model_dump(mode="json"),
@@ -100,9 +130,6 @@ def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAp
     )
     lead = _get_or_create_lead(db, cliente)
     conversation = _get_or_create_conversation(db, session_id, conversation_payload)
-    if _message_already_processed(db, payload.external_message_id):
-        db.commit()
-        return {"lead_id": lead.id, "conversation_id": conversation.id, "message_id": None, "duplicate": True}
     _mark_message_processed(db, payload.external_message_id)
 
     message = Message(
@@ -110,6 +137,13 @@ def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAp
         rol="usuario" if payload.direction == "inbound" else "agente",
         mensaje=payload.body or "",
         creado_en=payload.sent_at,
+        connection_id=payload.connection_id,
+        channel=payload.channel,
+        external_message_id=payload.external_message_id,
+        provider_message_id=payload.provider_message_id,
+        direction=payload.direction,
+        message_type=payload.message_type,
+        delivery_status=payload.delivery_status or ("received" if payload.direction == "inbound" else "unknown"),
     )
     db.add(message)
     create_system_event(db, "ingest.message.received", tenant.auth_tenant_id, tenant.schema_name, {"message_id": payload.external_message_id})
@@ -276,9 +310,9 @@ def register_dashboard_messages(db: Session, tenant: TenantContext, payload: Das
     bind_tenant_session(db, tenant.schema_name)
     messages: list[Message] = []
     if payload.user_message:
-        messages.append(Message(whatsapp_id=payload.phone, rol="usuario", mensaje=payload.user_message))
+        messages.append(Message(whatsapp_id=payload.phone, rol="usuario", direction="inbound", mensaje=payload.user_message))
     if payload.agent_message:
-        messages.append(Message(whatsapp_id=payload.phone, rol="agente", mensaje=payload.agent_message))
+        messages.append(Message(whatsapp_id=payload.phone, rol="agente", direction="outbound", mensaje=payload.agent_message))
     db.add_all(messages)
     db.flush()
     ids = [message.id for message in messages]

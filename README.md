@@ -88,6 +88,7 @@ Set a valid provider key and replace the example sender with an address on your 
 - [Architecture and component links](ARCHITECTURE.md)
 - [Local validation and contribution guide](CONTRIBUTING.md)
 - [Migration and change history](CHANGELOG.md)
+- [Análisis y tareas de evolución de Flowkron](EVOLUCION_FLOWKRON.md)
 - [Responsible disclosure](SECURITY.md)
 - [Brand assets](assets/brand/README.md)
 

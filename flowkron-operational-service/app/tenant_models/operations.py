@@ -211,6 +211,10 @@ class Message(Base):
     __tablename__ = "mensajes_dashboard"
     __table_args__ = (
         CheckConstraint("rol IN ('usuario', 'agente')", name="ck_mensajes_dashboard_rol"),
+        CheckConstraint("direction IN ('inbound', 'outbound')", name="ck_message_direction"),
+        CheckConstraint("delivery_status IN ('unknown', 'received', 'sent', 'delivered', 'read', 'failed')", name="ck_message_delivery_status"),
+        Index("uq_message_external_identity", "connection_id", "channel", "external_message_id", unique=True),
+        Index("idx_message_provider_identity", "connection_id", "channel", "provider_message_id"),
         {"schema": "tenant"},
     )
 
@@ -219,6 +223,14 @@ class Message(Base):
     rol: Mapped[str] = mapped_column(Text, nullable=False)
     mensaje: Mapped[str] = mapped_column(Text, nullable=False)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    connection_id: Mapped[str] = mapped_column(String(80), nullable=False, server_default=text("'default'"))
+    channel: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'whatsapp'"))
+    external_message_id: Mapped[str | None] = mapped_column(String(220), nullable=True)
+    provider_message_id: Mapped[str | None] = mapped_column(String(220), nullable=True)
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    message_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'text'"))
+    delivery_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'unknown'"))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
 
 class ReglaNegocio(Base):

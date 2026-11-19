@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Flowkron Operational Service API
-  version: 0.3.1
+  version: 0.4.0
   description: |
     Servicio operacional multi-tenant de la plataforma Flowkron.
     Gestiona ingesta de mensajes WhatsApp desde un adaptador de WhatsApp, leads, conversaciones,
@@ -83,9 +83,9 @@ paths:
     post:
       summary: Ingestar un mensaje entrante de WhatsApp
       description: |
-        Crea o actualiza cliente, lead y conversación. Registra el mensaje
-        de forma idempotente usando `external_message_id`. Requiere runtime
-        activo y plan pagado.
+        Crea o actualiza cliente, lead y conversación para mensajes nuevos. Registra el mensaje
+        de forma idempotente usando empresa autenticada, conexión, canal y `external_message_id`.
+        Una repetición no modifica contacto ni conversación. Requiere runtime activo.
       operationId: ingest_whatsapp_message
       tags: [Ingest]
       security:
@@ -103,6 +103,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IngestResponse'
+        '409':
+          description: Identidad externa ya utilizada para otro hilo o dirección
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido; solo conexión default y tipo text habilitados
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -1193,7 +1201,29 @@ components:
       properties:
         external_message_id:
           type: string
+          minLength: 1
           maxLength: 220
+          description: Identidad idempotente del mensaje dentro de la empresa autenticada, conexión y canal. Repetirla no actualiza el mensaje original.
+        connection_id:
+          type: string
+          enum: [default]
+          default: default
+          description: Conexión única actual por empresa. Otros valores se rechazan hasta habilitar varias conexiones.
+        provider_message_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 220
+          description: ID real del proveedor para este mensaje; no heredar el ID entrante al guardar su respuesta.
+        message_type:
+          type: string
+          enum: [text]
+          default: text
+        delivery_status:
+          type: string
+          nullable: true
+          enum: [unknown, received, sent, failed]
+          description: Estado reportado por el adaptador, sin verificar recibos. Omitido o null deriva received para inbound y unknown para outbound. sent indica aceptación del envío, no entrega ni lectura.
         external_thread_id:
           type: string
           maxLength: 180
@@ -1658,6 +1688,31 @@ components:
           type: integer
         external_message_id:
           type: string
+          description: ID idempotente guardado desde la ingestión. Para filas históricas sin ID externo se conserva el fallback del ID interno en texto; no es un ID del proveedor.
+        connection_id:
+          type: string
+          default: default
+        channel:
+          type: string
+          default: whatsapp
+        provider_message_id:
+          type: string
+          nullable: true
+          description: ID del proveedor, null cuando no se conoce. Nunca se reconstruye desde el ID interno.
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        message_type:
+          type: string
+          default: text
+        delivery_status:
+          type: string
+          enum: [unknown, received, sent, delivered, read, failed]
+          description: Estado persistido. No hay handlers de recibos de entrega/lectura en esta versión; historial migrado usa unknown.
+        recorded_at:
+          type: string
+          format: date-time
+          description: Fecha de registro en Flowkron. En filas históricas conserva creado_en por falta de otra evidencia.
         sender_type:
           type: string
           enum: [lead, agent, human]
@@ -1671,6 +1726,7 @@ components:
         created_at:
           type: string
           format: date-time
+
 
     ConversationListResponse:
       type: object

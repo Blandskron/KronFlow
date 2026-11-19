@@ -6,6 +6,10 @@ from pydantic import BaseModel, Field
 
 class WhatsAppMessageIn(BaseModel):
     external_message_id: str = Field(min_length=1, max_length=220)
+    connection_id: Literal["default"] = "default"
+    provider_message_id: str | None = Field(default=None, min_length=1, max_length=220)
+    message_type: Literal["text"] = "text"
+    delivery_status: Literal["unknown", "received", "sent", "failed"] | None = None
     external_thread_id: str | None = Field(default=None, max_length=180)
     phone: str = Field(min_length=4, max_length=48)
     full_name: str = Field(default="", max_length=180)

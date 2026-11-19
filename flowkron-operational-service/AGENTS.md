@@ -13,7 +13,7 @@ No asumas capacidades inexistentes:
 - `require_permission()` existe, pero ningún router de negocio lo usa; hoy se valida JWT, tenant activo y plan pagado, no permisos RBAC por endpoint.
 - El aislamiento usa `schema_translate_map`, no `SET search_path` en cada request.
 - Alembic se reserva para tablas públicas, pero no hay archivos en `alembic/versions/`; startup usa `create_all` para el esquema público.
-- No hay suite automatizada ni dependencia pytest instalada. `pyproject.toml` conserva una configuracion placeholder de pytest, pero no hay specs.
+- Hay pruebas `unittest` de límites de seguridad y de identidad de mensajes. La integración FK-01 usa un cluster PostgreSQL temporal propio al configurar `FLOWKRON_TEST_POSTGRES_BIN`; ver `docs/TESTING.md` para ejecución y limitaciones de dependencias.
 
 ## Mapa de código
 
@@ -73,7 +73,7 @@ python -m compileall -q app scripts
 - Modelos/migraciones: validar schema temporal, migración de todos los tenants y rollback operativo; estos comandos escriben DB.
 - Docker: `docker compose config` puede materializar variables sensibles; evita mostrar su salida.
 
-No declares tests aprobados: hoy no existe suite automatizada.
+Reporta únicamente las pruebas ejecutadas y distingue skips o fallos de importación; no infieras aprobación de toda la suite a partir de una ejecución parcial.
 
 ## Documentos canónicos
 

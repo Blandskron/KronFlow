@@ -15,6 +15,7 @@ from app.public_models.system_event import SystemEvent
 from app.public_models.tenant_runtime import TenantRuntime
 from app.schemas.tenant import TenantProvisionRequest
 from app.services.tenant_data import tenant_exec_options
+from app.services.tenant_message_schema import upgrade_message_schema
 from app import tenant_models
 
 
@@ -218,6 +219,8 @@ def create_system_event(
 
 
 def apply_tenant_schema(db: Session, schema_name: str) -> None:
+    # Serialize upgrades of the same schema, including first-time provisioning.
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"flowkron-schema:{schema_name}"})
     connection = db.connection()
     connection.execute(CreateSchema(schema_name, if_not_exists=True))
     tenant_tables = [
@@ -227,6 +230,7 @@ def apply_tenant_schema(db: Session, schema_name: str) -> None:
     ]
     tenant_connection = connection.execution_options(**tenant_exec_options(schema_name))
     Base.metadata.create_all(bind=tenant_connection, tables=tenant_tables)
+    upgrade_message_schema(db, schema_name)
     apply_tenant_database_objects(db, schema_name)
 
 

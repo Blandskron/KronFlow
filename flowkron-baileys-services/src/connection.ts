@@ -143,7 +143,8 @@ export class WhatsAppConnection {
           if (this.socket !== socket || this.status !== "connected") return;
           await this.ingest?.(inbound, async (text) => {
             if (this.socket !== socket || this.status !== "connected") throw new Error("Session disconnected");
-            await socket.sendMessage(jid, { text });
+            const sent = await socket.sendMessage(jid, { text });
+            return { provider_message_id: sent?.key?.id ?? undefined };
           });
         });
         if (!accepted) logger.warn("Inbound WhatsApp capacity exceeded");

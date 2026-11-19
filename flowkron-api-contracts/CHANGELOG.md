@@ -4,6 +4,10 @@ Formato basado en Keep a Changelog y SemVer.
 
 ## [Unreleased]
 
+### Added
+- Operational `v0.4.0` (FK-01): campos opcionales de identidad de conexión/proveedor, tipo y estado reportado en ingestión; metadatos persistidos y `recorded_at` en lectura de mensajes. Se mantienen requests anteriores y campos de respuesta existentes. `connection_id` solo admite `default`; no se habilitan varias cuentas, multimedia ni recibos de lectura.
+- Deduplicación concurrente dentro de la empresa autenticada. Repeticiones nuevas devuelven el ID original; marcadores históricos sin vínculo fiable conservan `message_id: null`. Reutilizar identidad nueva para otro hilo o dirección responde 409. `external_message_id` de lectura ahora refleja la entrada guardada; el fallback interno se conserva para historial no reconstruible. El CRM consume el `id` interno y no requiere cambios.
+
 ### Changed
 - `operational-service.openapi.yml` sube a `v0.3.1`; documenta auto-versionado de documentos de contexto, acciones deshabilitadas en `context/status` y retrieval lexical sobre chunks activos.
 - `agent-core.openapi.yml` sube a `v0.3.1`; alinea schemas reales de setup, reglas y documentos, agrega endpoints faltantes de templates/forms y marca rutas stateful/local-only con respuesta 501 cuando la persistencia se delega a Operational.

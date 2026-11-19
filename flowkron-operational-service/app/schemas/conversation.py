@@ -28,6 +28,13 @@ class MessageOut(BaseModel):
     raw_payload: dict
     sent_at: datetime
     created_at: datetime
+    connection_id: str = "default"
+    channel: str = "whatsapp"
+    provider_message_id: str | None = None
+    direction: str
+    message_type: str = "text"
+    delivery_status: str = "unknown"
+    recorded_at: datetime
 
 
 class ConversationListResponse(BaseModel):

@@ -25,7 +25,7 @@ La fuente canonica es `app/tenant_models/operations.py` y `app/tenant_models/con
 | `solicitudes_derechos` | Solicitudes de privacidad y plazos |
 | `log_limpiezas` | Auditoria de limpieza/anonimizacion |
 | `conversaciones` | `session_id`, ultimo payload JSON y fecha |
-| `mensajes_dashboard` | Mensajes por WhatsApp ID, rol, texto y fecha |
+| `mensajes_dashboard` | Mensajes activos con identidad externa/proveedor, conexión, canal, dirección, tipo, estado reportado y fecha de registro; conserva WhatsApp ID, rol, texto y fecha originales |
 | `reglas_negocio` | Reglas comerciales temporales por alcance JSON |
 | `rate_limit` | Contador por WhatsApp ID y ventana temporal |
 | `conversaciones_resumen` | Resumen materializado por WhatsApp ID |
@@ -42,7 +42,7 @@ La fuente canonica es `app/tenant_models/operations.py` y `app/tenant_models/con
 - `leads.cliente_id -> clientes.id` con cascade.
 - `leads.ejecutivo_id -> ejecutivos.id`.
 - Conversaciones/mensajes se relacionan logicamente mediante `session_id == whatsapp_id`; no hay FK.
-- `mensajes_procesados` conserva el ID externo separado de `mensajes_dashboard`.
+- Los mensajes nuevos guardan el ID externo en `mensajes_dashboard`, con unicidad por conexión/canal dentro del schema autenticado. `mensajes_procesados` se mantiene por compatibilidad y deduplicación histórica; no es una segunda fuente de contenido. Sus marcadores antiguos no se asocian por suposición a filas del historial.
 - `document_chunks.document_id -> business_context_documents.id` con cascade.
 - `document_embeddings.chunk_id -> document_chunks.id` con cascade.
 - Vista `v_inventario_disponible` filtra vehiculos disponibles.
@@ -74,4 +74,6 @@ No existen hoy tablas activas `agent_profiles`, `analytics_snapshots`, `handoff_
 
 ## Migracion
 
-`create_all` agrega tablas faltantes pero no altera columnas/constraints existentes. `TENANT_MIGRATION_VERSION` solo etiqueta ejecuciones; no representa un archivo de revision con upgrade/downgrade. Cualquier cambio no aditivo necesita una estrategia explicita y pruebas sobre todos los schemas.
+`create_all` agrega tablas faltantes pero no altera columnas/constraints existentes. El provisioning ejecuta además `upgrade_message_schema` para FK-01, una migración transaccional e idempotente de la tabla activa, tanto en empresas nuevas como existentes. `tenant_schema_v3` etiqueta este estado. No elimina columnas ni reconstruye IDs históricos.
+
+La [decisión de identidad de mensajes](MESSAGE_IDENTITY.md) documenta claves, compatibilidad, límites y despliegue. El modelo alternativo `message.py` permanece inactivo y explícitamente documentado como histórico.

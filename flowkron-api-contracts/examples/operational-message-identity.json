@@ -1,0 +1,11 @@
+{
+  "external_message_id": "baileys:12025550138:synthetic-inbound",
+  "connection_id": "default",
+  "provider_message_id": "synthetic-inbound",
+  "phone": "12025550138",
+  "direction": "inbound",
+  "message_type": "text",
+  "body": "Consulta de prueba",
+  "channel": "whatsapp",
+  "sent_at": "2026-11-18T12:00:00Z"
+}

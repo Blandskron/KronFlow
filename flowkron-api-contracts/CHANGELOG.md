@@ -5,6 +5,7 @@ Formato basado en Keep a Changelog y SemVer.
 ## [Unreleased]
 
 ### Added
+- Operational `v0.5.0` (FK-02): siete operaciones de turnos recuperables (`claim`, consulta, `prepare`, `begin-send`, `complete`, `release`, `reconcile`), con credenciales de ingestión existentes. Reclamación con lease, respuesta preparada inmutable, finalización idempotente y reconciliación de evidencia externa sin reenvío. `/message` sigue compatible; el nuevo conector requiere estas operaciones y el schema v4.
 - Operational `v0.4.0` (FK-01): campos opcionales de identidad de conexión/proveedor, tipo y estado reportado en ingestión; metadatos persistidos y `recorded_at` en lectura de mensajes. Se mantienen requests anteriores y campos de respuesta existentes. `connection_id` solo admite `default`; no se habilitan varias cuentas, multimedia ni recibos de lectura.
 - Deduplicación concurrente dentro de la empresa autenticada. Repeticiones nuevas devuelven el ID original; marcadores históricos sin vínculo fiable conservan `message_id: null`. Reutilizar identidad nueva para otro hilo o dirección responde 409. `external_message_id` de lectura ahora refleja la entrada guardada; el fallback interno se conserva para historial no reconstruible. El CRM consume el `id` interno y no requiere cambios.
 

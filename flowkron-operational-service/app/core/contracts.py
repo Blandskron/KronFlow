@@ -22,7 +22,7 @@ def request_meta(request: Request) -> dict[str, Any]:
         "api_version": "v1",
         "service": "operational-service",
         "environment": get_settings().environment,
-        "tenant_id": str(getattr(tenant, "tenant_id", None) or getattr(user, "tenant_id", None) or "") or None,
+        "tenant_id": str(getattr(tenant, "auth_tenant_id", None) or getattr(tenant, "tenant_id", None) or getattr(user, "tenant_id", None) or "") or None,
         "user_id": str(getattr(user, "user_id", None) or "") or None,
         "request_id": getattr(request.state, "request_id", ""),
         "correlation_id": getattr(request.state, "correlation_id", ""),

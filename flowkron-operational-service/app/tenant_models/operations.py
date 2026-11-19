@@ -10,6 +10,7 @@ from app.core.database import Base
 
 
 ACTIVE_TENANT_TABLE_NAMES = {
+    "whatsapp_turns",
     "mensajes_procesados",
     "clientes",
     "leads",

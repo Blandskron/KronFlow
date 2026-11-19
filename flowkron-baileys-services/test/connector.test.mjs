@@ -206,7 +206,8 @@ test("requires consent, stores each conversation and relays its agent response o
   const requests = [];
   const replies = [];
   let consent = false;
-  let duplicate = false;
+  let turnState = "generating";
+  let preparedReply;
   const backend = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -218,8 +219,21 @@ test("requires consent, stores each conversation and relays its agent response o
       data = { consentimiento_datos: consent };
     } else if (req.url.endsWith("/internal/whatsapp/15")) {
       data = { reply: { content: "Respuesta de prueba" }, requires_human: true };
+    } else if (req.url.endsWith("/turns/claim")) {
+      data = { turn_id: 1, state: turnState, claimed: turnState === "generating", claim_token: "synthetic-claim-token",
+        phone: "12025550138", external_thread_id: "12025550138", input_body: body.body };
+    } else if (req.url.endsWith("/prepare")) {
+      turnState = "prepared";
+      preparedReply = body.reply_body;
+      data = { state: turnState, reply_body: preparedReply };
+    } else if (req.url.endsWith("/begin-send")) {
+      turnState = "sending";
+      data = { state: turnState, claimed: true };
+    } else if (req.url.endsWith("/complete")) {
+      turnState = "completed";
+      data = { state: turnState };
     } else {
-      data = { duplicate };
+      throw new Error(`Unexpected request: ${req.url}`);
     }
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ data }));
@@ -241,15 +255,9 @@ test("requires consent, stores each conversation and relays its agent response o
   assert.equal(agentRequest.headers["x-flowkron-tenant"], "15");
   assert.equal(agentRequest.body.message.content, message.body);
   assert.equal(replies.at(-1), "Respuesta de prueba");
-  assert.equal(requests.at(-1).body.direction, "outbound");
+  assert.ok(requests.at(-1).url.endsWith("/complete"));
   assert.equal(requests.at(-1).body.provider_message_id, "outgoing-provider-id");
-  assert.equal(requests.at(-1).body.delivery_status, "sent");
-  assert.ok(requests.some((request) => request.url.endsWith("/handoff")));
-  duplicate = true;
+  assert.ok(requests.some((request) => request.url.endsWith("/prepare") && request.body.requires_human));
   await handler(message, reply);
   assert.equal(replies.length, 3);
-  duplicate = false;
-  await handler({ ...message, external_message_id: "second-message" }, async () => {});
-  assert.equal(requests.at(-1).body.provider_message_id, null);
-  assert.equal(requests.at(-1).body.delivery_status, "sent");
 });

@@ -22,6 +22,7 @@ from app.schemas.ingest import (
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente, Conversation, Ejecutivo, InventarioVehiculo, Lead, MensajeProcesado, Message, SolicitudDerecho
+from app.tenant_models.whatsapp_turn import WhatsAppTurn
 
 
 def _get_or_create_cliente(db: Session, phone: str, full_name: str = "", email: str = "", source: str = "whatsapp_directo") -> Cliente:
@@ -83,7 +84,7 @@ def _message_already_processed(db: Session, external_message_id: str) -> bool:
     return db.scalar(select(MensajeProcesado.id).where(MensajeProcesado.message_id == external_message_id)) is not None
 
 
-def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAppMessageIn) -> dict:
+def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAppMessageIn, *, create_turn: bool = False) -> dict:
     bind_tenant_session(db, tenant.schema_name)
     session_id = payload.external_thread_id or payload.phone
     # Lock before any read/upsert. The unique index is the final invariant;
@@ -146,6 +147,9 @@ def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAp
         delivery_status=payload.delivery_status or ("received" if payload.direction == "inbound" else "unknown"),
     )
     db.add(message)
+    if create_turn:
+        db.flush()
+        db.add(WhatsAppTurn(id=message.id, phone=payload.phone, lead_id=lead.id, conversation_id=conversation.id))
     create_system_event(db, "ingest.message.received", tenant.auth_tenant_id, tenant.schema_name, {"message_id": payload.external_message_id})
     db.commit()
     db.refresh(message)

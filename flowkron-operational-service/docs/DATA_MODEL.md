@@ -13,7 +13,7 @@ Startup crea estas tablas con `Base.metadata.create_all`:
 
 ## Schema tenant activo
 
-La fuente canonica es `app/tenant_models/operations.py` y `app/tenant_models/context.py`. El provisioning crea exclusivamente tablas incluidas en `ACTIVE_TENANT_TABLE_NAMES`.
+La fuente canonica está en `app/tenant_models/operations.py`, `app/tenant_models/context.py` y `app/tenant_models/whatsapp_turn.py`. El provisioning crea exclusivamente tablas incluidas en `ACTIVE_TENANT_TABLE_NAMES`.
 
 | Tabla | Proposito |
 | --- | --- |
@@ -26,6 +26,7 @@ La fuente canonica es `app/tenant_models/operations.py` y `app/tenant_models/con
 | `log_limpiezas` | Auditoria de limpieza/anonimizacion |
 | `conversaciones` | `session_id`, ultimo payload JSON y fecha |
 | `mensajes_dashboard` | Mensajes activos con identidad externa/proveedor, conexión, canal, dirección, tipo, estado reportado y fecha de registro; conserva WhatsApp ID, rol, texto y fecha originales |
+| `whatsapp_turns` | FK-02: etapa por mensaje entrante, lease/token privado, respuesta preparada, handoff y referencia a salida; no duplica el historial |
 | `reglas_negocio` | Reglas comerciales temporales por alcance JSON |
 | `rate_limit` | Contador por WhatsApp ID y ventana temporal |
 | `conversaciones_resumen` | Resumen materializado por WhatsApp ID |
@@ -77,3 +78,5 @@ No existen hoy tablas activas `agent_profiles`, `analytics_snapshots`, `handoff_
 `create_all` agrega tablas faltantes pero no altera columnas/constraints existentes. El provisioning ejecuta además `upgrade_message_schema` para FK-01, una migración transaccional e idempotente de la tabla activa, tanto en empresas nuevas como existentes. `tenant_schema_v3` etiqueta este estado. No elimina columnas ni reconstruye IDs históricos.
 
 La [decisión de identidad de mensajes](MESSAGE_IDENTITY.md) documenta claves, compatibilidad, límites y despliegue. El modelo alternativo `message.py` permanece inactivo y explícitamente documentado como histórico.
+
+`tenant_schema_v4` mantiene ese upgrade y agrega `whatsapp_turns` desde `tenant_models/whatsapp_turn.py`, importado por el metadata activo. No crea filas a partir de mensajes antiguos. Ver [recuperación de turnos](TURN_RECOVERY.md) para estados, atomicidad y reconciliación.

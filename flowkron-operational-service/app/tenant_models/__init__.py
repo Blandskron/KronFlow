@@ -1,3 +1,4 @@
+from app.tenant_models.whatsapp_turn import WhatsAppTurn
 from app.tenant_models.operations import (
     ACTIVE_TENANT_TABLE_NAMES,
     Cliente,
@@ -24,6 +25,7 @@ from app.tenant_models.context import (
 )
 
 __all__ = [
+    "WhatsAppTurn",
     "ACTIVE_TENANT_TABLE_NAMES",
     "BusinessContextDocument",
     "BusinessContextField",

@@ -2,6 +2,8 @@
 
 La ingestión conserva el ID real del proveedor en cada mensaje. Para una respuesta, registra el ID devuelto por su propio envío y el estado reportado `sent`; ese estado no confirma entrega ni lectura. Ver la [decisión de identidad de mensajes](../flowkron-operational-service/docs/MESSAGE_IDENTITY.md).
 
+FK-02 persiste el turno en Operational y reutiliza respuestas preparadas al reintentar. Fallos recuperables tienen hasta tres intentos; la confirmación de envío se vuelve a guardar sin retransmitir. Un envío con resultado desconocido no se repite automáticamente. El conector nuevo requiere las rutas de turnos y `tenant_schema_v4` antes de abrir tráfico. Ver [recuperación y reconciliación](../flowkron-operational-service/docs/TURN_RECOVERY.md); la cola sigue en memoria y aún no existe un barrido de pendientes al arrancar.
+
 Vincula una cuenta de WhatsApp por empresa en **WhatsApp → Generar código QR** dentro del CRM. Escanea el código desde **Dispositivos vinculados** en el teléfono. El código vigente aparece únicamente a miembros con el permiso de conexión de su empresa.
 
 - El conector guarda las credenciales de cada empresa en su propio directorio dentro del volumen privado `baileys-lab-sessions`. Las sesiones vinculadas se reabren después de reiniciar el servicio.

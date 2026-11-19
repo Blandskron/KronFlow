@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     default_page_size: int = 50
     max_page_size: int = 200
-    tenant_migration_version: str = "tenant_schema_v3"
+    tenant_migration_version: str = "tenant_schema_v4"
     ingest_rate_limit_per_minute: int = 120
 
     model_config = SettingsConfigDict(

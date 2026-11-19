@@ -27,6 +27,8 @@ Para recrear un tenant de desarrollo desde cero, envia `recreate_schema=true`; e
 
 ## Migración de schemas
 
+Para `tenant_schema_v4` (FK-02), seguir el [procedimiento de turnos recuperables](TURN_RECOVERY.md#migración-y-compatibilidad). Migrar Operational antes de reabrir el conector nuevo; revisar turnos en curso antes de volver al código anterior. Los resultados desconocidos se atienden con el [runbook de reconciliación](TURN_RECOVERY.md#reconciliación-operativa), sin forzar reenvíos.
+
 Para `tenant_schema_v3` (FK-01), seguir el [procedimiento de identidad de mensajes](MESSAGE_IDENTITY.md#migración-y-operación): pausar tráfico, migrar antes de servir el nuevo modelo, revisar fallos y tratar schemas suspendidos antes de reactivarlos. La migración es aditiva, pero requiere locks e índices; no se aplica a una base existente por el mero arranque del proceso API.
 
 ```powershell

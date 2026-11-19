@@ -26,6 +26,8 @@ Todas las respuestas JSON de runtime, incluyendo health, rutas internas, ingest 
 
 Los errores usan `ApiError` problem-details con `type`, `title`, `status`, `detail`, `instance`, `error_code`, `errors` y `meta`. El middleware conserva `X-Request-ID` y `X-Correlation-ID`. `/docs`, `/redoc` y `/openapi.json` no se envuelven.
 
+`meta.tenant_id` usa primero el ID IAM del runtime resuelto (`TenantContext.auth_tenant_id`), tanto en éxitos como en errores. Si todavía no se resolvió runtime, puede usar el principal autenticado; sin identidad validada es `null`. Las cabeceras que declaran empresa no se copian a metadatos antes de autenticar. Esto corrige trazabilidad y no cambia la autorización de recursos.
+
 ## Health
 
 | Método y ruta | Auth | Respuesta |
@@ -78,7 +80,9 @@ El `tenant_id` de la ruta es el ID logico de Auth/IAM. Operational resuelve `ten
 
 ## Ingesta WhatsApp
 
-Todas las rutas exigen `X-Tenant-Code` y `X-Ingest-Key`, runtime activo, plan pagado y rate limit en memoria.
+Las rutas usan credenciales de ingestión por empresa: `X-Tenant-Code` + `X-Ingest-Key`, o el puente interno `X-Flowkron-Tenant` + `X-Baileys-Token`. Exigen runtime activo y admisión/tasa en memoria. El puente privado no se expone al navegador.
+
+FK-02 añade siete operaciones bajo `/api/v1/ingest/whatsapp/turns`: `claim`, consulta por ID, `prepare`, `begin-send`, `complete`, `release` y `reconcile`. El [contrato y runbook de recuperación](TURN_RECOVERY.md) explica su orden, tokens, estados y límites. El endpoint anterior `/message` conserva su comportamiento para adaptadores existentes.
 
 | Método y ruta | Acción |
 | --- | --- |

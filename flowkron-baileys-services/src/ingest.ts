@@ -1,4 +1,5 @@
 import type { WAMessage } from "baileys";
+import { processTurn, type SendText } from "./turn-pipeline.js";
 
 export function normalizeInbound(message: WAMessage) {
   const { key } = message;
@@ -62,7 +63,6 @@ export function operationalIngest(env: NodeJS.ProcessEnv) {
 
 
 type Inbound = NonNullable<ReturnType<typeof normalizeInbound>>;
-type SendText = (text: string) => Promise<{ provider_message_id?: string } | void>;
 export type InboundHandler = (message: Inbound, reply: SendText) => Promise<void>;
 
 export function tenantIngest(
@@ -124,31 +124,6 @@ export function tenantIngest(
       return;
     }
 
-    const messageUrl = new URL("message", base);
-    const stored = await request(messageUrl, message);
-    if (stored.duplicate) return;
-    const result = await request(agentUrl, {
-      tenant_id: tenant,
-      channel: "whatsapp",
-      conversation_id: message.external_thread_id,
-      customer: { external_id: message.phone, phone: message.phone },
-      message: { content: message.body }
-    });
-    const response = result.reply?.content;
-    if (typeof response !== "string" || !response.trim()) throw new Error("Agent returned no WhatsApp reply");
-    if (result.requires_human) {
-      await request(new URL("handoff", base), { phone: message.phone, reason: "agent_requires_human" });
-    }
-    const body = response.slice(0, 4000);
-    const sent = await reply(body);
-    await request(messageUrl, {
-      ...message,
-      external_message_id: `${message.external_message_id}:reply`,
-      direction: "outbound",
-      provider_message_id: sent?.provider_message_id ?? null,
-      delivery_status: "sent",
-      body,
-      sent_at: new Date().toISOString()
-    });
+    await processTurn(message, reply, base, agentUrl, tenant, request);
   };
 }

@@ -43,7 +43,7 @@ class MessageInputTests(unittest.TestCase):
 
 
 @unittest.skipUnless(os.getenv("FLOWKRON_TEST_POSTGRES_BIN"), "Set FLOWKRON_TEST_POSTGRES_BIN for disposable PostgreSQL tests")
-class MessageIdentityTests(unittest.TestCase):
+class PostgresCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temporary = tempfile.TemporaryDirectory(prefix="flowkron-fk01-")
@@ -58,7 +58,8 @@ class MessageIdentityTests(unittest.TestCase):
         cls.addClassCleanup(lambda: cls.pg("pg_ctl", "-D", str(cls.data), "-m", "fast", "-w", "stop"))
         cls.pg("pg_ctl", "-D", str(cls.data), "-l", str(cls.root / "postgres.log"),
                "-o", f"-h 127.0.0.1 -p {port}", "-w", "start")
-        cls.engine = create_engine(f"postgresql+psycopg://fk01@127.0.0.1:{port}/postgres")
+        cls.engine = create_engine(f"postgresql+psycopg://fk01@127.0.0.1:{port}/postgres",
+                                   connect_args={"options": "-c statement_timeout=10000"})
         cls.addClassCleanup(cls.engine.dispose)
         Base.metadata.create_all(cls.engine, tables=[table for table in Base.metadata.sorted_tables if table.schema in (None, "public")])
 
@@ -92,6 +93,8 @@ class MessageIdentityTests(unittest.TestCase):
         with Session(self.engine) as db:
             return ingest_whatsapp_message(db, tenant, payload)
 
+
+class MessageIdentityTests(PostgresCase):
     def test_new_tenant_persists_identity_and_preserves_response_shape(self):
         tenant = self.tenant()
         result = self.ingest(tenant, self.payload())

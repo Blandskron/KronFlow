@@ -8,12 +8,12 @@ Servicio FastAPI de datos operacionales multi-tenant. Gestiona runtime público,
 
 No asumas capacidades inexistentes:
 
-- `app/tenant_models/operations.py` y `app/tenant_models/context.py`, importados desde `app/tenant_models/__init__.py`, definen el esquema tenant activo. Los módulos `agent_profile.py`, `analytics_snapshot.py`, `conversation.py`, `handoff_request.py`, `lead.py`, `lead_event.py` y `message.py` son un modelo anterior no importado por el provisioning actual.
+- `app/tenant_models/operations.py`, `app/tenant_models/context.py` y `app/tenant_models/whatsapp_turn.py`, importados desde `app/tenant_models/__init__.py`, definen el esquema tenant activo. Los módulos `agent_profile.py`, `analytics_snapshot.py`, `conversation.py`, `handoff_request.py`, `lead.py`, `lead_event.py` y `message.py` son un modelo anterior no importado por el provisioning actual.
 - Los endpoints `/api/v1/agents` no persisten agentes todavía.
 - `require_permission()` existe, pero ningún router de negocio lo usa; hoy se valida JWT, tenant activo y plan pagado, no permisos RBAC por endpoint.
 - El aislamiento usa `schema_translate_map`, no `SET search_path` en cada request.
 - Alembic se reserva para tablas públicas, pero no hay archivos en `alembic/versions/`; startup usa `create_all` para el esquema público.
-- Hay pruebas `unittest` de límites de seguridad y de identidad de mensajes. La integración FK-01 usa un cluster PostgreSQL temporal propio al configurar `FLOWKRON_TEST_POSTGRES_BIN`; ver `docs/TESTING.md` para ejecución y limitaciones de dependencias.
+- Hay pruebas `unittest` de límites de seguridad, identidad de mensajes y recuperación de turnos. Las integraciones FK-01/FK-02 usan un cluster PostgreSQL temporal propio al configurar `FLOWKRON_TEST_POSTGRES_BIN`; FK-02 ejercita ASGI sin TestClient. Ver `docs/TESTING.md` para ejecución y limitaciones de dependencias.
 
 ## Mapa de código
 

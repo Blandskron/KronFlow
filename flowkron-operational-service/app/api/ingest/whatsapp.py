@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.api.ingest.turns import router as turns_router
 from app.core.rate_limit import enforce_ingest_rate_limit
 from app.core.tenant_resolver import TenantContext, resolve_tenant_from_ingest_headers
 from app.schemas.ingest import (
@@ -42,6 +43,7 @@ from app.services.ingest_service import (
 )
 
 router = APIRouter(prefix="/api/v1/ingest/whatsapp", tags=["WhatsApp Ingest"])
+router.include_router(turns_router)
 
 
 @router.get("/runtime-ready", include_in_schema=False)

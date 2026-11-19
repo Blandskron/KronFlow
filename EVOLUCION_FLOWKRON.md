@@ -2,7 +2,7 @@
 
 Fecha: 18 de noviembre de 2026. Responsable del producto: Blandskron.
 
-Actualización: segunda revisión cruzada completa y ampliación a 26 tareas. FK-01 conserva su estado implementado; FK-02 a FK-26 siguen pendientes. El análisis de nuevas ideas no las habilita automáticamente en el runtime.
+Actualización: tercera revisión cruzada de tres POC y ampliación selectiva a 27 tareas. FK-01 y FK-02 están implementadas y validadas en entorno descartable; FK-09 tiene una primera entrega de metadatos de empresa. Las demás tareas siguen pendientes. El análisis de nuevas ideas no las habilita automáticamente en el runtime.
 
 ## Objetivo y alcance
 
@@ -16,7 +16,15 @@ El análisis inicial fue estático: código, contratos, configuración, document
 
 Validación: 9 pruebas FK-01 aprobadas, incluidas migración repetida, rollback, concurrencia y aislamiento en PostgreSQL 18.3 temporal; 10 pruebas del conector aprobadas. La suite Operational completa no pudo validar `test_security.py`: su import falla por una incompatibilidad previa entre Starlette instalado y el cliente HTTP declarado. No se modificaron dependencias. La [decisión técnica y procedimiento](flowkron-operational-service/docs/MESSAGE_IDENTITY.md) documenta alcance y rollout.
 
-No se migró ninguna base de la instalación ni se desplegó el cambio. Ese paso permanece pendiente para un despliegue autorizado. FK-02 y las demás tareas siguen pendientes; guardar identidad todavía no recupera turnos incompletos.
+No se migró ninguna base de la instalación ni se desplegó el cambio. Ese paso permanece pendiente para un despliegue autorizado. La entrega inicial de FK-01 no recuperaba turnos incompletos; se añade a continuación el avance posterior.
+
+**FK-02 implementada y validada en entorno descartable (18 de noviembre de 2026).** Operational conserva etapas de turno, lease, respuesta preparada y derivación humana atómica. El conector retoma generación/preparación recuperables y reintenta registrar una confirmación sin volver a enviar. Un envío ambiguo queda en `unknown`, consultable mediante API; una operación privada registra evidencia externamente verificada sin transmitir otro mensaje. No se reproducen automáticamente entradas históricas sin turno.
+
+Validación FK-02: 13 pruebas PostgreSQL/ASGI aprobadas y 19 pruebas del conector aprobadas; las 9 pruebas FK-01 también pasaron con el esquema ampliado. Se probaron concurrencia, caducidad, tokens obsoletos, rollback, fallos antes/después del envío, retiradas previas al envío, aislamiento y reconciliación tras reinicio. Se conservan las limitaciones de la suite anterior basada en `TestClient`. Ver [diseño, migración v4 y runbook](flowkron-operational-service/docs/TURN_RECOVERY.md).
+
+FK-02 no implementa aún un worker que busque pendientes después de reiniciar ni una cola durable: tras agotar los reintentos se necesita una nueva entrega/reclamación. Esa automatización es FK-03. Tampoco cierra toda la política de retiradas concurrentes de FK-04. No se aplicó la migración a la instalación ni se usaron proveedores reales.
+
+**FK-09, primera entrega pequeña:** los metadatos de éxito y error de Operational identifican la empresa por `TenantContext.auth_tenant_id`, conservando el principal autenticado como fallback. No usan cabeceras no verificadas como identidad. Cuatro pruebas específicas y el recorrido ASGI de turnos cubren prioridad del contexto, compatibilidad, 200/409 y ausencia de identidad ante 401. La correlación completa, métricas y vista de diagnóstico siguen pendientes: FK-09 queda parcial.
 
 La segunda revisión incorpora propuestas de acciones, supervisión humana, memoria conversacional, actualización de leads, agenda, correo, integraciones por empresa, notificaciones y evaluación del agente. Se amplían tareas existentes cuando el aprendizaje ya tiene un propietario; solo se crean IDs nuevos para capacidades distintas. La publicación Git del trabajo pendiente fue solicitada expresamente por el usuario; no implica un despliegue.
 
@@ -84,19 +92,19 @@ El valor de la referencia está en sus conceptos, no en asumir que su implementa
 
 ## Tareas de mejora y evolución
 
-Estado actual: **FK-01 implementada y validada en entorno descartable; demás tareas pendientes / propuestas**. P0 significa integridad y recuperación; P1, operación cotidiana; P2, extensibilidad. S/M/L son tamaños relativos, no compromisos de fechas. Los responsables indicados son componentes propietarios, no personas asignadas.
+Estado actual: **FK-01 y FK-02 implementadas y validadas en entorno descartable; FK-09 parcial (metadatos de empresa); demás tareas pendientes / propuestas**. P0 significa integridad y recuperación; P1, operación cotidiana; P2, extensibilidad. S/M/L son tamaños relativos, no compromisos de fechas. Los responsables indicados son componentes propietarios, no personas asignadas.
 
 | ID | Prioridad | Tarea | Propietario | Tamaño | Depende de |
 | --- | --- | --- | --- | --- | --- |
 | FK-01 | P0 | Alinear contratos y modelo activo de mensajes — implementada; migración de instalaciones pendiente | Operational + Contratos | M | — |
-| FK-02 | P0 | Recuperar etapas incompletas del turno | Operational + Conector | L | FK-01 |
+| FK-02 | P0 | Recuperar etapas incompletas del turno — implementada; migración v4 de instalaciones pendiente | Operational + Conector | L | FK-01 |
 | FK-03 | P0 | Persistir trabajos con admisión acotada | Operational + Conector + Deploy | L | FK-02 |
 | FK-04 | P0 | Mantener consentimiento durante trabajos y reintentos | Operational + Conector | M | FK-02; completar con FK-03 |
 | FK-05 | P1 | Diagnóstico accionable de conexión | Conector + IAM + CRM | M | — |
 | FK-06 | P1 | Atención humana y envío desde el CRM | Operational + IAM + CRM + Conector | L | FK-02, FK-04 |
 | FK-07 | P1 | Recibos y estados reales de cada mensaje | Operational + Conector + CRM | M | FK-01, FK-02 |
 | FK-08 | P1 | Búsqueda, páginas y lecturas del inbox | Operational + CRM | M | FK-01 |
-| FK-09 | P1 | Trazas y métricas del recorrido completo | Todos los servicios del recorrido | M | FK-01; ampliar con FK-02, FK-03 |
+| FK-09 | P1 | Trazas y métricas del recorrido completo — parcial: metadatos de empresa corregidos | Todos los servicios del recorrido | M | FK-01; ampliar con FK-02, FK-03 |
 | FK-10 | P2 | Eventos de dominio y suscripciones por empresa | Operational + Contratos | M | FK-01, FK-02 |
 | FK-11 | P2 | Entrega fiable y diagnóstico de webhooks | Operational + Deploy + CRM | L | FK-03, FK-09, FK-10 |
 | FK-12 | P2 | Credenciales acotadas para automatizaciones | IAM + Operational | M | FK-10 |
@@ -114,6 +122,7 @@ Estado actual: **FK-01 implementada y validada en entorno descartable; demás ta
 | FK-24 | P2 | Integraciones delegadas y credenciales por empresa | IAM + Operational + Deploy + CRM | L | FK-04, FK-09 |
 | FK-25 | P1 | Centro de notificaciones de negocio y entregas | Operational + CRM + Correo Blandskron | M | FK-02, FK-03, FK-09; FK-17 para acciones |
 | FK-26 | P1 | Evaluación del agente, trazas y presupuestos | Agent Core + Operational + Contratos | M | FK-09, FK-20; ampliar con FK-17 |
+| FK-27 | P1 | Resolver solicitudes de privacidad y verificar retención | Operational + IAM + CRM + Deploy | L | FK-03, FK-04, FK-09 |
 
 ### FK-01 — Alinear contratos y modelo activo de mensajes
 
@@ -132,6 +141,8 @@ Estado actual: **FK-01 implementada y validada en entorno descartable; demás ta
 **Aceptación:** fallos inducidos después de cada etapa se pueden recuperar; una entrada duplicada retoma trabajo incompleto; fallar al registrar una respuesta enviada permite reconciliarla. Un timeout de envío con resultado desconocido queda visible y no provoca reenvío ciego. No prometer entrega exactamente una vez cuando el proveedor no permite demostrarla.
 
 **Ampliación de la segunda revisión:** las acciones externas y sus confirmaciones también son etapas recuperables. Si el proveedor completó una operación y falló su persistencia local, reconciliar su ID antes de repetirla. Una respuesta inmediata confirma recepción de la solicitud; solo un resultado comprobado permite anunciar que la operación terminó.
+
+**Entrega FK-02:** el ciclo WhatsApp de generación, respuesta, handoff y confirmación está implementado; la extensión a futuras acciones de correo/agenda depende de FK-17/FK-22/FK-23. La incertidumbre de envío queda bloqueada para reenvío automático. El despliegue necesita `tenant_schema_v4`; no se habilitó ninguna integración de negocio nueva.
 
 ### FK-03 — Persistir trabajos con admisión acotada
 
@@ -219,6 +230,8 @@ Estado actual: **FK-01 implementada y validada en entorno descartable; demás ta
 
 **Aceptación:** secreto visible una sola vez; credencial revocada o vencida deja de autorizar según la política definida; scopes de lectura no envían mensajes; pruebas cruzadas por ID de recurso impiden acceso entre empresas. Ningún secreto operativo se almacena en el navegador del CRM.
 
+**Aporte de la tercera revisión:** los permisos efectivos son la intersección de concesiones vigentes del servidor y alcance solicitado. Una lista de concesiones vacía deniega; nunca habilita como fallback los permisos enviados por el cliente. No incorporar credenciales comodín para elegir empresa desde el cuerpo ni aceptar un actor declarado por el solicitante como identidad autenticada.
+
 ### FK-13 — Adjuntos privados por etapas
 
 **Problema:** mensajes con archivos quedan fuera del flujo de texto actual.
@@ -305,6 +318,8 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 
 **Aceptación:** herramientas desconocidas y argumentos inválidos no se ejecutan; la IA no elige empresa, remitente ni permisos; entrada repetida no crea una segunda acción lógica; cada transición conserva autor, versión y correlación. Un resultado simulado no figura como ejecución real. `create_lead` debe actualizar la lógica actual en vez de crear una segunda tabla de clientes.
 
+**Aporte de la tercera revisión:** el catálogo de herramientas del backend define permiso, tipos de argumentos/resultado, modo consulta/escritura, integraciones requeridas y timeout efectivamente aplicado. El planner no puede rebajar esos requisitos. Separar análisis sin efectos de ejecución autorizada: nombrar una ruta `analyze` no la hace inocua si llama al mismo ejecutor. Normalizar resultados de dominio como `needs_input`, `connection_required`, `awaiting_approval`, `succeeded`, `failed`, `unknown` y `cancelled`; terminar una función sin excepción no prueba éxito de negocio. Una solicitud con varias acciones presenta resultados individuales y estado agregado honesto; no ofrece atomicidad entre proveedores ni continúa un paso dependiente después de un fallo.
+
 ### FK-18 — Revisar, aprobar y rechazar acciones desde el CRM
 
 **Problema:** aceptar un nombre de herramienta no basta para autorizar sus efectos y actualmente no existe revisión de propuestas externas en el CRM.
@@ -312,6 +327,8 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 **Trabajo:** bandeja Angular por empresa con resumen entendible, destinatarios, recursos afectados, argumentos exactos, motivo de revisión y resultado. Aprobar, rechazar o pedir corrección según rol. La política del backend decide qué requiere revisión o confirmación del contacto; no un campo enviado por la IA. Vincular aprobación a la versión/hash de argumentos, actor y vencimiento; todo cambio posterior invalida esa aprobación. El worker comprueba vigencia y permisos antes del efecto.
 
 **Aceptación:** otro tenant o un lector no aprueba; doble aprobación no encola dos veces; editar destinatario después de aprobar obliga a revisar de nuevo; revocar la integración o pausar la automatización bloquea efectos pendientes. Se conserva el rechazo y su motivo. La aprobación de acciones es distinta de tomar el control del chat en FK-06.
+
+**Aporte de la tercera revisión:** distinguir denegación por falta de permiso, argumentos incompletos, conexión ausente y revisión humana requerida. Una aprobación no concede un permiso que el solicitante no tenía ni transforma una solicitud inválida en ejecutable. La propuesta sigue identificada al expirar o reintentarse; generar un UUID de aprobación sin registro y sin transición verificable no constituye un flujo de aprobación.
 
 ### FK-19 — Control efectivo de IA y configuración por empresa
 
@@ -329,6 +346,8 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 
 **Aceptación:** «sí, ese horario» refiere a una propuesta anterior del mismo hilo; no recupera contenido de otra empresa/conexión. Reintentos usan el mismo corte de contexto cuando corresponde; un retiro o purga invalida resúmenes derivados. La simulación no escribe recuerdos en conversaciones reales y se registran límites de contexto sin guardar por defecto prompts completos.
 
+**Aporte de la tercera revisión:** evitar guardar como «última memoria» un contexto que contiene recursivamente toda la memoria anterior. Usar estructuras planas, versiones/posiciones de turno, tamaño máximo, caducidad y resolución de escrituras concurrentes. Una etiqueta `semantic` no equivale a recuperación semántica; cada memoria debe tener una finalidad y un consumidor probado antes de persistirse. La invalidación y eliminación se coordinan con FK-27.
+
 ### FK-21 — Enriquecer leads con datos confirmados
 
 **Problema:** hay contactos y clasificación en Flowkron, pero falta un camino conversacional trazable para completar datos sin inventar información o elevar automáticamente la calificación.
@@ -345,6 +364,8 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 
 **Aceptación:** no se usan fechas o asistentes de ejemplo; dos reservas concurrentes conflictivas tienen una resolución explícita y no se promete bloqueo atómico si el proveedor no lo ofrece. Reintentos y resultado desconocido reconcilian el evento; cambios/cancelaciones preservan correlación. Se avisa «creada» solo con resultado comprobado; si el enlace de reunión está pendiente, se muestra como tal. La especificación del proveedor se verificará al implementar, sin asumir vigentes los permisos de la referencia.
 
+**Aporte de la tercera revisión:** un borrador o evento guardado solo en Flowkron no es una reserva en el calendario externo. Si falta conexión, informar qué falta y conservar la propuesta; no convertir silenciosamente una solicitud externa en una reunión local ni inventar una hora para completar el proceso. Si se ofrece agenda local, será una capacidad explícita y confirmada, con estado distinto.
+
 ### FK-23 — Correo comercial vinculado a conversación
 
 **Problema:** Flowkron tiene correo de cuentas/contacto, pero eso no habilita al agente a enviar seguimientos comerciales por petición de un chat.
@@ -353,6 +374,8 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 
 **Aceptación:** no se usa una dirección de ejemplo cuando falta el email; la IA no escoge remitentes ajenos ni amplía destinatarios sin validación. Un timeout queda reconciliable; no duplica envío al fallar el registro local. Distingue identidad de login y autorización del buzón. Los correos automáticos comerciales no se habilitan por el consentimiento de registro de cuenta; aplicar la política de finalidad/canal definida por la empresa.
 
+**Aporte de la tercera revisión:** mostrar datos pendientes y conexión pendiente como causas distintas. El proveedor/remitente es parte de la propuesta autorizada: no cambiar de un buzón delegado al remitente de infraestructura al faltar o vencer la conexión, salvo una política explícita y una aprobación todavía válida para ese destino. Registrar el resultado real del proveedor como dato de negocio, no envolver `connection_required` en un éxito genérico del ejecutor.
+
 ### FK-24 — Integraciones delegadas y credenciales por empresa
 
 **Problema:** iniciar sesión con Google identifica un usuario; no autoriza automáticamente a operar su calendario o correo ni establece qué cuenta pertenece a cada empresa.
@@ -360,6 +383,8 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 **Trabajo:** modelo de integración por empresa, proveedor, cuenta externa, scopes realmente concedidos, estado, vencimiento y responsable. Flujo OAuth con vinculación de sesión/empresa, `state` aleatorio de un solo uso, expiración, validación de callback y PKCE cuando corresponda; secretos cifrados con rotación y refresh coordinado. Comprobar requisitos actuales en documentación oficial durante la implementación. Estados distintos para no configurado, simulado, conectado, expirado, revocado y error. Desconectar una cuenta no desactiva cuentas de otras empresas; revocar tokens y trabajos pendientes conforme al alcance concedido.
 
 **Aceptación:** callback con estado repetido, vencido o de otra sesión se rechaza; ningún token se devuelve al navegador ni aparece en logs; dos workers no corrompen la renovación. Falta de scopes bloquea solo la capacidad afectada. Conexión/desconexión y cambio de cuenta requieren permiso y auditoría; pruebas con proveedor simulado verifican revocación y aislamiento antes de habilitar sandbox o cuentas reales.
+
+**Aporte de la tercera revisión:** exponer un catálogo mínimo de capacidades por empresa, con permiso efectivo y preparación de la integración, sin secretos. Permite al CRM explicar qué conectar o completar antes de solicitar una acción. Consumir `state` y renovar credenciales requieren coordinación transaccional; leer «no usado» y actualizar después sin exclusión no garantiza un solo uso. Devolver el identificador persistido de la conexión, sin fabricar otro en cada respuesta de configuración.
 
 ### FK-25 — Centro de notificaciones de negocio y entregas
 
@@ -377,6 +402,51 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 
 **Aceptación:** cambiar prompt/modelo ejecuta casos reproducibles con umbrales acordados; «no envíes correo» no dispara un envío por coincidir con una palabra. Una baja puntuación deriva o pregunta según política; no se anuncia como probabilidad calibrada. El simulador informa qué propondría y por qué sin ejecutar. Límite excedido produce un resultado comprensible y trazable, no un cobro o envío oculto. Costos usan tarifas verificadas al implementar y muestran fecha de estimación.
 
+**Aporte de la tercera revisión:** pruebas de ausencia de efectos al analizar/simular; denegación ante concesiones vacías aunque el cliente pida permisos; resultados de negocio fallidos aunque el HTTP sea 200; timeout aplicado de verdad y ninguna ejecución tardía oculta. Probar que la respuesta usa los resultados observados y no solo cuenta acciones propuestas. Medir tamaño de memoria tras muchos turnos y verificar que se mantiene acotado.
+
+## Tercera revisión cruzada: selección de aportes de tres POC
+
+### Cobertura y criterio de selección
+
+Se revisaron tres ejemplos locales: dos variantes de un agente empresarial portable (78 archivos cada una, 57 Python por variante) y un panel Django de lectura de CRM (70 archivos, 34 Python). La comparación archivo por archivo de las dos variantes, normalizando el nombre de su paquete, resultó idéntica en los 78 archivos: no se cuentan como dos implementaciones independientes ni como validaciones adicionales.
+
+Se inspeccionaron orquestación, políticas, permisos, herramientas, aprobaciones, memoria, auditoría, eventos, OAuth, correo, agenda, modelos, SDK y pruebas declaradas; para el panel, vistas, modelos y router de DB, pipeline, solicitudes de privacidad y registros de limpieza. La revisión es estática y selectiva por responsabilidad: no se arrancaron los POC, no se ejecutaron sus herramientas ni se probaron proveedores o bases reales. Posteriormente el usuario eliminó `ejemplos/`; se verificó su ausencia antes de la publicación solicitada. No se integra su código a Flowkron.
+
+El valor incremental está en mejorar contratos de ejecución y cerrar el ciclo de privacidad. La arquitectura de agentes, correo, agenda, IAM, memoria y notificaciones ya tiene tareas en Flowkron: se agregan criterios a esas tareas, no proyectos paralelos ni diez funcionalidades repetidas.
+
+| Evidencia de los ejemplos | Qué aporta | Aplicación en Flowkron |
+| --- | --- | --- |
+| Registro de herramientas con nombre, permiso y timeout; separación planner/política/ejecutor | Un catálogo explícito ayuda a validar y mostrar capacidades; en el POC el timeout se declara pero no lo impone el registro | FK-17/FK-24: requisitos del lado servidor y límites ejecutables |
+| `chat`, `analyze` y `execute` llaman al mismo orquestador, que ejecuta herramientas | El nombre del endpoint no garantiza ausencia de efectos | FK-17/FK-26: análisis y simulación con prohibición verificable de escritura/envío |
+| El ejecutor devuelve éxito si la herramienta retorna un objeto, incluso con resultado `connection_required`; el orquestador conserva éxito global ante errores individuales | Separar resultado del transporte, del ejecutor y del negocio | FK-17/FK-22/FK-23: estados tipados, resultados parciales y explicación veraz |
+| Los permisos persistidos se intersectan con los solicitados, pero una lista persistida vacía cae a los permisos del cuerpo | El alcance solicitado solo puede reducir una concesión, nunca crearla | FK-12/FK-18/FK-26: denegar sin concesiones y revalidar identidad/permiso |
+| Memoria por empresa y sesión; el contexto guardado incluye la memoria previa anidada | El scope es útil; copiar el árbol anterior hace crecer el almacenamiento/contexto sin límite | FK-20: resumen plano y acotado, control de concurrencia y borrado de derivados |
+| OAuth persiste estado con expiración y ofrece refresh; el consumo es una lectura seguida de actualización y las credenciales quedan en JSON | Hay ideas de ciclo de vida, pero no garantizan exclusión concurrente ni cifrado | Completar criterios de FK-24, sin copiar almacenes o credenciales |
+| El correo señala conexión ausente; la agenda puede crear un evento local cuando falta el proveedor externo | Explicar preparación de la integración y distinguir intención local de efecto externo | FK-22/FK-23/FK-24: capacidades explícitas y sin sustitución silenciosa de proveedor |
+| El panel muestra consentimiento, solicitudes, fechas de resolución y contadores de limpieza sobre modelos externos `managed=False` | Visibilidad operativa de privacidad; las vistas son de lectura y no resuelven solicitudes | Nueva FK-27 sobre los modelos y APIs que Flowkron ya tiene |
+| El pipeline del panel mezcla temperatura y etapa: un lead nuevo caliente también aparece en Inicio | No confundir clasificación con avance operativo ni duplicar tarjetas para aumentar métricas | Conservar el [pipeline actual de Flowkron](flowkron-front-app-angular/src/app/domains/leads/features/workflows-page/workflows-page.component.ts), que separa progreso y temperatura; no crear otro tablero por este ejemplo |
+
+### Qué se descarta por falta de valor adicional
+
+- Otro frontend, login por API key o acceso directo del navegador/panel a la DB: Flowkron ya tiene Angular, IAM y APIs por empresa. La intención de lectura de un router o `managed=False` no sustituye permisos de DB ni autorización por recurso.
+- Facturas, cobranzas y un nuevo dominio ERP solo por aparecer en un POC. No hay un consumidor o necesidad de Flowkron demostrados para ese alcance.
+- Un servidor MCP o SDK publicados: los ejemplos ofrecen un manifiesto y clientes mínimos; no prueban un protocolo completo ni justifican distribución/mantenimiento sin un consumidor concreto.
+- Un motor genérico de workflows porque un método devuelve `scheduled`. El ejemplo no programa ni ejecuta esos pasos. La recuperación de trabajos sigue en FK-03; las acciones autorizadas, en FK-17.
+- Más categorías de memoria, eventos en listas locales o métricas de proceso como si fueran infraestructura durable/distribuida. Se conserva la dirección existente de FK-03/FK-09/FK-10/FK-20.
+- Copiar plantillas que convierten datos de clientes en HTML mediante cadenas, defaults de acceso del prototipo o generación de migraciones en cada arranque. La apariencia y las instrucciones del POC no sustituyen las verificaciones de runtime de Flowkron.
+
+### FK-27 — Resolver solicitudes de privacidad y verificar retención
+
+**Problema:** Flowkron registra solicitudes y permite [leer solicitudes y logs de limpieza](flowkron-operational-service/app/api/v1/operational.py), pero ese registro no implementa el circuito de verificación, resolución, exportación o eliminación. El [modelo activo](flowkron-operational-service/app/tenant_models/operations.py) ya tiene `SolicitudDerecho`, `LogLimpieza` y campos de consentimiento; crear otras tablas de clientes o un portal separado duplicaría la base existente.
+
+**Trabajo:** completar el flujo en Operational y CRM: solicitud, verificación del solicitante y alcance, responsable, decisión autorizada, trabajo de ejecución y resultado comprobable. Separar retirada de consentimiento de solicitud de acceso/exportación, rectificación, oposición o supresión. Definir política de retención por tipo de dato y plazos configurables; verificar requisitos aplicables al implementar/desplegar, sin tratar el default técnico de 30 días como una garantía normativa.
+
+Inventariar mensajes, respuestas preparadas y turnos FK-02, trabajos, adjuntos, datos de contacto, contexto/memoria derivada e integraciones que hayan recibido datos. Coordinar cancelación o bloqueo con FK-03/FK-04 antes de borrar. Prever supresión o seudonimización de identificadores de deduplicación según una política explícita para que un replay no recree automáticamente el contacto eliminado. Las exportaciones usan selección autorizada y acceso privado con vencimiento; no se entregan dumps de la empresa ni se envían datos al LLM para resolver la solicitud por defecto.
+
+**Aceptación:** solo roles autorizados gestionan solicitudes y cada operación queda limitada a su empresa/persona verificada. Reintentar no duplica exportaciones o borrados. Se prueba una eliminación con un turno preparado, un envío en curso, adjuntos y memoria derivados; se informa qué ya fue enviado externamente y qué exige gestión adicional, sin prometer cancelación retroactiva. Los logs conservan evidencia mínima de decisión/ejecución sin volver a almacenar el contenido eliminado. Un fallo parcial queda pendiente con alcance y motivo; marcar «completada» requiere verificar cada almacén previsto. Restaurar un backup aplica la política de supresión antes de reabrir tráfico y no reintroduce datos sin control; se declaran límites y caducidad de copias en lugar de afirmar que desaparecieron inmediatamente.
+
+**Relación con el plan:** FK-04 evita nuevos efectos tras retirar autorización; FK-27 gestiona la solicitud y el ciclo de vida de datos. FK-13 aporta tratamiento de archivos y FK-20 el de memorias derivadas cuando esas capacidades estén presentes. No requiere implementar todas las funciones futuras para resolver solicitudes sobre los datos actuales.
+
 ## Orden recomendado y límites de ejecución
 
 1. **Integridad:** FK-01 → FK-02 → FK-03, con FK-04 y pruebas FK-15 desde el inicio. FK-05, FK-09 inicial y FK-16 pueden avanzar sin esperar nuevas funciones.
@@ -384,6 +454,7 @@ También se constató que faltan el `tsconfig.json` que necesita el comando `tsc
 3. **Extensibilidad:** FK-10 → FK-11; FK-12 cuando haya consumidores concretos. FK-13 como entregas separadas. FK-14 queda condicionada a necesitar múltiples conexiones o proveedores.
 4. **Agente supervisado:** avanzar FK-19 y FK-20 sobre la base recuperable; FK-26 acompaña sus entregas. FK-17 → FK-18 habilita acciones de negocio con política; FK-21 y FK-25 completan datos confirmados y supervisión.
 5. **Servicios al cliente:** FK-24 habilita cuentas delegadas; después FK-22 y FK-23, empezando por proveedores simulados y sandbox. La agenda y el correo no deben adelantarse a recuperación, permisos o confirmación de argumentos.
+6. **Ciclo de datos:** diseñar FK-27 junto con FK-03/FK-04 y entregarla sobre los almacenes actuales; ampliar su cobertura al incorporar archivos, memoria e integraciones. El análisis de los tres POC no altera la prioridad inmediata de FK-03.
 
 No hay fechas de entrega asignadas. La instrucción posterior del usuario inició FK-01; las demás mejoras requieren continuar sus tareas. Se autorizó commit y push del trabajo acumulado. No se conectaron cuentas reales, desplegaron servicios ni migraron bases existentes.
 
@@ -394,9 +465,10 @@ No hay fechas de entrega asignadas. La instrucción posterior del usuario inici�
 - [x] Mantener las propuestas dentro de los límites actuales de Flowkron.
 - [x] Retiro de la primera referencia: el usuario eliminó la carpeta y se verificó su ausencia en esta segunda revisión.
 - [x] Segunda revisión completa y conservación de aprendizajes en FK-17 a FK-26 y ampliaciones de FK-02/FK-03/FK-06/FK-09/FK-15/FK-16.
+- [x] Tercera revisión de tres POC: detectar variantes equivalentes, incorporar mejoras concretas a ocho tareas existentes y añadir solo FK-27 como capacidad nueva.
 - [x] Retirar la segunda carpeta de referencia después de conservar el análisis; ausencia verificada en el workspace.
 - [ ] Ejecutar tareas de evolución en cambios posteriores.
 
 Los aprendizajes quedan conservados aquí. No se incorpora código, configuración, dependencias ni activos de las referencias a Flowkron; las mejoras futuras se implementan en los componentes propietarios existentes.
 
-Se verificaron las 26 tareas consecutivas, enlaces locales existentes, UTF-8 y ausencia de nombres de las referencias. La publicación solicitada incluye el trabajo acumulado de FK-01 y este documento; el commit y su correspondencia con el remoto se verifican en el cierre de la entrega.
+La tercera revisión conserva 27 tareas consecutivas, enlaces locales existentes, UTF-8 y ausencia de nombres de las referencias. La instrucción posterior solicita una tarea pequeña y publicar todo en `main`: se entrega la corrección acotada de FK-09 junto con FK-02 y el análisis acumulado. Los POC no forman parte del commit. No se aplican migraciones a la instalación ni se despliegan servicios por hacer push.

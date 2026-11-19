@@ -11,6 +11,7 @@ Documentación mantenida contra la implementación. OpenAPI (`/openapi.json`) es
 | [SECURITY.md](SECURITY.md) | Controles implementados y brechas explícitas |
 | [OPERATIONS.md](OPERATIONS.md) | Provisioning, migraciones, runbooks y producción |
 | [TESTING.md](TESTING.md) | Validación actual y cobertura pendiente |
+| [TURN_RECOVERY.md](TURN_RECOVERY.md) | Turnos recuperables, incertidumbre de envío y reconciliación (FK-02) |
 
 Las instrucciones para agentes están consolidadas en [../AGENTS.md](../AGENTS.md); no existe una copia paralela bajo `docs/agent/`.
 

@@ -2,7 +2,17 @@
 
 ## Estado real
 
+`tests/test_contract_metadata.py` agrega cuatro pruebas sin DB para FK-09: empresa resuelta en éxito/error, prioridad sobre principal, compatibilidad de contexto previo y rechazo de cabeceras no verificadas como fuente de identidad. La prueba ASGI de FK-02 comprueba también `meta.tenant_id` en respuestas 200/409 y que permanece `null` ante credenciales inválidas (401).
+
 Existen pruebas `unittest` en `tests/test_security.py` y `tests/test_message_identity.py`. La segunda valida FK-01 con PostgreSQL descartable; no necesita pytest. La dependencia de cliente HTTP declarada está en `requirements-dev.txt`.
+
+FK-02 agrega `tests/test_turn_recovery.py`, con 13 pruebas PostgreSQL y API ASGI real. Reutiliza el fixture descartable de FK-01; no usa `TestClient` ni agrega dependencias. Cubre reclamación concurrente, persistencia atómica, expiración, respuesta/handoff, resultados desconocidos, confirmación idempotente, reconciliación, consentimiento antes del envío y credenciales/aislamiento. El fixture limita las consultas a 10 segundos para convertir bloqueos en fallos de prueba.
+
+```powershell
+python -m unittest discover -s tests -p test_turn_recovery.py -v
+```
+
+Con `FLOWKRON_TEST_POSTGRES_BIN` configurado, FK-02 aprobó sus 13 pruebas y FK-01 sus 9 pruebas. `npm test` en el conector aprobó 19 pruebas, incluidas nueve de fallos del pipeline. Sin la variable se omiten las pruebas PostgreSQL de ambas suites. No se conectó un canal real ni se ejecutó una migración sobre la instalación del usuario.
 
 ```powershell
 python -m unittest discover -s tests -v

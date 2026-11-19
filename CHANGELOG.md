@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Added the cross-project evolution analysis and 26 prioritized Flowkron tasks, including supervised agent actions, effective AI controls, conversation memory, confirmed lead updates, scheduling, business email, delegated integrations, notifications and agent evaluation. Reference implementations are excluded from the repository.
+- Operational response metadata now uses the resolved IAM tenant ID for successful requests and errors, including private WhatsApp ingestion. Unverified tenant headers never populate identity metadata (FK-09).
+
+- FK-02 persists WhatsApp turn stages, prepared replies and human handoffs in Operational. The connector resumes recoverable stages and retries acknowledgement persistence without retransmitting. Uncertain sends are observable and require evidence-based reconciliation. Existing installations must migrate to `tenant_schema_v4` before enabling the new connector; see [turn recovery and rollout](flowkron-operational-service/docs/TURN_RECOVERY.md).
+
+- Added the cross-project evolution analysis and 27 prioritized Flowkron tasks, including supervised agent actions, effective AI controls, conversation memory, confirmed lead updates, scheduling, business email, delegated integrations, notifications, agent evaluation and the data privacy lifecycle. Reference implementations are excluded from the repository.
 
 - FK-01 persists external/provider message identity, direction, channel, type, reported status and recording time in the active inbox table. Operational contracts advance to `v0.4.0`. Existing installations must apply the additive `tenant_schema_v3` migration before serving the new message model; see the [migration and rollback procedure](flowkron-operational-service/docs/MESSAGE_IDENTITY.md). Historical IDs are not reconstructed, and concurrent retries no longer create duplicate messages.
 

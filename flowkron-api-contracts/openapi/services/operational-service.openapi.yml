@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Flowkron Operational Service API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     Servicio operacional multi-tenant de la plataforma Flowkron.
     Gestiona ingesta de mensajes WhatsApp desde un adaptador de WhatsApp, leads, conversaciones,
@@ -1115,6 +1115,459 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/v1/ingest/whatsapp/turns/claim:
+    post:
+      summary: Guardar y reclamar un turno recuperable
+      description: Crea entrada y turno juntos. Repeticiones reclaman trabajo recuperable con lease de 180 segundos; una entrada
+        histórica sin turno devuelve legacy_untracked y no se reenvía.
+      operationId: whatsapp_turn_claim
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters:
+      - name: X-Flowkron-Tenant
+        in: header
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Requerido con X-Baileys-Token; alternativa al par X-Tenant-Code/X-Ingest-Key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnClaimIn'
+      responses:
+        '200':
+          description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '401':
+          description: Credenciales de ingestión inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Runtime suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Turno o runtime inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Estado, lease, token o identidad incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Admisión o tasa de ingestión excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/turns/{turn_id}/prepare:
+    post:
+      summary: Persistir respuesta y derivación humana
+      description: Respuesta y handoff se guardan juntos. Repetir con los mismos argumentos es idempotente; modificar una respuesta
+        preparada se rechaza.
+      operationId: whatsapp_turn_prepare
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters:
+      - name: X-Flowkron-Tenant
+        in: header
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Requerido con X-Baileys-Token; alternativa al par X-Tenant-Code/X-Ingest-Key.
+      - name: turn_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnPrepareIn'
+      responses:
+        '200':
+          description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '401':
+          description: Credenciales de ingestión inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Runtime suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Turno o runtime inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Estado, lease, token o identidad incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Admisión o tasa de ingestión excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/turns/{turn_id}/begin-send:
+    post:
+      summary: Autorizar un único intento de envío
+      description: Solo la primera transición prepared a sending devuelve claimed=true. No repetir este POST para obtener otra
+        autorización si se perdió su respuesta.
+      operationId: whatsapp_turn_begin_send
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters:
+      - name: X-Flowkron-Tenant
+        in: header
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Requerido con X-Baileys-Token; alternativa al par X-Tenant-Code/X-Ingest-Key.
+      - name: turn_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnTokenIn'
+      responses:
+        '200':
+          description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '401':
+          description: Credenciales de ingestión inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Runtime suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Turno o runtime inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Estado, lease, token o identidad incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Admisión o tasa de ingestión excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/turns/{turn_id}/complete:
+    post:
+      summary: Registrar confirmación del proveedor
+      description: Idempotente para el mismo ID del proveedor. Guarda respuesta, marcador y finalización juntos. sent significa
+        envío aceptado, no entregado ni leído.
+      operationId: whatsapp_turn_complete
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters: &id001
+      - name: X-Flowkron-Tenant
+        in: header
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Requerido con X-Baileys-Token; alternativa al par X-Tenant-Code/X-Ingest-Key.
+      - name: turn_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnCompleteIn'
+      responses: &id002
+        '200':
+          description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '401':
+          description: Credenciales de ingestión inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Runtime suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Turno o runtime inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Estado, lease, token o identidad incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Admisión o tasa de ingestión excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/turns/{turn_id}/release:
+    post:
+      summary: Liberar etapa recuperable o marcar incertidumbre
+      description: generating vuelve a received; prepared conserva respuesta. Un envío ya iniciado pasa a unknown y no se rearma
+        automáticamente.
+      operationId: whatsapp_turn_release
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters:
+      - name: X-Flowkron-Tenant
+        in: header
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Requerido con X-Baileys-Token; alternativa al par X-Tenant-Code/X-Ingest-Key.
+      - name: turn_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnTokenIn'
+      responses:
+        '200':
+          description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '401':
+          description: Credenciales de ingestión inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Runtime suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Turno o runtime inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Estado, lease, token o identidad incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Admisión o tasa de ingestión excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/turns/{turn_id}/reconcile:
+    post:
+      summary: Registrar evidencia de un envío desconocido
+      description: Operación de mantenimiento con credenciales de ingestión de la empresa. Requiere verificar externamente ID
+        y fecha del envío original; no consulta al proveedor ni envía un mensaje. Solo admite unknown, sending vencido o repetición
+        de completed con el mismo ID.
+      operationId: whatsapp_turn_reconcile
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters:
+      - name: X-Flowkron-Tenant
+        in: header
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Requerido con X-Baileys-Token; alternativa al par X-Tenant-Code/X-Ingest-Key.
+      - name: turn_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnReceiptIn'
+      responses:
+        '200':
+          description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '401':
+          description: Credenciales de ingestión inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Runtime suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Turno o runtime inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Estado, lease, token o identidad incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Admisión o tasa de ingestión excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/turns/{turn_id}:
+    get:
+      summary: Consultar el estado del turno
+      description: 'No devuelve el token de reclamación. Un sending vencido se materializa como unknown. Solo credenciales de
+        ingestión de la empresa. Cache-Control: no-store.'
+      operationId: whatsapp_turn_read
+      tags:
+      - Ingest
+      security:
+      - IngestAuth: []
+      - BaileysBridge: []
+      parameters: *id001
+      responses: *id002
+
 components:
 
   securitySchemes:
@@ -1125,6 +1578,11 @@ components:
       description: |
         JWT RS256 emitido por flowkron-auth-service. Debe incluir claim `tenant_id`,
         runtime activo y plan distinto de Free para acceder a los endpoints del dashboard.
+    BaileysBridge:
+      type: apiKey
+      in: header
+      name: X-Baileys-Token
+      description: Credencial privada del conector; requiere X-Flowkron-Tenant y runtime activo. No es JWT ni se expone al navegador.
     IngestAuth:
       type: apiKey
       in: header
@@ -1156,6 +1614,184 @@ components:
         default: 0
 
   schemas:
+
+    TurnTokenIn:
+      properties:
+        claim_token:
+          maxLength: 64
+          minLength: 20
+          title: Claim Token
+          type: string
+      required:
+      - claim_token
+      title: TurnTokenIn
+      type: object
+    TurnPrepareIn:
+      properties:
+        claim_token:
+          maxLength: 64
+          minLength: 20
+          title: Claim Token
+          type: string
+        reply_body:
+          maxLength: 4000
+          minLength: 1
+          pattern: \S
+          title: Reply Body
+          type: string
+        requires_human:
+          default: false
+          title: Requires Human
+          type: boolean
+      required:
+      - claim_token
+      - reply_body
+      title: TurnPrepareIn
+      type: object
+    TurnReceiptIn:
+      properties:
+        provider_message_id:
+          maxLength: 220
+          minLength: 1
+          title: Provider Message Id
+          type: string
+        sent_at:
+          format: date-time
+          title: Sent At
+          type: string
+      required:
+      - provider_message_id
+      - sent_at
+      title: TurnReceiptIn
+      type: object
+    TurnCompleteIn:
+      properties:
+        provider_message_id:
+          maxLength: 220
+          minLength: 1
+          title: Provider Message Id
+          type: string
+        sent_at:
+          format: date-time
+          title: Sent At
+          type: string
+        claim_token:
+          maxLength: 64
+          minLength: 20
+          title: Claim Token
+          type: string
+      required:
+      - provider_message_id
+      - sent_at
+      - claim_token
+      title: TurnCompleteIn
+      type: object
+    TurnOut:
+      properties:
+        turn_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Turn Id
+        state:
+          enum:
+          - received
+          - generating
+          - prepared
+          - sending
+          - completed
+          - unknown
+          - cancelled
+          - legacy_untracked
+          title: State
+          type: string
+        claimed:
+          default: false
+          title: Claimed
+          type: boolean
+        claim_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Claim Token
+        lease_until:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Lease Until
+        input_body:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Input Body
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Phone
+        external_thread_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: External Thread Id
+        reply_body:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Reply Body
+        requires_human:
+          default: false
+          title: Requires Human
+          type: boolean
+        outbound_message_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Outbound Message Id
+        last_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Last Error
+      required:
+      - state
+      title: TurnOut
+      type: object
+    TurnClaimIn:
+      allOf:
+      - $ref: '#/components/schemas/WhatsAppMessageIn'
+      - type: object
+        properties:
+          direction:
+            type: string
+            enum:
+            - inbound
+            default: inbound
+    TurnResponse:
+      type: object
+      required:
+      - success
+      - data
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/TurnOut'
+        meta:
+          type: object
+        status:
+          type: object
 
     # ── Health ─────────────────────────────────────────────────────────────────
 

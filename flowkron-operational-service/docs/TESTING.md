@@ -14,6 +14,33 @@ python -m unittest discover -s tests -p test_turn_recovery.py -v
 
 Con `FLOWKRON_TEST_POSTGRES_BIN` configurado, FK-02 aprobó sus 13 pruebas y FK-01 sus 9 pruebas. `npm test` en el conector aprobó 19 pruebas, incluidas nueve de fallos del pipeline. Sin la variable se omiten las pruebas PostgreSQL de ambas suites. No se conectó un canal real ni se ejecutó una migración sobre la instalación del usuario.
 
+FK-03 agrega `test_turn_jobs.py` sobre el mismo cluster descartable. Termina un proceso después de que guarda una respuesta, adelanta el vencimiento de su lease de prueba y reclama la respuesta desde otro proceso. También prueba concurrencia, capacidad, aislamiento por cuenta y empresa, reversión transaccional, reprogramación y migración v4 a v5 repetible. El conector simulado prueba por separado el arranque y despacho sin reentrega.
+
+FK-07 amplía las pruebas de cola y turnos con la migración de la tabla de evidencia, identidad reservada, recibos concurrentes y recuperación de envíos inciertos. La prueba del conector emite un recibo mientras espera el resultado de la llamada de envío simulada. El caso de Chromium comprueba las etiquetas de envío y el motivo de fallo. La validación usa PostgreSQL temporal y eventos de proveedor sintéticos.
+
+```powershell
+python -m unittest discover -s tests -p test_turn_jobs.py -v
+```
+
+### Búsqueda y lectura del inbox
+
+`test_conversation_inbox.py` verifica búsqueda fuera de la primera página, cursor con llegadas nuevas, lectura monotónica y permisos de CRM. Su medición opcional crea 10.000 conversaciones y 100.000 mensajes sintéticos en PostgreSQL temporal. Mide 20 ejecuciones con caché caliente para la primera página y una búsqueda de contacto, e imprime `EXPLAIN (ANALYZE, BUFFERS)`. El presupuesto local es p95 inferior a 250 ms por consulta de listado de 40 conversaciones, incluido el total. La medición cubre el acceso al servicio Python y PostgreSQL local.
+
+```powershell
+$env:FLOWKRON_TEST_POSTGRES_BIN = 'C:/Program Files/PostgreSQL/18/bin'
+$env:FLOWKRON_TEST_INBOX_BENCHMARK = '1'
+python -m unittest discover -s tests -p test_conversation_inbox.py -v
+```
+
+Medición local del 19 de noviembre de 2026 en PostgreSQL 18 descartable.
+
+| Consulta | p95 del servicio | `EXPLAIN ANALYZE` |
+| --- | ---: | ---: |
+| Primera página | 109,9 ms | 95,5 ms |
+| Búsqueda «Contacto sintético 42» | 137,9 ms | 94,4 ms |
+
+Los planes contaron 10.000 y 111 filas coincidentes mediante `WindowAgg` y ordenaron la página con `top-N heapsort` (29 kB). La consulta recuperó el resumen, contacto y lead completos para las 40 filas de cada página.
+
 ```powershell
 python -m unittest discover -s tests -v
 ```

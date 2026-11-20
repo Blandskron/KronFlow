@@ -12,28 +12,67 @@
       }
 
       @if (session(); as current) {
-        @if (current.status === 'qr_pending' && current.qr) {
+        @if (!busy() && current.status === 'qr_pending' && current.qr) {
           <img class="qr" [src]="current.qr" width="256" height="256" alt="Código QR para vincular esta cuenta con WhatsApp">
-          <p class="muted">El código se renueva automáticamente.</p>
+          <p class="muted">El código vence a las {{ current.diagnostics?.qr_expires_at | date:'HH:mm:ss' }}.</p>
         }
         @if (current.status === 'connected') {
           <p class="muted">Los mensajes de contactos que acepten el aviso aparecerán en Conversaciones.</p>
           <a class="btn btn-primary" routerLink="/app/conversations">Ver conversaciones</a>
         }
-        @if (current.status === 'disconnected') {
-          <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="update('POST')">
-            Generar código QR
-          </button>
-        } @else if (confirmDisconnect()) {
+        @if (causeLabel()) {
+          <p class="muted">{{ causeLabel() }}</p>
+        }
+        @if (current.diagnostics; as info) {
+          @if (info.next_retry_at; as nextRetry) {
+            <p>Próximo intento {{ info.retry_attempts + 1 }} de {{ info.retry_limit }} a las
+              <time [attr.datetime]="nextRetry">{{ nextRetry | date:'HH:mm:ss' }}</time>.
+            </p>
+          }
+          @if (info.retry_exhausted) {
+            <p>Se hicieron {{ info.retry_attempts }} intentos. Reintenta para recuperar el vínculo existente.</p>
+          }
+          @if (info.last_connected_at; as lastConnected) {
+            <p class="muted">Última conexión el
+              <time [attr.datetime]="lastConnected">{{ lastConnected | date:'dd/MM/yyyy HH:mm:ss' }}</time>.
+            </p>
+          }
+        }
+
+        @if (confirmDisconnect()) {
           <p>Para volver a usar esta cuenta tendrás que escanear un QR nuevo.</p>
           <div class="actions">
             <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="update('DELETE')">Confirmar desconexión</button>
             <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="confirmDisconnect.set(false)">Cancelar</button>
           </div>
         } @else {
-          <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="confirmDisconnect.set(true)">
-            {{ current.status === 'pairing_required' ? 'Restablecer vínculo' : current.status === 'connected' ? 'Desconectar' : 'Cancelar vinculación' }}
-          </button>
+          <div class="actions">
+            @if (nextAction() === 'connect' || nextAction() === 'retry') {
+              <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="update('POST')">
+                {{ nextAction() === 'retry' ? 'Reintentar conexión' : 'Generar código QR' }}
+              </button>
+            }
+            @if (current.status !== 'disconnected' || current.diagnostics?.next_retry_at) {
+              <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="confirmDisconnect.set(true)">
+                {{ current.status === 'pairing_required' ? 'Restablecer vínculo' : current.status === 'connected' ? 'Desconectar' : 'Cancelar conexión' }}
+              </button>
+            }
+          </div>
+        }
+        @if (current.diagnostics?.recent_transitions; as transitions) {
+          @if (transitions.length) {
+            <details class="connection-history">
+              <summary>Actividad reciente</summary>
+              <ul>
+                @for (transition of transitions; track $index) {
+                  <li>
+                    <span>{{ statusLabels[transition.status] }}</span>
+                    <time [attr.datetime]="transition.changed_at">{{ transition.changed_at | date:'dd/MM/yyyy HH:mm:ss' }}</time>
+                  </li>
+                }
+              </ul>
+            </details>
+          }
         }
       }
     </article>

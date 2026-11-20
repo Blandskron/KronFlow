@@ -260,10 +260,13 @@ paths:
                 $ref: '#/components/schemas/ConsentOut'
     post:
       summary: Registrar consentimiento de datos de un cliente
+      description: Con external_message_id se deduplica el comando por contacto. El puente puede incluir sent_at para ordenar
+        por fecha del proveedor. BAJA prevalece sobre ACEPTO si coinciden en el mismo segundo.
       operationId: ingest_whatsapp_consent_post
       tags: [Ingest]
       security:
         - IngestAuth: []
+        - BaileysBridge: []
       requestBody:
         required: true
         content:
@@ -276,7 +279,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConsentOut'
+                $ref: '#/components/schemas/ConsentUpdateResponse'
 
   /api/v1/ingest/whatsapp/client:
     post:
@@ -535,7 +538,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [open, closed, archived]
+            enum: [new, active, waiting, closed]
         - name: channel
           in: query
           schema:
@@ -545,6 +548,23 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: q
+          in: query
+          description: Subcadena literal del nombre, teléfono, sesión o texto del último mensaje.
+          schema:
+            type: string
+            maxLength: 120
+        - name: before_at
+          in: query
+          description: Fecha del cursor devuelto. Usar con before_id y sin offset.
+          schema:
+            type: string
+            format: date-time
+        - name: before_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '200':
           description: Lista paginada de conversaciones
@@ -577,6 +597,53 @@ paths:
                 $ref: '#/components/schemas/ConversationOut'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/conversations/{conversation_id}/read:
+    post:
+      summary: Marcar los mensajes visibles como leídos por el equipo
+      description: Requiere crm.manage. El ID debe pertenecer a la conversación.
+      operationId: conversations_read
+      tags: [Conversations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [through_message_id]
+              properties:
+                through_message_id:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Contador compartido dentro del envelope estándar.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: {type: boolean, const: true}
+                  data:
+                    type: object
+                    required: [no_leidos]
+                    properties:
+                      no_leidos: {type: integer, minimum: 0}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Permiso de gestión de CRM requerido.
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1115,11 +1182,106 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/v1/ingest/whatsapp/turns/enqueue:
+    post:
+      summary: Admitir un trabajo durable de WhatsApp
+      operationId: whatsapp_turn_enqueue
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+        - BaileysBridge: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnEnqueueIn'
+      responses:
+        '202':
+          description: Resultado durable dentro del envelope estándar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnEnqueueResponse'
+        '403':
+          description: Falta consentimiento vigente o la empresa está suspendida
+        '409':
+          description: La identidad ya pertenece a otro contacto o cuenta
+        '422':
+          description: Datos de admisión inválidos
+        '429':
+          description: Capacidad o tasa de ingestión excedida
+        '503':
+          description: La empresa requiere el esquema durable
+
+  /api/v1/ingest/whatsapp/turns/next:
+    post:
+      summary: Reclamar el próximo turno de una cuenta conectada
+      operationId: whatsapp_turn_next
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+        - BaileysBridge: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnAccountIn'
+      responses:
+        '200':
+          description: Turno reclamado o job nulo si no hay trabajo disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnNextResponse'
+        '422':
+          description: Identidad de cuenta inválida
+        '429':
+          description: Tasa de ingestión excedida
+        '503':
+          description: La empresa requiere el esquema durable
+
+  /api/v1/ingest/whatsapp/turns/{turn_id}/retry:
+    post:
+      summary: Reprogramar un turno recuperable que agotó intentos
+      operationId: whatsapp_turn_retry
+      tags: [Ingest]
+      security:
+        - IngestAuth: []
+        - BaileysBridge: []
+      parameters:
+        - name: turn_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnAccountIn'
+      responses:
+        '200':
+          description: Estado persistido del turno sin permiso de envío
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '404':
+          description: Turno durable ausente en la cuenta solicitada
+        '409':
+          description: Turno fuera del estado recuperable
+        '429':
+          description: Capacidad o tasa de ingestión excedida
+
   /api/v1/ingest/whatsapp/turns/claim:
     post:
       summary: Guardar y reclamar un turno recuperable
-      description: Crea entrada y turno juntos. Repeticiones reclaman trabajo recuperable con lease de 180 segundos; una entrada
-        histórica sin turno devuelve legacy_untracked y no se reenvía.
+      description: Crea entrada y turno juntos con consentimiento vigente. Las repeticiones reclaman trabajo recuperable con
+        lease de 180 segundos. Una entrada histórica sin turno devuelve legacy_untracked.
       operationId: whatsapp_turn_claim
       tags:
       - Ingest
@@ -1154,7 +1316,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '403':
-          description: Runtime suspendido
+          description: Runtime suspendido o falta de consentimiento para una entrada nueva
           content:
             application/json:
               schema:
@@ -1257,11 +1419,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /api/v1/ingest/whatsapp/receipts:
+    post:
+      summary: Consolidar recibos de envíos reservados
+      operationId: whatsapp_provider_receipts
+      tags: [Ingest]
+      security:
+        - BaileysBridge: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receipts]
+              properties:
+                receipts:
+                  type: array
+                  minItems: 1
+                  maxItems: 32
+                  items:
+                    $ref: '#/components/schemas/ProviderReceiptIn'
+      responses:
+        '200':
+          description: Cantidad de recibos que avanzaron el estado de un envío conocido.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: {type: boolean, const: true}
+                  data:
+                    type: object
+                    required: [applied]
+                    properties:
+                      applied: {type: integer, minimum: 0}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Límite de ingestión excedido.
+        '503':
+          description: La empresa requiere el esquema de recibos.
+
   /api/v1/ingest/whatsapp/turns/{turn_id}/begin-send:
     post:
       summary: Autorizar un único intento de envío
-      description: Solo la primera transición prepared a sending devuelve claimed=true. No repetir este POST para obtener otra
-        autorización si se perdió su respuesta.
+      description: Solo la primera transición prepared a sending devuelve claimed=true. El conector durable reserva el ID
+        antes de transmitir para vincular el eventual recibo.
       operationId: whatsapp_turn_begin_send
       tags:
       - Ingest
@@ -1287,7 +1492,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TurnTokenIn'
+              $ref: '#/components/schemas/TurnSendIn'
       responses:
         '200':
           description: 'Estado persistido del turno, dentro del envelope estándar. Cache-Control: no-store.'
@@ -1626,6 +1831,37 @@ components:
       - claim_token
       title: TurnTokenIn
       type: object
+    TurnSendIn:
+      allOf:
+        - $ref: '#/components/schemas/TurnTokenIn'
+        - type: object
+          properties:
+            provider_message_id:
+              type: [string, 'null']
+              minLength: 1
+              maxLength: 220
+    ProviderReceiptIn:
+      type: object
+      required: [account_key, provider_message_id, recipient_jids, status]
+      properties:
+        account_key:
+          $ref: '#/components/schemas/TurnAccountKey'
+        connection_id: {type: string, const: default}
+        provider_message_id: {type: string, minLength: 1, maxLength: 220}
+        recipient_jids:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items:
+            type: string
+            maxLength: 180
+            pattern: '^[0-9]+@(s\.whatsapp\.net|lid)$'
+        status:
+          type: string
+          enum: [sent, failed, delivered, read]
+        failure_reason:
+          type: [string, 'null']
+          enum: [provider_rejected, account_restricted, connection_invalid, null]
     TurnPrepareIn:
       properties:
         claim_token:
@@ -1777,6 +2013,81 @@ components:
             enum:
             - inbound
             default: inbound
+    TurnAccountKey:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+      description: SHA-256 del identificador de la cuenta sin el sufijo de dispositivo.
+
+    TurnAccountIn:
+      type: object
+      required: [account_key]
+      properties:
+        account_key:
+          $ref: '#/components/schemas/TurnAccountKey'
+
+    TurnEnqueueIn:
+      allOf:
+        - $ref: '#/components/schemas/TurnClaimIn'
+        - type: object
+          required: [account_key, recipient_jid, body]
+          properties:
+            account_key:
+              $ref: '#/components/schemas/TurnAccountKey'
+            recipient_jid:
+              type: string
+              maxLength: 180
+              pattern: '^[0-9]+@(s\.whatsapp\.net|lid)$'
+            body:
+              type: string
+              minLength: 1
+              maxLength: 4000
+
+    TurnEnqueueResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required: [disposition]
+          properties:
+            turn_id:
+              type: integer
+              nullable: true
+            disposition:
+              type: string
+              enum: [accepted, duplicate, legacy_untracked]
+        meta:
+          type: object
+        status:
+          type: object
+
+    TurnNextResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            job:
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/TurnOut'
+                - type: object
+                  required: [recipient_jid]
+                  properties:
+                    recipient_jid:
+                      type: string
+        meta:
+          type: object
+        status:
+          type: object
+
     TurnResponse:
       type: object
       required:
@@ -1977,6 +2288,16 @@ components:
           type: string
           default: v1.0
           maxLength: 40
+        external_message_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 220
+          description: Identidad estable del comando en el canal para deduplicar por empresa y contacto.
+        sent_at:
+          type: [string, 'null']
+          format: date-time
+          description: Hora del comando en el proveedor. Requiere external_message_id y credenciales del puente.
 
     ConsentOut:
       type: object
@@ -1990,6 +2311,30 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    ConsentUpdateResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          allOf:
+            - $ref: '#/components/schemas/ConsentOut'
+            - type: object
+              properties:
+                duplicate:
+                  type: boolean
+                  default: false
+                stale:
+                  type: boolean
+                  default: false
+                  description: Un comando anterior conservó la decisión vigente. Una BAJA tardía puede cerrar el período anterior.
+        meta:
+          type: object
+        status:
+          type: object
 
     CustomerOut:
       type: object
@@ -2036,6 +2381,7 @@ components:
         consentimiento_datos:
           type: boolean
           default: true
+          description: El valor por defecto aplica al crear un contacto. La actualización de un contacto existente exige un valor explícito.
 
     ClientUpsertResponse:
       type: object
@@ -2295,9 +2641,13 @@ components:
           type: string
         status:
           type: string
-          enum: [open, closed, archived]
+          enum: [new, active, waiting, closed]
         requires_human:
           type: boolean
+        no_leidos:
+          type: integer
+          minimum: 0
+          description: Mensajes entrantes pendientes de lectura compartida en el CRM.
         last_message_at:
           type: string
           format: date-time
@@ -2344,7 +2694,10 @@ components:
         delivery_status:
           type: string
           enum: [unknown, received, sent, delivered, read, failed]
-          description: Estado persistido. No hay handlers de recibos de entrega/lectura en esta versión; historial migrado usa unknown.
+          description: Estado persistido de cada mensaje. Los recibos de envíos reservados pueden avanzar a entregado o leído.
+        delivery_failure_reason:
+          type: [string, 'null']
+          enum: [provider_rejected, account_restricted, connection_invalid, null]
         recorded_at:
           type: string
           format: date-time
@@ -2377,6 +2730,16 @@ components:
           type: integer
         offset:
           type: integer
+        next_cursor:
+          type: [object, 'null']
+          required: [before_at, before_id]
+          properties:
+            before_at:
+              type: string
+              format: date-time
+            before_id:
+              type: integer
+              minimum: 1
 
     MessageListResponse:
       type: object
@@ -2391,6 +2754,17 @@ components:
           type: integer
         offset:
           type: integer
+        pending_replies:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required: [inbound_message_id, status]
+            properties:
+              inbound_message_id: {type: integer}
+              status:
+                type: string
+                enum: [queued, sending, unknown, not_sent]
 
     # ── Analytics ──────────────────────────────────────────────────────────────
 

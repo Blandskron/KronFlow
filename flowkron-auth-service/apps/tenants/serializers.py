@@ -20,6 +20,37 @@ from .entitlements import subscription_summary
 User = get_user_model()
 
 
+WHATSAPP_STATUSES = ("disconnected", "connecting", "qr_pending", "connected", "pairing_required")
+
+
+class WhatsAppTransitionSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=WHATSAPP_STATUSES)
+    changed_at = serializers.DateTimeField()
+
+
+class WhatsAppDiagnosticSerializer(serializers.Serializer):
+    status_changed_at = serializers.DateTimeField()
+    recent_transitions = WhatsAppTransitionSerializer(many=True, required=False, max_length=8)
+    last_connected_at = serializers.DateTimeField(required=False)
+    disconnect_cause = serializers.ChoiceField(choices=(
+        "signed_out", "invalid_session", "replaced_session", "provider_denied", "device_mismatch",
+        "temporary", "startup_failed", "workspace_unavailable", "manual",
+    ), required=False)
+    retry_attempts = serializers.IntegerField(min_value=0, max_value=100)
+    retry_limit = serializers.IntegerField(min_value=1, max_value=100)
+    next_retry_at = serializers.DateTimeField(required=False)
+    retry_exhausted = serializers.BooleanField()
+    next_action = serializers.ChoiceField(choices=("connect", "scan", "wait", "retry", "relink", "none"))
+    qr_issued_at = serializers.DateTimeField(required=False)
+    qr_expires_at = serializers.DateTimeField(required=False)
+
+
+class WhatsAppSessionSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=WHATSAPP_STATUSES)
+    qr = serializers.CharField(required=False, max_length=32768)
+    diagnostics = WhatsAppDiagnosticSerializer(required=False)
+
+
 class TenantSerializer(serializers.ModelSerializer):
     subscription = serializers.SerializerMethodField()
     operational_runtime = serializers.SerializerMethodField()

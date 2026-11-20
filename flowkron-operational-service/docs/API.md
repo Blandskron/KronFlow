@@ -127,9 +127,16 @@ Importante: hoy no se exigen permisos como `users.read`, `crm.manage` o `agents.
 
 | Método y ruta | Detalle |
 | --- | --- |
-| `GET /api/v1/conversations` | Filtros `status`, `channel`, `requires_human`; paginación en memoria tras adaptar registros |
+| `GET /api/v1/conversations` | Filtros SQL `status`, `channel`, `requires_human` y `q`. Admite continuación por `before_at` y `before_id`; conserva `offset` |
 | `GET /api/v1/conversations/{id}` | Detalle |
+| `POST /api/v1/conversations/{id}/read` | Lectura compartida hasta `through_message_id`, con permiso `crm.manage`. Devuelve el contador `no_leidos` |
 | `GET /api/v1/conversations/{id}/messages` | Mensajes asociados por `session_id/whatsapp_id` |
+
+La búsqueda compara una subcadena literal del nombre, teléfono, sesión o texto del último mensaje en el resumen. El endpoint ordena por fecha del resumen e ID en orden descendente. Para avanzar, enviar los dos campos de `next_cursor` con los mismos filtros. Actualizar la primera página para incorporar conversaciones que hayan subido en el orden. La paginación de mensajes conserva su propio cursor.
+
+El contador es compartido por el equipo. Un usuario con `crm.manage` puede marcar los mensajes hasta un ID cargado de esa conversación. Los mensajes entrantes más recientes siguen pendientes. El contador acredita actividad en el CRM y los recibos del proveedor se rigen por el estado de cada mensaje.
+
+Los mensajes de salida exponen `delivery_status` y el motivo normalizado cuando existe. La primera página con `order=recent` incluye `pending_replies`, estados de procesamiento de respuestas enlazados al mensaje entrante. Los recibos del conector se reciben por la ruta privada descrita en el [procedimiento de turnos](TURN_RECOVERY.md#recibos-del-proveedor).
 
 El modelo activo de conversación es un JSON por `session_id`, no la tabla relacional descrita por los módulos legacy.
 

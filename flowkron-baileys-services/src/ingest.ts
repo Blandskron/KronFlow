@@ -1,5 +1,6 @@
 import type { WAMessage } from "baileys";
-import { processTurn, type SendText } from "./turn-pipeline.js";
+import type { ProviderReceipt } from "./receipts.js";
+import { advanceTurn, processTurn, type SendText, type TurnSnapshot } from "./turn-pipeline.js";
 
 export function normalizeInbound(message: WAMessage) {
   const { key } = message;
@@ -63,7 +64,15 @@ export function operationalIngest(env: NodeJS.ProcessEnv) {
 
 
 type Inbound = NonNullable<ReturnType<typeof normalizeInbound>>;
-export type InboundHandler = (message: Inbound, reply: SendText) => Promise<void>;
+type Dispatch = { accountKey: string; recipientJid: string; admitted: () => void };
+type Resume = (phone: string, jid: string,
+  run: (reply: SendText, canReply: () => boolean, providerMessageId: string) => Promise<void>) => Promise<void>;
+export type InboundHandler = ((
+  message: Inbound, reply: SendText, canReply?: () => boolean, dispatch?: Dispatch
+) => Promise<void>) & {
+  recoverNext?: (accountKey: string, resume: Resume) => Promise<boolean>;
+  recordReceipts?: (receipts: ProviderReceipt[]) => Promise<void>;
+};
 
 export function tenantIngest(
   tenant: string,
@@ -90,28 +99,40 @@ export function tenantIngest(
     return json.data ?? json;
   }
 
-  return async (message, reply) => {
+  const ingest: InboundHandler = async (message, reply, canReply = () => true, dispatch) => {
     const consentUrl = new URL("consent", base);
     const command = message.body.trim().toUpperCase();
     if (command === "ACEPTO" || command === "BAJA") {
+      const decision = {
+        phone: message.phone,
+        accepted: command === "ACEPTO",
+        policy_version: "flowkron-whatsapp-v1",
+        external_message_id: message.external_message_id,
+        sent_at: message.sent_at
+      };
       // Transient downstream overload must not silently discard a withdrawal.
       for (let attempt = 0; ; attempt++) {
         try {
-          await request(consentUrl, { phone: message.phone, accepted: command === "ACEPTO", policy_version: "flowkron-whatsapp-v1" }, 5000);
+          const result = await request(consentUrl, decision, 5000);
+          if (result.duplicate === true || result.stale === true) return;
           break;
         } catch (error) {
           if (command !== "BAJA" || attempt >= 2) throw error;
           await new Promise(resolve => setTimeout(resolve, 250 * 2 ** attempt));
         }
       }
-      await reply(command === "ACEPTO"
-        ? "Gracias. Ya puedes enviar tu consulta. Escribe BAJA si quieres retirar tu autorización."
-        : "Tu autorización fue retirada. Si quieres volver a consultar, escribe ACEPTO.");
+      if (canReply()) {
+        await reply(command === "ACEPTO"
+          ? "Gracias. Ya puedes enviar tu consulta. Escribe BAJA si quieres retirar tu autorización."
+          : "Tu autorización fue retirada. Si quieres volver a consultar, escribe ACEPTO.");
+      }
       return;
     }
 
+    if (!canReply()) return;
     consentUrl.searchParams.set("phone", message.phone);
-    if (!(await request(consentUrl)).consentimiento_datos) {
+    if (!(await request(consentUrl, undefined, 5000)).consentimiento_datos) {
+      if (!canReply()) return;
       const now = Date.now();
       const last = prompted.get(message.phone);
       if (last && now - last < 86_400_000) return;
@@ -124,6 +145,33 @@ export function tenantIngest(
       return;
     }
 
-    await processTurn(message, reply, base, agentUrl, tenant, request);
+    if (!canReply()) return;
+    if (dispatch) {
+      const admitted = await request(new URL("turns/enqueue", base), {
+        ...message, account_key: dispatch.accountKey, recipient_jid: dispatch.recipientJid
+      }, 5000);
+      if (admitted.disposition === "accepted" || admitted.disposition === "duplicate") {
+        dispatch.admitted();
+        return;
+      }
+      if (admitted.disposition !== "legacy_untracked") throw new Error("Invalid WhatsApp turn admission");
+    }
+    await processTurn(message, reply, base, agentUrl, tenant, request, canReply);
   };
+  ingest.recoverNext = async (accountKey, resume) => {
+    const { job }: { job: (TurnSnapshot & { recipient_jid: string }) | null } = await request(
+      new URL("turns/next", base), { account_key: accountKey }, 5000
+    );
+    if (!job) return false;
+    if (!job.claimed || !job.phone || !job.claim_token || !job.turn_id) throw new Error("Invalid claimed WhatsApp job");
+    await resume(job.phone, job.recipient_jid, async (reply, canReply, providerMessageId) => {
+      const failure = await advanceTurn(job, reply, base, agentUrl, tenant, request, canReply, providerMessageId);
+      if (failure) throw failure.error;
+    });
+    return true;
+  };
+  ingest.recordReceipts = async (receipts) => {
+    await request(new URL("receipts", base), { receipts }, 5000);
+  };
+  return ingest;
 }

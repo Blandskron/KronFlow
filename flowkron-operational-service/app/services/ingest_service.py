@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from hashlib import sha256
 import json
 
 from fastapi import HTTPException
-from sqlalchemy import select, text
+from sqlalchemy import func, inspect, or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
@@ -22,11 +23,39 @@ from app.schemas.ingest import (
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente, Conversation, Ejecutivo, InventarioVehiculo, Lead, MensajeProcesado, Message, SolicitudDerecho
-from app.tenant_models.whatsapp_turn import WhatsAppTurn
+from app.tenant_models.whatsapp_consent import WhatsAppConsentState
+from app.tenant_models.whatsapp_turn import WhatsAppTurn, WhatsAppTurnJob
 
 
-def _get_or_create_cliente(db: Session, phone: str, full_name: str = "", email: str = "", source: str = "whatsapp_directo") -> Cliente:
-    cliente = db.scalar(select(Cliente).where(Cliente.whatsapp_id == phone))
+TURN_JOB_CAPACITY = 128
+TURN_JOB_ATTEMPT_LIMIT = 5
+RECOVERABLE_TURN_STATES = ("received", "generating", "prepared")
+
+
+def _lock_ingest_identity(db, schema_name, *identity):
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+               {"key": json.dumps([schema_name, *identity], separators=(",", ":"))})
+
+
+def lock_turn_jobs(db: Session, tenant: TenantContext):
+    _lock_ingest_identity(db, tenant.schema_name, "turn-job-admission")
+
+
+def require_turn_job_capacity(db: Session):
+    pending = select(WhatsAppTurnJob.turn_id).join(WhatsAppTurn).where(
+        WhatsAppTurn.state.in_((*RECOVERABLE_TURN_STATES, "sending")),
+        or_(WhatsAppTurnJob.attempts < TURN_JOB_ATTEMPT_LIMIT, WhatsAppTurn.lease_until > func.now()),
+    ).limit(TURN_JOB_CAPACITY)
+    if db.scalar(select(func.count()).select_from(pending.subquery())) >= TURN_JOB_CAPACITY:
+        raise HTTPException(status_code=429, detail="WhatsApp turn queue capacity exceeded")
+
+
+def _get_or_create_cliente(
+    db: Session, phone: str, full_name: str = "", email: str = "", source: str = "whatsapp_directo",
+    *, lock: bool = False,
+) -> Cliente:
+    statement = select(Cliente).where(Cliente.whatsapp_id == phone)
+    cliente = db.scalar(statement.with_for_update() if lock else statement)
     if cliente:
         if full_name:
             cliente.nombre = full_name
@@ -84,19 +113,24 @@ def _message_already_processed(db: Session, external_message_id: str) -> bool:
     return db.scalar(select(MensajeProcesado.id).where(MensajeProcesado.message_id == external_message_id)) is not None
 
 
-def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAppMessageIn, *, create_turn: bool = False) -> dict:
+def ingest_whatsapp_message(
+    db: Session, tenant: TenantContext, payload: WhatsAppMessageIn, *,
+    create_turn: bool = False, job: WhatsAppTurnJob | None = None,
+) -> dict:
     bind_tenant_session(db, tenant.schema_name)
     session_id = payload.external_thread_id or payload.phone
+    if job is not None:
+        create_turn = True
+        lock_turn_jobs(db, tenant)
     # Lock before any read/upsert. The unique index is the final invariant;
     # locks also prevent races creating contacts, leads and conversations.
     # Scope comes from the authenticated tenant, never from request schema input.
     for identity in (
-        [tenant.schema_name, payload.connection_id, payload.channel, "message", payload.external_message_id],
-        [tenant.schema_name, "phone", payload.phone],
-        [tenant.schema_name, "thread", session_id],
+        [payload.connection_id, payload.channel, "message", payload.external_message_id],
+        ["phone", payload.phone],
+        ["thread", session_id],
     ):
-        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
-                   {"key": json.dumps(identity, separators=(",", ":"))})
+        _lock_ingest_identity(db, tenant.schema_name, *identity)
 
     existing = db.scalar(select(Message).where(
         Message.connection_id == payload.connection_id,
@@ -115,6 +149,16 @@ def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAp
         db.commit()
         return {"lead_id": lead_id, "conversation_id": conversation_id,
                 "message_id": message_id, "duplicate": True}
+    if create_turn:
+        recipient = db.scalar(select(Cliente).where(Cliente.whatsapp_id == payload.phone))
+        if recipient is None or not recipient.consentimiento_datos:
+            raise HTTPException(status_code=403, detail="WhatsApp consent is required")
+        if job is not None and ordered_consent_ready(db, tenant):
+            decision = db.get(WhatsAppConsentState, recipient.id)
+            if decision and decision.authorized_from and payload.sent_at < decision.authorized_from:
+                raise HTTPException(status_code=403, detail="Message predates the current WhatsApp consent")
+    if job is not None:
+        require_turn_job_capacity(db)
     raw_payload = payload.raw_payload or {}
     conversation_payload = {
         **payload.model_dump(mode="json"),
@@ -150,6 +194,10 @@ def ingest_whatsapp_message(db: Session, tenant: TenantContext, payload: WhatsAp
     if create_turn:
         db.flush()
         db.add(WhatsAppTurn(id=message.id, phone=payload.phone, lead_id=lead.id, conversation_id=conversation.id))
+        if job is not None:
+            db.flush()
+            job.turn_id = message.id
+            db.add(job)
     create_system_event(db, "ingest.message.received", tenant.auth_tenant_id, tenant.schema_name, {"message_id": payload.external_message_id})
     db.commit()
     db.refresh(message)
@@ -239,6 +287,10 @@ def get_customer_by_phone(db: Session, tenant: TenantContext, phone: str) -> dic
 def get_consent(db: Session, tenant: TenantContext, phone: str) -> dict:
     bind_tenant_session(db, tenant.schema_name)
     cliente = db.scalar(select(Cliente).where(Cliente.whatsapp_id == phone))
+    return _consent_snapshot(phone, cliente)
+
+
+def _consent_snapshot(phone: str, cliente: Cliente | None) -> dict:
     return {
         "phone": phone,
         "consentimiento_datos": bool(cliente and cliente.consentimiento_datos),
@@ -248,23 +300,116 @@ def get_consent(db: Session, tenant: TenantContext, phone: str) -> dict:
 
 def save_consent(db: Session, tenant: TenantContext, payload: ConsentIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
-    cliente = _get_or_create_cliente(db, phone=payload.phone, source="whatsapp_directo")
-    cliente.telefono = payload.phone
-    cliente.whatsapp_id = payload.phone
-    cliente.consentimiento_datos = payload.accepted
-    if payload.accepted and not cliente.fecha_consentimiento:
-        cliente.fecha_consentimiento = datetime.now(timezone.utc)
-    cliente.canal_consentimiento = payload.channel
-    cliente.version_politica = payload.policy_version
+    _lock_ingest_identity(db, tenant.schema_name, "phone", payload.phone)
+    marker = None
+    if payload.external_message_id is not None:
+        identity = json.dumps([payload.phone, payload.external_message_id], separators=(",", ":"))
+        marker = f"flowkron:consent:{sha256(identity.encode()).hexdigest()}"
+        if _message_already_processed(db, marker):
+            result = get_consent(db, tenant, payload.phone)
+            db.commit()
+            return {**result, "duplicate": True}
+    cliente = _get_or_create_cliente(db, phone=payload.phone, source="whatsapp_directo", lock=True)
+    applied = _apply_consent(
+        db, tenant, cliente, payload.accepted,
+        provider_at=payload.sent_at, channel=payload.channel, policy_version=payload.policy_version,
+    )
+    if marker is not None:
+        _mark_message_processed(db, marker)
+    result = _consent_snapshot(payload.phone, cliente)
     db.commit()
-    return get_consent(db, tenant, payload.phone)
+    return result | {"stale": not applied}
+
+
+def ordered_consent_ready(db: Session, tenant: TenantContext) -> bool:
+    return inspect(db.connection()).has_table(WhatsAppConsentState.__tablename__, schema=tenant.schema_name)
+
+
+def _cancel_consent_turns(
+    db: Session, tenant: TenantContext, cliente: Cliente, now: datetime, *, before: datetime | None = None,
+) -> None:
+    if not inspect(db.connection()).has_table(WhatsAppTurn.__tablename__, schema=tenant.schema_name):
+        return
+    # A granted send keeps its state and can still be acknowledged or reconciled.
+    statement = update(WhatsAppTurn).where(
+        or_(WhatsAppTurn.phone == cliente.whatsapp_id,
+            WhatsAppTurn.lead_id.in_(select(Lead.id).where(Lead.cliente_id == cliente.id))),
+        WhatsAppTurn.state.in_(RECOVERABLE_TURN_STATES),
+    )
+    reason = "consent_withdrawn"
+    if before is not None:
+        statement = statement.where(select(Message.id).where(
+            Message.id == WhatsAppTurn.id, Message.creado_en < before,
+        ).exists())
+        reason = "consent_superseded_by_renewal"
+    db.execute(statement.values(state="cancelled", lease_until=None, last_error=reason, updated_at=now))
+
+
+def _apply_consent(
+    db: Session, tenant: TenantContext, cliente: Cliente, accepted: bool, *,
+    provider_at: datetime | None = None, channel: str | None = None, policy_version: str | None = None,
+) -> bool:
+    now = datetime.now(timezone.utc)
+    effective_at = min(provider_at.replace(microsecond=0), now.replace(microsecond=0)) if provider_at else now
+    if ordered_consent_ready(db, tenant):
+        decision = db.get(WhatsAppConsentState, cliente.id)
+        if decision is not None and provider_at is not None:
+            # WhatsApp timestamps have second resolution. A withdrawal wins an
+            # ambiguous tie, regardless of which delivery reached us first.
+            if effective_at < decision.decision_at or (
+                effective_at == decision.decision_at and (accepted or not cliente.consentimiento_datos)
+            ):
+                # A late withdrawal inside the open consent period does not
+                # overturn a later grant. It closes the preceding period.
+                if not accepted and cliente.consentimiento_datos and (
+                    decision.authorized_from is None or effective_at >= decision.authorized_from
+                ):
+                    decision.authorized_from = decision.decision_at
+                    _cancel_consent_turns(db, tenant, cliente, now, before=decision.authorized_from)
+                    create_system_event(db, "whatsapp.consent.prior_withdrawal", tenant.auth_tenant_id, tenant.schema_name, {
+                        "client_id": cliente.id,
+                        "decision_at": effective_at.isoformat(),
+                        "authorized_from": decision.authorized_from.isoformat(),
+                    })
+                return False
+        if decision is None:
+            decision = WhatsAppConsentState(client_id=cliente.id, decision_at=effective_at)
+            db.add(decision)
+        decision.decision_at = max(effective_at, decision.decision_at)
+        if not accepted:
+            decision.authorized_from = None
+        elif not cliente.consentimiento_datos:
+            decision.authorized_from = effective_at if provider_at is not None else None
+    elif provider_at is not None:
+        raise HTTPException(status_code=503, detail="WhatsApp consent schema is unavailable")
+
+    changed = cliente.consentimiento_datos != accepted
+    cliente.consentimiento_datos = accepted
+    if channel is not None:
+        cliente.canal_consentimiento = channel
+        cliente.telefono = cliente.whatsapp_id
+    if policy_version is not None:
+        cliente.version_politica = policy_version
+    if accepted and (changed or cliente.fecha_consentimiento is None):
+        cliente.fecha_consentimiento = now
+    if not accepted:
+        _cancel_consent_turns(db, tenant, cliente, now)
+    if changed or provider_at is not None:
+        create_system_event(db, "whatsapp.consent.changed", tenant.auth_tenant_id, tenant.schema_name, {
+            "client_id": cliente.id, "accepted": accepted,
+            "channel": cliente.canal_consentimiento, "policy_version": cliente.version_politica,
+            "decision_at": effective_at.isoformat(), "source": "whatsapp_message" if provider_at else "operational",
+        })
+    return True
 
 
 def upsert_client(db: Session, tenant: TenantContext, payload: ClientUpsertIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
-    cliente = db.scalar(select(Cliente).where(Cliente.rut == payload.rut))
+    _lock_ingest_identity(db, tenant.schema_name, "phone", payload.phone)
+    cliente = db.scalar(select(Cliente).where(Cliente.rut == payload.rut).with_for_update())
     if not cliente:
-        cliente = db.scalar(select(Cliente).where(Cliente.whatsapp_id == payload.phone))
+        cliente = db.scalar(select(Cliente).where(Cliente.whatsapp_id == payload.phone).with_for_update())
+    creating = cliente is None
     if not cliente:
         cliente = Cliente(rut=payload.rut, nombre=payload.nombre, canal_origen="whatsapp_directo")
         db.add(cliente)
@@ -275,8 +420,9 @@ def upsert_client(db: Session, tenant: TenantContext, payload: ClientUpsertIn) -
     cliente.whatsapp_id = payload.phone
     cliente.tipo_cliente = "prospecto"
     cliente.canal_origen = "whatsapp_directo"
-    cliente.consentimiento_datos = payload.consentimiento_datos
     db.flush()
+    if creating or "consentimiento_datos" in payload.model_fields_set:
+        _apply_consent(db, tenant, cliente, payload.consentimiento_datos)
     db.commit()
     return {"id": cliente.id}
 

@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { timer } from 'rxjs';
+import { Subject, Subscription, debounceTime, timer } from 'rxjs';
 import {
   LucideArrowLeft,
   LucideMail,
@@ -11,8 +11,9 @@ import {
   LucideRefreshCw,
   LucideSearch
 } from '@lucide/angular';
-import { Conversation, ConversationMessage } from '@domains/conversations/domain/conversation.model';
+import { Conversation, ConversationCursor, ConversationMessage, PendingReply } from '@domains/conversations/domain/conversation.model';
 import { ConversationsApiService } from '@domains/conversations/data-access/conversations-api.service';
+import { AuthService } from '@domains/auth/data-access/auth-api.service';
 
 type ChatStatus = 'new' | 'active' | 'waiting' | 'closed';
 type LeadStatus = 'cold' | 'warm' | 'hot' | 'converted';
@@ -26,6 +27,7 @@ interface ChatContact {
   channel: 'whatsapp' | 'email' | 'web';
   leadStatus: LeadStatus;
   requiresHuman: boolean;
+  unread: number;
 }
 
 interface Message {
@@ -33,6 +35,8 @@ interface Message {
   sender: 'user' | 'agent';
   text: string;
   timestamp: string;
+  deliveryLabel?: string;
+  deliveryFailure?: string;
 }
 
 interface Thread {
@@ -40,7 +44,18 @@ interface Thread {
   error: boolean;
   hasOlder: boolean;
   messages: Message[];
+  pendingReplies: Partial<Record<number, PendingReply['status']>>;
 }
+
+const deliveryLabels = {
+  unknown: 'Entrega desconocida', received: 'Entrega desconocida', sent: 'Enviado',
+  failed: 'Falló el envío', delivered: 'Entregado', read: 'Leído'
+};
+const deliveryFailures = {
+  provider_rejected: 'WhatsApp rechazó el envío.',
+  account_restricted: 'WhatsApp restringió el envío desde esta cuenta.',
+  connection_invalid: 'WhatsApp rechazó la sesión. Revisa la conexión.'
+};
 
 @Component({
   selector: 'flowkron-chats-page',
@@ -58,19 +73,32 @@ interface Thread {
 })
 export class ChatsPageComponent implements OnInit {
   private readonly operational = inject(ConversationsApiService);
+  private readonly auth = inject(AuthService);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly backButton = viewChild<ElementRef<HTMLButtonElement>>('backButton');
+  private readonly filtersChanged = new Subject<void>();
+  private readonly readThrough = new Map<number, number>();
+  private listRequest?: Subscription;
+  private paged = false;
 
   readonly searchQuery = signal('');
   readonly filterStatus = signal('all');
   readonly selectedChatId = signal<number | null>(null);
-  readonly selectedChat = computed(() => this.chats().find((chat) => chat.id === this.selectedChatId()) ?? null);
+  private readonly selectedContact = signal<ChatContact | null>(null);
+  readonly selectedChat = computed(() => this.chats().find((chat) => chat.id === this.selectedChatId()) ?? this.selectedContact());
+  readonly nextCursor = signal<ConversationCursor | null>(null);
   readonly isLoading = signal(false);
   readonly loadError = signal('');
   readonly chats = signal<ChatContact[]>([]);
   readonly threads = signal<Partial<Record<number, Thread>>>({});
+  readonly pendingReplyLabels = {
+    queued: 'Respuesta en cola',
+    sending: 'Enviando respuesta',
+    unknown: 'Resultado del envío desconocido',
+    not_sent: 'Respuesta pendiente de reprogramar'
+  };
 
   readonly statuses = [
     { id: 'all', label: 'Todas' },
@@ -80,22 +108,17 @@ export class ChatsPageComponent implements OnInit {
     { id: 'closed', label: 'Cerradas' }
   ];
 
-  readonly filteredChats = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const status = this.filterStatus();
-    return this.chats().filter((chat) => {
-      const matchesQuery = !query || chat.name.toLowerCase().includes(query) || chat.lastMessage.toLowerCase().includes(query);
-      const matchesStatus = status === 'all' || chat.status === status;
-      return matchesQuery && matchesStatus;
-    });
-  });
-
   ngOnInit(): void {
     const requested = Number(this.route.snapshot.queryParamMap.get('conversation'));
-    if (Number.isSafeInteger(requested) && requested > 0) this.selectedChatId.set(requested);
+    if (Number.isSafeInteger(requested) && requested > 0) this.openDeepLink(requested);
+    this.filtersChanged.pipe(debounceTime(250), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadConversations());
     this.loadConversations();
     timer(10000, 10000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (!document.hidden) this.refresh();
+      if (document.hidden) return;
+      if (!this.paged && !this.isLoading()) this.loadConversations();
+      const selected = this.selectedChatId();
+      if (selected !== null) this.loadThread(selected);
     });
   }
 
@@ -105,22 +128,27 @@ export class ChatsPageComponent implements OnInit {
     if (selected !== null) this.loadThread(selected);
   }
 
-  loadConversations(): void {
-    if (this.isLoading()) {
-      return;
-    }
-
+  loadConversations(append = false): void {
+    const cursor = append ? this.nextCursor() : null;
+    if (append && (!cursor || this.isLoading())) return;
+    this.listRequest?.unsubscribe();
     this.isLoading.set(true);
     this.loadError.set('');
-    this.operational.listConversations({ limit: 100 }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.listRequest = this.operational.listConversations({
+      limit: 40,
+      q: this.searchQuery().trim() || undefined,
+      status: this.filterStatus() === 'all' ? undefined : this.filterStatus(),
+      ...cursor
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
-        this.chats.set(response.items.map((item) => this.toChatContact(item)));
-        const selected = this.selectedChat();
-        if (!selected) {
-          this.selectedChatId.set(null);
-        } else if (!this.threads()[selected.id]) {
-          this.loadThread(selected.id);
-        }
+        const contacts = new Map((append ? this.chats() : []).map((chat) => [chat.id, chat]));
+        for (const item of response.items) contacts.set(item.id, this.toChatContact(item));
+        const selected = this.selectedChatId();
+        const updatedContact = selected === null ? undefined : contacts.get(selected);
+        if (updatedContact) this.selectedContact.set(updatedContact);
+        this.chats.set([...contacts.values()]);
+        this.nextCursor.set(response.next_cursor ?? null);
+        this.paged = append;
         this.isLoading.set(false);
       },
       error: (error) => {
@@ -131,6 +159,7 @@ export class ChatsPageComponent implements OnInit {
   }
 
   select(chatId: number, trigger?: HTMLButtonElement): void {
+    this.selectedContact.set(this.chats().find((chat) => chat.id === chatId) ?? null);
     this.selectedChatId.set(chatId);
     if (trigger) {
       afterNextRender(() => {
@@ -143,7 +172,9 @@ export class ChatsPageComponent implements OnInit {
   }
 
   loadThread(chatId: number, older = false): void {
-    const current = this.threads()[chatId] ?? { loading: false, error: false, hasOlder: false, messages: [] };
+    const current = this.threads()[chatId] ?? {
+      loading: false, error: false, hasOlder: false, messages: [], pendingReplies: {}
+    };
     if (current.loading) return;
     const beforeId = older ? current.messages[0]?.id : undefined;
     if (older && beforeId === undefined) return;
@@ -161,9 +192,18 @@ export class ChatsPageComponent implements OnInit {
             loading: false,
             error: false,
             hasOlder: response.total > (older ? response.items.length : messages.size),
-            messages: [...messages.values()].sort((a, b) => a.id - b.id)
+            messages: [...messages.values()].sort((a, b) => a.id - b.id),
+            pendingReplies: older ? current.pendingReplies : Object.fromEntries(
+              (response.pending_replies ?? []).map((reply) => [reply.inbound_message_id, reply.status])
+            )
           }
         }));
+        if (!older && this.selectedChatId() === chatId) {
+          const newest = response.items[0]?.id;
+          if (newest !== undefined) {
+            afterNextRender(() => this.markVisibleThreadRead(chatId, newest), { injector: this.injector });
+          }
+        }
       },
       error: () => {
         this.threads.update((threads) => ({ ...threads, [chatId]: { ...current, loading: false, error: true } }));
@@ -174,6 +214,7 @@ export class ChatsPageComponent implements OnInit {
   closeThread(): void {
     const chatId = this.selectedChatId();
     this.selectedChatId.set(null);
+    this.selectedContact.set(null);
     afterNextRender(() => {
       const trigger = document.getElementById(`conversation-${chatId}`);
       (trigger ?? document.getElementById('conversation-search'))?.focus();
@@ -183,6 +224,59 @@ export class ChatsPageComponent implements OnInit {
   clearFilters(): void {
     this.searchQuery.set('');
     this.filterStatus.set('all');
+    this.reloadFilters();
+  }
+
+  searchFor(query: string): void {
+    this.searchQuery.set(query);
+    this.reloadFilters();
+  }
+
+  filterBy(status: string): void {
+    if (this.filterStatus() === status) return;
+    this.filterStatus.set(status);
+    this.reloadFilters();
+  }
+
+  private reloadFilters(): void {
+    this.listRequest?.unsubscribe();
+    this.chats.set([]);
+    this.nextCursor.set(null);
+    this.paged = false;
+    this.isLoading.set(true);
+    this.loadError.set('');
+    this.filtersChanged.next();
+  }
+
+  private openDeepLink(chatId: number): void {
+    this.selectedChatId.set(chatId);
+    this.operational.getConversation(chatId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (conversation) => {
+        if (this.selectedChatId() !== chatId) return;
+        this.selectedContact.set(this.toChatContact(conversation));
+        this.loadThread(chatId);
+      },
+      error: () => {
+        if (this.selectedChatId() === chatId) this.selectedChatId.set(null);
+      }
+    });
+  }
+
+  private markVisibleThreadRead(chatId: number, through: number): void {
+    if (this.selectedChatId() !== chatId || document.hidden || !this.auth.hasPermission('crm.manage')
+        || (this.readThrough.get(chatId) ?? 0) >= through) return;
+    this.readThrough.set(chatId, through);
+    this.operational.markRead(chatId, through).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ no_leidos }) => {
+        if (this.readThrough.get(chatId) !== through) return;
+        this.chats.update((chats) => chats.map((chat) => chat.id === chatId ? { ...chat, unread: no_leidos } : chat));
+        const selected = this.selectedContact();
+        if (selected?.id === chatId) this.selectedContact.set({ ...selected, unread: no_leidos });
+      },
+      error: () => {
+        if (this.readThrough.get(chatId) === through) this.readThrough.delete(chatId);
+      }
+    });
   }
 
   channelLabel(channel: ChatContact['channel']): string {
@@ -214,16 +308,21 @@ export class ChatsPageComponent implements OnInit {
       status: this.mapConversationStatus(conversation),
       channel: this.mapChannel(conversation.channel),
       leadStatus: this.mapLeadStatus(conversation.temperature),
-      requiresHuman: conversation.requires_human
+      requiresHuman: conversation.requires_human,
+      unread: conversation.no_leidos ?? 0
     };
   }
 
   private toMessage(message: ConversationMessage): Message {
+    const outbound = message.sender_type !== 'lead';
     return {
       id: message.id,
-      sender: message.sender_type === 'lead' ? 'user' : 'agent',
+      sender: outbound ? 'agent' : 'user',
       text: message.body,
-      timestamp: this.formatTime(message.sent_at)
+      timestamp: this.formatTime(message.sent_at),
+      deliveryLabel: outbound ? deliveryLabels[message.delivery_status ?? 'unknown'] : undefined,
+      deliveryFailure: outbound && message.delivery_failure_reason
+        ? deliveryFailures[message.delivery_failure_reason] : undefined
     };
   }
 

@@ -14,6 +14,15 @@ function json(response: ServerResponse, status: number, payload: object) {
 type LegacyConnection = Pick<WhatsAppConnection, "start" | "snapshot">;
 type TenantConnection = LegacyConnection & Pick<WhatsAppConnection, "stop">;
 
+async function sessionResponse(connection: LegacyConnection, includeDiagnostics: boolean) {
+  const before = connection.snapshot();
+  const png = before.qr && before.status === "qr_pending" ? await QRCode.toDataURL(before.qr) : undefined;
+  const current = connection.snapshot();
+  const qr = current.status === "qr_pending" && current.qr === before.qr &&
+    current.diagnostics?.qr_issued_at === before.diagnostics?.qr_issued_at ? png : undefined;
+  return { status: current.status, qr, diagnostics: includeDiagnostics ? current.diagnostics : undefined };
+}
+
 export function createHttpServer(
   connection: LegacyConnection,
   token: string,
@@ -37,8 +46,7 @@ export function createHttpServer(
         const session = resolveTenant(tenant[1]);
         if (req.method === "POST") await session.start();
         if (req.method === "DELETE") await session.stop();
-        const { status, qr } = session.snapshot();
-        return json(res, 200, { status, qr: qr ? await QRCode.toDataURL(qr) : undefined });
+        return json(res, 200, await sessionResponse(session, true));
       }
       if (req.method === "POST" && req.url === "/internal/baileys/session/start") {
         await connection.start();
@@ -46,8 +54,7 @@ export function createHttpServer(
         return json(res, status === "pairing_required" ? 409 : 202, { status });
       }
       if (req.method === "GET" && req.url === "/internal/baileys/session") {
-        const { status, qr } = connection.snapshot();
-        return json(res, 200, { status, qr: qr ? await QRCode.toDataURL(qr) : undefined });
+        return json(res, 200, await sessionResponse(connection, false));
       }
       return json(res, 404, { error: "not_found" });
     } catch (error) {

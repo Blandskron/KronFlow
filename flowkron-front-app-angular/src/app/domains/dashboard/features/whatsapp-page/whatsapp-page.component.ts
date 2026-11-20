@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -8,10 +9,35 @@ import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { ApiResponse } from '@shared/types/api.types';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'qr_pending' | 'connected' | 'pairing_required';
+type ConnectionAction = 'connect' | 'scan' | 'wait' | 'retry' | 'relink' | 'none';
+
+const causeLabels = {
+  signed_out: 'Se cerró la sesión en WhatsApp.',
+  invalid_session: 'Las credenciales del vínculo ya no son válidas.',
+  replaced_session: 'WhatsApp reemplazó esta sesión por otra conexión.',
+  provider_denied: 'WhatsApp rechazó la conexión.',
+  device_mismatch: 'WhatsApp requiere vincular nuevamente el dispositivo.',
+  temporary: 'La conexión con WhatsApp se interrumpió.',
+  startup_failed: 'El conector no pudo iniciar la sesión.',
+  workspace_unavailable: 'El espacio de trabajo todavía no está disponible para WhatsApp.',
+  manual: 'La cuenta se desconectó desde Flowkron.'
+};
 
 interface WhatsAppSession {
   status: ConnectionStatus;
   qr?: string;
+  diagnostics?: {
+    status_changed_at: string;
+    last_connected_at?: string;
+    disconnect_cause?: keyof typeof causeLabels;
+    recent_transitions?: { status: ConnectionStatus; changed_at: string }[];
+    retry_attempts: number;
+    retry_limit: number;
+    next_retry_at?: string;
+    retry_exhausted: boolean;
+    next_action: ConnectionAction;
+    qr_expires_at?: string;
+  };
 }
 
 const statusLabels: Record<ConnectionStatus, string> = {
@@ -24,7 +50,7 @@ const statusLabels: Record<ConnectionStatus, string> = {
 
 @Component({
   selector: 'flowkron-whatsapp-page',
-  imports: [RouterLink],
+  imports: [DatePipe, RouterLink],
   templateUrl: './whatsapp-page.component.html',
   styleUrl: './whatsapp-page.component.css'
 })
@@ -37,29 +63,53 @@ export class WhatsAppPageComponent implements OnInit {
   readonly error = signal('');
   readonly confirmDisconnect = signal(false);
   private readonly forbidden = signal(false);
+  private mutationVersion = 0;
+  private qrExpiryTimer?: ReturnType<typeof setTimeout>;
+  readonly statusLabels = statusLabels;
+  readonly causeLabel = computed(() => {
+    const cause = this.session()?.diagnostics?.disconnect_cause;
+    return cause ? causeLabels[cause] : '';
+  });
+  readonly nextAction = computed<ConnectionAction>(() => {
+    const state = this.session();
+    if (!state) return 'none';
+    if (state.status === 'qr_pending') return state.qr ? 'scan' : 'wait';
+    return state.diagnostics?.next_action ?? (state.status === 'disconnected' ? 'connect' : 'none');
+  });
   readonly statusLabel = computed(() => {
     const state = this.session();
-    return state ? statusLabels[state.status] : this.error() ? 'Estado no disponible' : 'Consultando conexión…';
+    if (!state) return this.error() ? 'Estado no disponible' : 'Consultando conexión…';
+    if (state.diagnostics?.retry_exhausted) return 'Se agotaron los intentos de reconexión';
+    if (state.diagnostics?.next_retry_at) return 'Reconexión programada';
+    if (state.status === 'qr_pending' && !state.qr) return 'Esperando un código nuevo';
+    return statusLabels[state.status];
   });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => clearTimeout(this.qrExpiryTimer));
     timer(0, 2500).pipe(
-      exhaustMap(() => this.busy() || this.forbidden() ? EMPTY : this.request('GET').pipe(
-        catchError((error: unknown) => {
-          if (!this.busy()) this.reportError(error);
-          return EMPTY;
-        })
-      )),
+      exhaustMap(() => {
+        if (this.busy() || this.forbidden()) return EMPTY;
+        const version = this.mutationVersion;
+        return this.request('GET').pipe(
+          map((session) => ({ session, version })),
+          catchError((error: unknown) => {
+            if (version === this.mutationVersion) this.reportError(error);
+            return EMPTY;
+          })
+        );
+      }),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe((session) => {
-      if (this.busy()) return;
-      this.session.set(session);
+    ).subscribe(({ session, version }) => {
+      if (version !== this.mutationVersion) return;
+      this.applySession(session);
       this.error.set('');
     });
   }
 
   update(method: 'POST' | 'DELETE'): void {
     if (this.busy()) return;
+    this.mutationVersion++;
     this.busy.set(true);
     this.error.set('');
     this.request(method).pipe(
@@ -67,7 +117,7 @@ export class WhatsAppPageComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (session) => {
-        this.session.set(session);
+        this.applySession(session);
         this.confirmDisconnect.set(false);
       },
       error: (error: unknown) => this.reportError(error)
@@ -80,12 +130,25 @@ export class WhatsAppPageComponent implements OnInit {
   }
 
   private reportError(error: unknown): void {
+    this.applySession(null);
     if (error instanceof HttpErrorResponse && error.status === 403) {
       this.forbidden.set(true);
       this.error.set('Tu rol no permite vincular WhatsApp. Contacta a quien administra tu empresa.');
       return;
     }
-    this.session.set(null);
     this.error.set('No pudimos consultar el conector. Reintenta en unos segundos.');
+  }
+
+  private applySession(session: WhatsAppSession | null): void {
+    clearTimeout(this.qrExpiryTimer);
+    const remaining = Date.parse(session?.diagnostics?.qr_expires_at ?? '') - Date.now();
+    if (!session?.qr || session.status !== 'qr_pending' || !(remaining > 0)) {
+      this.session.set(session ? { ...session, qr: undefined } : null);
+      return;
+    }
+    this.session.set(session);
+    this.qrExpiryTimer = setTimeout(() => {
+      if (this.session() === session) this.session.set({ ...session, qr: undefined });
+    }, remaining);
   }
 }

@@ -357,6 +357,51 @@ paths:
       responses:
         '200':
           description: Tenant updated.
+  /api/v1/tenants/{tenant_id}/whatsapp/:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+    get:
+      tags: [Tenants]
+      operationId: tenantWhatsAppStatus
+      summary: Consultar la conexión WhatsApp de la empresa
+      description: Requiere membresía activa y permiso whatsapp.connect en la empresa solicitada.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/WhatsAppSession'
+        '403':
+          description: Falta permiso en la empresa.
+        '404':
+          description: Empresa fuera del contexto autorizado.
+        '503':
+          description: Conector no disponible.
+    post:
+      tags: [Tenants]
+      operationId: tenantWhatsAppStart
+      summary: Iniciar o reintentar conexión
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/WhatsAppSession'
+        '403':
+          description: Falta permiso whatsapp.connect.
+        '503':
+          description: Conector no disponible.
+    delete:
+      tags: [Tenants]
+      operationId: tenantWhatsAppDisconnect
+      summary: Desconectar y restablecer el vínculo
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/WhatsAppSession'
+        '403':
+          description: Falta permiso whatsapp.connect.
+        '503':
+          description: Conector no disponible.
   /api/v1/tenants/{tenant_id}/members/:
     parameters:
       - $ref: '#/components/parameters/TenantId'
@@ -497,7 +542,68 @@ components:
       description: Invalid request.
     Unauthorized:
       description: Authentication required or invalid token.
+    WhatsAppSession:
+      description: Estado, diagnóstico y QR vigente cuando corresponda.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WhatsAppSessionResponse'
   schemas:
+    WhatsAppConnectionStatus:
+      type: string
+      enum: [disconnected, connecting, qr_pending, connected, pairing_required]
+    WhatsAppDiagnostics:
+      type: object
+      required: [status_changed_at, retry_attempts, retry_limit, retry_exhausted, next_action]
+      properties:
+        status_changed_at: {type: string, format: date-time}
+        last_connected_at: {type: string, format: date-time}
+        disconnect_cause:
+          type: string
+          enum: [signed_out, invalid_session, replaced_session, provider_denied, device_mismatch, temporary, startup_failed, workspace_unavailable, manual]
+        retry_attempts: {type: integer, minimum: 0}
+        retry_limit: {type: integer, minimum: 1}
+        next_retry_at: {type: string, format: date-time}
+        retry_exhausted: {type: boolean}
+        next_action:
+          type: string
+          enum: [connect, scan, wait, retry, relink, none]
+        qr_issued_at: {type: string, format: date-time}
+        qr_expires_at: {type: string, format: date-time}
+        recent_transitions:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            required: [status, changed_at]
+            properties:
+              status:
+                $ref: '#/components/schemas/WhatsAppConnectionStatus'
+              changed_at: {type: string, format: date-time}
+    WhatsAppSessionResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [status]
+          properties:
+            status:
+              $ref: '#/components/schemas/WhatsAppConnectionStatus'
+            qr:
+              type: string
+              maxLength: 32768
+              description: Data URL PNG presente únicamente mientras el QR está vigente.
+            diagnostics:
+              $ref: '#/components/schemas/WhatsAppDiagnostics'
+        status: {type: object}
+        meta: {type: object}
     LoginRequest:
       type: object
       required: [email, password]

@@ -12,4 +12,9 @@ ol { margin-bottom: 0; padding-inline-start: 20px; }
 li + li { margin-top: 10px; }
 .error { color: var(--error-text); }
 .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.connection-history { margin: 20px auto 0; max-width: 400px; text-align: start; }
+.connection-history summary { cursor: pointer; font-weight: 650; }
+.connection-history ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.connection-history li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.connection-history time { font-variant-numeric: tabular-nums; }
 @media (max-width: 740px) { .connection-grid { grid-template-columns: minmax(0, 1fr); } .connection-panel { grid-row: auto; } }

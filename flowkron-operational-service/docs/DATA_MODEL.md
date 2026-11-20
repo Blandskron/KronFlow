@@ -80,3 +80,11 @@ No existen hoy tablas activas `agent_profiles`, `analytics_snapshots`, `handoff_
 La [decisión de identidad de mensajes](MESSAGE_IDENTITY.md) documenta claves, compatibilidad, límites y despliegue. El modelo alternativo `message.py` permanece inactivo y explícitamente documentado como histórico.
 
 `tenant_schema_v4` mantiene ese upgrade y agrega `whatsapp_turns` desde `tenant_models/whatsapp_turn.py`, importado por el metadata activo. No crea filas a partir de mensajes antiguos. Ver [recuperación de turnos](TURN_RECOVERY.md) para estados, atomicidad y reconciliación.
+
+`tenant_schema_v5` agrega `whatsapp_turn_jobs` con un registro por turno admitido de forma durable. Conserva clave de cuenta, destinatario original, intentos y próxima disponibilidad. La eliminación de su turno elimina el trabajo correspondiente.
+
+`tenant_schema_v6` agrega el índice `idx_messages_thread_id` para consultar mensajes por sesión e ID. El trigger conserva `conversaciones_resumen.no_leidos` al guardar respuestas de salida. Los mensajes entrantes incrementan el contador y el equipo lo reduce al marcar el último mensaje cargado. Los contadores previos se conservan tal como estaban al migrar.
+
+`tenant_schema_v7` agrega `whatsapp_send_evidence`. Cada fila depende de un trabajo durable y reserva un ID del proveedor único por cuenta. Guarda el estado más fuerte observado y, cuando corresponde, un motivo de fallo normalizado. La reserva precede el envío. El estado final del mensaje se conserva en `mensajes_dashboard.delivery_status`.
+
+`tenant_schema_v8` agrega `whatsapp_consent_state` por contacto. `decision_at` ordena comandos y `authorized_from` delimita el período de admisión de consultas cuando se conoce la hora de concesión. La migración conserva el consentimiento vigente y recupera la fecha de auditoría más reciente cuando existe.

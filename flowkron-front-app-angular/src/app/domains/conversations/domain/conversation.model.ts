@@ -12,6 +12,12 @@ export interface Conversation {
   temperature: string | null;
   created_at: string;
   updated_at: string;
+  no_leidos?: number;
+}
+
+export interface ConversationCursor {
+  before_at: string;
+  before_id: number;
 }
 
 export interface ConversationMessage {
@@ -23,4 +29,11 @@ export interface ConversationMessage {
   raw_payload: Record<string, unknown>;
   sent_at: string;
   created_at: string;
+  delivery_status?: 'unknown' | 'received' | 'sent' | 'failed' | 'delivered' | 'read';
+  delivery_failure_reason?: 'provider_rejected' | 'account_restricted' | 'connection_invalid' | null;
+}
+
+export interface PendingReply {
+  inbound_message_id: number;
+  status: 'queued' | 'sending' | 'unknown' | 'not_sent';
 }

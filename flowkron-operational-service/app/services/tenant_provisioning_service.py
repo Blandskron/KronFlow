@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import Text, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import text
 from sqlalchemy.schema import CreateSchema, DropSchema
@@ -91,6 +92,11 @@ def apply_tenant_database_objects(db: Session, schema_name: str) -> None:
         )
     )
 
+    db.execute(text(f"""
+        CREATE INDEX IF NOT EXISTS idx_messages_thread_id
+        ON {quoted_schema}.mensajes_dashboard (whatsapp_id, id)
+    """))
+
     db.execute(
         text(
             f"""
@@ -126,7 +132,7 @@ def apply_tenant_database_objects(db: Session, schema_name: str) -> None:
                     no_leidos         = CASE
                                             WHEN NEW.rol = 'usuario'
                                                 THEN {quoted_schema}.conversaciones_resumen.no_leidos + 1
-                                            ELSE 0
+                                            ELSE {quoted_schema}.conversaciones_resumen.no_leidos
                                          END,
                     actualizado_en    = NOW();
                 RETURN NEW;
@@ -230,6 +236,22 @@ def apply_tenant_schema(db: Session, schema_name: str) -> None:
     ]
     tenant_connection = connection.execution_options(**tenant_exec_options(schema_name))
     Base.metadata.create_all(bind=tenant_connection, tables=tenant_tables)
+    # Earlier consent updates did not retain the provider timestamp. Preserve
+    # the last recorded decision boundary from tenant-scoped audit history.
+    audit_client = SystemEvent.payload["client_id"].astext
+    latest_consent = select(
+        audit_client.label("client_reference"),
+        func.max(SystemEvent.created_at).label("recorded_at"),
+    ).where(
+        SystemEvent.schema_name == schema_name,
+        SystemEvent.event_type == "whatsapp.consent.changed",
+    ).group_by(audit_client).subquery()
+    tenant_connection.execute(insert(tenant_models.WhatsAppConsentState).from_select(
+        ["client_id", "decision_at"],
+        select(tenant_models.Cliente.id, latest_consent.c.recorded_at).join(
+            latest_consent, tenant_models.Cliente.id.cast(Text) == latest_consent.c.client_reference,
+        ),
+    ).on_conflict_do_nothing())
     upgrade_message_schema(db, schema_name)
     apply_tenant_database_objects(db, schema_name)
 

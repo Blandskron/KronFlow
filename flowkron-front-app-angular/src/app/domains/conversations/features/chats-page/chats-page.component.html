@@ -16,11 +16,11 @@
           <label class="search-field">
             <svg lucideSearch size="18" aria-hidden="true"></svg>
             <input #search id="conversation-search" type="search" aria-label="Buscar conversaciones"
-              [value]="searchQuery()" (input)="searchQuery.set(search.value)" placeholder="Buscar contactos o mensajes">
+              maxlength="120" [value]="searchQuery()" (input)="searchFor(search.value)" placeholder="Buscar contacto o último mensaje">
           </label>
           <div class="segments" role="group" aria-label="Filtrar por estado">
             @for (status of statuses; track status.id) {
-              <button type="button" [attr.aria-pressed]="filterStatus() === status.id" (click)="filterStatus.set(status.id)">
+              <button type="button" [attr.aria-pressed]="filterStatus() === status.id" (click)="filterBy(status.id)">
                 {{ status.label }}
               </button>
             }
@@ -31,7 +31,7 @@
           <p class="muted state" role="status">Cargando conversaciones…</p>
         } @else if (loadError()) {
           <p class="muted state" role="alert">{{ loadError() }}</p>
-        } @else if (filteredChats().length === 0) {
+        } @else if (chats().length === 0) {
           <div class="state">
             @if (searchQuery().trim() || filterStatus() !== 'all') {
               <p class="muted" role="status">No encontramos conversaciones con estos filtros.</p>
@@ -42,7 +42,7 @@
           </div>
         }
 
-        @for (chat of filteredChats(); track chat.id) {
+        @for (chat of chats(); track chat.id) {
           <button #chatButton class="chat-item" type="button" [id]="'conversation-' + chat.id"
             [attr.aria-pressed]="selectedChatId() === chat.id" (click)="select(chat.id, chatButton)">
             <span class="avatar" aria-hidden="true">{{ chat.name.charAt(0) }}</span>
@@ -56,11 +56,21 @@
             </span>
             <span class="chat-meta">
               <small class="muted">{{ chat.timestamp }}</small>
+              @if (chat.unread > 0) {
+                <span class="badge badge-info" [attr.aria-label]="chat.unread + ' mensajes sin leer'">{{ chat.unread }}</span>
+              }
               @if (chat.requiresHuman) {
                 <span class="attention">Requiere atención</span>
               }
             </span>
           </button>
+        }
+        @if (nextCursor()) {
+          <div class="state">
+            <button class="btn btn-secondary" type="button" [disabled]="isLoading()" (click)="loadConversations(true)">
+              Ver más conversaciones
+            </button>
+          </div>
         }
       </section>
 
@@ -104,7 +114,16 @@
                     <div class="message-row" [class.agent]="message.sender === 'agent'">
                       <div class="bubble">
                         <p>{{ message.text }}</p>
-                        <small>{{ message.sender === 'agent' ? 'Agente' : 'Contacto' }} · {{ message.timestamp }}</small>
+                        <small>
+                          {{ message.sender === 'agent' ? 'Agente' : 'Contacto' }} · {{ message.timestamp }}
+                          @if (message.deliveryLabel) { · <span>{{ message.deliveryLabel }}</span> }
+                        </small>
+                        @if (message.deliveryFailure) {
+                          <small class="delivery-detail">{{ message.deliveryFailure }}</small>
+                        }
+                        @if (thread.pendingReplies[message.id]; as pending) {
+                          <small class="delivery-detail">{{ pendingReplyLabels[pending] }}</small>
+                        }
                       </div>
                     </div>
                   }

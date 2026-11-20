@@ -2,7 +2,7 @@
 
 Fecha: 18 de noviembre de 2026. Responsable del producto: Blandskron.
 
-Actualización: tercera revisión cruzada de tres POC y ampliación selectiva a 27 tareas. FK-01 y FK-02 están implementadas y validadas en entorno descartable; FK-09 tiene una primera entrega de metadatos de empresa. Las demás tareas siguen pendientes. El análisis de nuevas ideas no las habilita automáticamente en el runtime.
+Actualización del 19 de noviembre de 2026. FK-01, FK-02, FK-05, FK-07 y FK-08 están implementadas y validadas localmente. FK-03 incorpora cola durable para consultas WhatsApp y FK-04 conserva las cancelaciones tras BAJA. FK-09 tiene una primera entrega de metadatos de empresa. El plan conserva 27 tareas. Publicar el trabajo en `main` después de verificar el cierre del plan, según la instrucción del usuario.
 
 ## Objetivo y alcance
 
@@ -25,6 +25,24 @@ Validación FK-02: 13 pruebas PostgreSQL/ASGI aprobadas y 19 pruebas del conecto
 FK-02 no implementa aún un worker que busque pendientes después de reiniciar ni una cola durable: tras agotar los reintentos se necesita una nueva entrega/reclamación. Esa automatización es FK-03. Tampoco cierra toda la política de retiradas concurrentes de FK-04. No se aplicó la migración a la instalación ni se usaron proveedores reales.
 
 **FK-09, primera entrega pequeña:** los metadatos de éxito y error de Operational identifican la empresa por `TenantContext.auth_tenant_id`, conservando el principal autenticado como fallback. No usan cabeceras no verificadas como identidad. Cuatro pruebas específicas y el recorrido ASGI de turnos cubren prioridad del contexto, compatibilidad, 200/409 y ausencia de identidad ante 401. La correlación completa, métricas y vista de diagnóstico siguen pendientes: FK-09 queda parcial.
+
+**FK-04, primera entrega (19 de noviembre de 2026).** BAJA cancela en la misma transacción los turnos recibidos, en generación y preparados del contacto. Un ACEPTO posterior habilita consultas nuevas y conserva las cancelaciones. Operational comprueba consentimiento antes de guardar un turno nuevo. El conector bloquea el envío ordinario desde que admite BAJA, incluso si está esperando la respuesta del agente o el permiso de envío. Los permisos ya concedidos siguen el protocolo de confirmación o reconciliación de FK-02. Se reutilizó el esquema v4. La recuperación de una BAJA que solo llegó a la cola en memoria depende de FK-03. Ver [coordinación y límites](flowkron-operational-service/docs/TURN_RECOVERY.md#retirada-de-consentimiento).
+
+Validación de esta entrega: 17 pruebas de turnos PostgreSQL/ASGI y 21 del conector aprobadas. Se probaron la carrera con el permiso de envío, la reversión transaccional, el aislamiento entre empresas y la cancelación tras un nuevo ACEPTO. `test_security.py` sigue bloqueada por la dependencia `httpx2` requerida por el Starlette instalado.
+
+**FK-03, primera entrega (19 de noviembre de 2026).** El conector de empresa separa las escrituras de consentimiento del trabajo ordinario para que BAJA pueda persistirse mientras el agente está ocupado. Operational guarda la decisión y el marcador idempotente juntos mediante el esquema actual. Si ya se registró un comando, reentregar ese ACEPTO tras BAJA o esa BAJA tras un nuevo ACEPTO conserva la decisión vigente. La garantía comienza al confirmar la transacción. Ver [retirada de consentimiento](flowkron-operational-service/docs/TURN_RECOVERY.md#retirada-de-consentimiento).
+
+Validación de FK-03: 19 pruebas de turnos PostgreSQL/ASGI y 23 del conector aprobadas. Incluyen BAJA durante una generación bloqueada, repetición concurrente, pérdida de la respuesta HTTP y reversión de la decisión si falla su marcador.
+
+**FK-03, segunda entrega (19 de noviembre de 2026).** PostgreSQL guarda cada consulta admitida, su turno y su trabajo en una sola transacción. El conector los retoma al abrir o restaurar el socket original. Se limita la capacidad a 128 trabajos por empresa y los intentos automáticos a cinco por turno. Se preservan el orden por contacto, la exclusión de reclamantes y la reconciliación de resultados inciertos. Se añadió una operación privada de reprogramación para trabajos recuperables agotados. Esta entrega usa `tenant_schema_v5`, con migración pendiente para instalaciones existentes. La extensión de la cola y su outbox a acciones de negocio sigue pendiente. Ver [cola durable de turnos](flowkron-operational-service/docs/TURN_RECOVERY.md#cola-durable-de-turnos).
+
+Validación de la segunda entrega: 8 pruebas nuevas de cola en PostgreSQL descartable, 19 de turnos PostgreSQL/ASGI, 9 de identidad de mensajes y 25 del conector. Se recuperó una respuesta preparada después de terminar el proceso que la guardó y se probó por separado que el socket simulado reclama un trabajo persistido al arrancar sin reentrega del proveedor.
+
+**FK-05 implementada y validada localmente (19 de noviembre de 2026).** La pantalla de WhatsApp muestra la última conexión, hasta ocho transiciones del proceso actual, causas normalizadas y la próxima acción. Una interrupción transitoria muestra el intento programado, el agotamiento ofrece reintentar y el cierre de sesión exige restablecer el vínculo. IAM conserva `whatsapp.connect`, filtra los campos del diagnóstico y devuelve solo códigos QR vigentes. El conector y el navegador retiran los códigos vencidos. Pasaron 28 pruebas del conector, 8 de tenants de IAM con SQLite en memoria y una prueba de Chromium con API simulada. Compiló la app Angular y se comprobó el contrato OpenAPI. Actualizar el conector antes de verificar el flujo nuevo con un dispositivo real.
+
+**FK-08 implementada y validada localmente (19 de noviembre de 2026).** El inbox busca nombre, teléfono, sesión y texto del último mensaje en SQL. La navegación por cursor mantiene el orden por fecha e ID ante nuevas conversaciones y conserva la paginación del historial de mensajes. El contador es compartido y `crm.manage` permite reducirlo hasta el último mensaje cargado, conservando las llegadas posteriores. `tenant_schema_v6` actualiza el trigger y agrega el índice de mensajes por sesión e ID. Pasaron cinco pruebas PostgreSQL/ASGI y una prueba de Chromium con API simulada. Con 10.000 conversaciones y 100.000 mensajes sintéticos el p95 fue 109,9 ms para la primera página y 137,9 ms para búsqueda, ambos dentro del presupuesto de 250 ms. Ver [medición reproducible](flowkron-operational-service/docs/TESTING.md#búsqueda-y-lectura-del-inbox). La migración de instalaciones existentes sigue pendiente.
+
+**FK-07 implementada y validada localmente (19 de noviembre de 2026).** El conector reserva el ID que Baileys usará y reporta recibos directos para entregas confirmadas, lecturas y fallos. Operational valida empresa, cuenta, conexión y destinatario. Los recibos repetidos y fuera de orden conservan la evidencia más fuerte. Un recibo que coincide puede resolver un envío incierto sin volver a transmitirlo. El CRM muestra los estados de mensajes y las respuestas en cola. Pasaron 19 pruebas de turnos PostgreSQL/ASGI, 10 de cola y recibos, 30 del conector y una prueba de Chromium con API simulada. El esquema v7 requiere migración antes de instalar el conector nuevo. Ver [recibos del proveedor](flowkron-operational-service/docs/TURN_RECOVERY.md#recibos-del-proveedor).
 
 La segunda revisión incorpora propuestas de acciones, supervisión humana, memoria conversacional, actualización de leads, agenda, correo, integraciones por empresa, notificaciones y evaluación del agente. Se amplían tareas existentes cuando el aprendizaje ya tiene un propietario; solo se crean IDs nuevos para capacidades distintas. La publicación Git del trabajo pendiente fue solicitada expresamente por el usuario; no implica un despliegue.
 
@@ -92,18 +110,18 @@ El valor de la referencia está en sus conceptos, no en asumir que su implementa
 
 ## Tareas de mejora y evolución
 
-Estado actual: **FK-01 y FK-02 implementadas y validadas en entorno descartable; FK-09 parcial (metadatos de empresa); demás tareas pendientes / propuestas**. P0 significa integridad y recuperación; P1, operación cotidiana; P2, extensibilidad. S/M/L son tamaños relativos, no compromisos de fechas. Los responsables indicados son componentes propietarios, no personas asignadas.
+Estado actual: **FK-01, FK-02, FK-05, FK-07 y FK-08 implementadas y validadas localmente. FK-03, FK-04 y FK-09 tienen entregas parciales.** P0 significa integridad y recuperación; P1, operación cotidiana; P2, extensibilidad. S/M/L son tamaños relativos, no compromisos de fechas. Los responsables indicados son componentes propietarios, no personas asignadas.
 
 | ID | Prioridad | Tarea | Propietario | Tamaño | Depende de |
 | --- | --- | --- | --- | --- | --- |
 | FK-01 | P0 | Alinear contratos y modelo activo de mensajes — implementada; migración de instalaciones pendiente | Operational + Contratos | M | — |
 | FK-02 | P0 | Recuperar etapas incompletas del turno — implementada; migración v4 de instalaciones pendiente | Operational + Conector | L | FK-01 |
-| FK-03 | P0 | Persistir trabajos con admisión acotada | Operational + Conector + Deploy | L | FK-02 |
-| FK-04 | P0 | Mantener consentimiento durante trabajos y reintentos | Operational + Conector | M | FK-02; completar con FK-03 |
-| FK-05 | P1 | Diagnóstico accionable de conexión | Conector + IAM + CRM | M | — |
+| FK-03 | P0 | Persistir trabajos con admisión acotada — cola WhatsApp, recuperación y reprogramación verificadas; outbox de acciones pendiente | Operational + Conector + Deploy | L | FK-02 |
+| FK-04 | P0 | Mantener consentimiento durante trabajos y reintentos — parcial, cancelación persistente y bloqueo local tras BAJA | Operational + Conector | M | FK-02; completar con FK-03 |
+| FK-05 | P1 | Diagnóstico accionable de conexión — implementado y validado localmente | Conector + IAM + CRM | M | — |
 | FK-06 | P1 | Atención humana y envío desde el CRM | Operational + IAM + CRM + Conector | L | FK-02, FK-04 |
-| FK-07 | P1 | Recibos y estados reales de cada mensaje | Operational + Conector + CRM | M | FK-01, FK-02 |
-| FK-08 | P1 | Búsqueda, páginas y lecturas del inbox | Operational + CRM | M | FK-01 |
+| FK-07 | P1 | Recibos y estados reales de cada mensaje — implementada y validada localmente para envíos directos durables | Operational + Conector + CRM | M | FK-01, FK-02 |
+| FK-08 | P1 | Búsqueda, páginas y lecturas del inbox — implementada y validada localmente | Operational + CRM | M | FK-01 |
 | FK-09 | P1 | Trazas y métricas del recorrido completo — parcial: metadatos de empresa corregidos | Todos los servicios del recorrido | M | FK-01; ampliar con FK-02, FK-03 |
 | FK-10 | P2 | Eventos de dominio y suscripciones por empresa | Operational + Contratos | M | FK-01, FK-02 |
 | FK-11 | P2 | Entrega fiable y diagnóstico de webhooks | Operational + Deploy + CRM | L | FK-03, FK-09, FK-10 |

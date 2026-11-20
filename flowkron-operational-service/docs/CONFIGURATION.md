@@ -23,7 +23,7 @@ Pydantic carga variables de entorno y `.env`; nombres no distinguen mayúsculas 
 | `JWT_ISSUER` | `flowkron-auth-service` | Issuer requerido |
 | `DEFAULT_PAGE_SIZE` | `50` | Disponible, pero routers fijan 50 explícitamente |
 | `MAX_PAGE_SIZE` | `200` | Tope de listados |
-| `TENANT_MIGRATION_VERSION` | `tenant_schema_v4` | Versión lógica en registry; conserva FK-01 y agrega turnos recuperables (FK-02) |
+| `TENANT_MIGRATION_VERSION` | `tenant_schema_v8` | Versión lógica en registry con evidencia de recibos y orden de decisiones de consentimiento |
 | `INGEST_RATE_LIMIT_PER_MINUTE` | `120` | Límite en memoria por tenant/proceso |
 | `OPERATIONAL_PORT` | `8001` en Compose | Solo interpolación del puerto host |
 

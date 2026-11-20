@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -10,6 +10,7 @@ from app.schemas.ingest import (
     ClientUpsertResponse,
     ConsentIn,
     ConsentOut,
+    ConsentUpdateOut,
     CustomerOut,
     DashboardMessagesIn,
     DashboardMessagesResponse,
@@ -25,6 +26,7 @@ from app.schemas.ingest import (
     WhatsAppMessageIn,
     WhatsAppStatusIn,
 )
+from app.schemas.whatsapp_turn import ProviderReceiptsIn, ProviderReceiptsOut
 from app.services.ingest_service import (
     apply_lead_classification,
     assign_executive,
@@ -34,6 +36,7 @@ from app.services.ingest_service import (
     ingest_whatsapp_message,
     inventory_for_agent,
     link_executive,
+    ordered_consent_ready,
     register_dashboard_messages,
     register_privacy_request,
     save_consent,
@@ -41,14 +44,34 @@ from app.services.ingest_service import (
     upsert_client,
     upsert_lead,
 )
+from app.services.whatsapp_turn_service import record_provider_receipts, turn_jobs_ready, turn_receipts_ready
 
 router = APIRouter(prefix="/api/v1/ingest/whatsapp", tags=["WhatsApp Ingest"])
 router.include_router(turns_router)
 
 
 @router.get("/runtime-ready", include_in_schema=False)
-def runtime_ready(_tenant: TenantContext = Depends(resolve_tenant_from_ingest_headers)):
-    return {"status": "active"}
+def runtime_ready(
+    tenant: TenantContext = Depends(resolve_tenant_from_ingest_headers), db: Session = Depends(get_db),
+):
+    return {
+        "status": "active", "durable_turns_ready": turn_jobs_ready(db, tenant),
+        "provider_receipts_ready": turn_receipts_ready(db, tenant),
+        "ordered_consent_ready": ordered_consent_ready(db, tenant),
+    }
+
+
+@router.post("/receipts", response_model=ProviderReceiptsOut)
+def receipts(
+    payload: ProviderReceiptsIn,
+    x_baileys_token: str | None = Header(default=None),
+    tenant: TenantContext = Depends(enforce_ingest_rate_limit), db: Session = Depends(get_db),
+):
+    # The shared ingress resolver validates this token when the header is set.
+    # A legacy ingestion key alone is insufficient to report provider evidence.
+    if not x_baileys_token:
+        raise HTTPException(status_code=401, detail="WhatsApp receipts require bridge credentials")
+    return ProviderReceiptsOut(**record_provider_receipts(db, tenant, payload.receipts))
 
 
 @router.post("/message", response_model=IngestResponse)
@@ -102,9 +125,16 @@ def consent(
     return ConsentOut(**get_consent(db, tenant, phone))
 
 
-@router.post("/consent", response_model=ConsentOut)
-def consent_update(payload: ConsentIn, tenant: TenantContext = Depends(resolve_tenant_from_ingest_headers), db: Session = Depends(get_db)):
-    return ConsentOut(**save_consent(db, tenant, payload))
+@router.post("/consent", response_model=ConsentUpdateOut)
+def consent_update(
+    payload: ConsentIn,
+    x_baileys_token: str | None = Header(default=None),
+    tenant: TenantContext = Depends(resolve_tenant_from_ingest_headers),
+    db: Session = Depends(get_db),
+):
+    if payload.sent_at is not None and not x_baileys_token:
+        raise HTTPException(status_code=401, detail="Provider consent timestamps require bridge credentials")
+    return ConsentUpdateOut(**save_consent(db, tenant, payload))
 
 
 @router.post("/client", response_model=ClientUpsertResponse)

@@ -80,7 +80,9 @@ El registro de empresa aprovisiona su esquema operativo. El acceso se rige por l
 
 ### Vincular WhatsApp
 
-Las acciones sobre `/api/v1/tenants/{id}/whatsapp/` requieren una sesión de la empresa con permiso `whatsapp.connect`. `GET` devuelve el estado actual y el QR PNG si está pendiente. `POST` inicia el vínculo. `DELETE` desconecta y elimina las credenciales locales de esa sesión. El QR se devuelve con `Cache-Control: no-store`.
+Las acciones sobre `/api/v1/tenants/{id}/whatsapp/` requieren una sesión de la empresa con permiso `whatsapp.connect`. `GET` devuelve el estado, el diagnóstico y el QR PNG si está pendiente y vigente. `POST` inicia el vínculo o reintenta la conexión. `DELETE` desconecta y elimina las credenciales locales de esa sesión. Las respuestas que incluyen el estado llevan `Cache-Control: no-store`.
+
+`diagnostics` incluye la hora de la última transición, hasta ocho transiciones recientes, la última conexión, una causa normalizada, intentos realizados, próximo intento y próxima acción. IAM valida los campos y omite los datos de transporte ajenos al contrato. El QR requiere una fecha de vencimiento futura, por lo que el conector debe actualizarse antes de validar un vínculo nuevo desde el CRM actualizado.
 
 
 | Método y ruta | Auth | Propósito |

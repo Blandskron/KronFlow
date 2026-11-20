@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from threading import Event
 from unittest.mock import patch
 import asyncio
 import json
@@ -13,11 +14,13 @@ from app.public_models.system_event import SystemEvent
 from app.public_models.tenant_runtime import TenantRuntime
 from app.core.database import get_db
 from app.core.config import Settings
+from app.core.security import hash_secret
 from app.main import app
-from app.schemas.ingest import ConsentIn
+from app.schemas.ingest import ClientUpsertIn, ConsentIn
 from app.schemas.whatsapp_turn import TurnClaimIn, TurnCompleteIn, TurnPrepareIn, TurnReceiptIn
-from app.services.ingest_service import save_consent
+from app.services.ingest_service import get_consent, save_consent, upsert_client
 from app.services.tenant_data import tenant_exec_options
+from app.services.tenant_provisioning_service import create_system_event
 from app.services.whatsapp_turn_service import begin_turn_send, claim_turn, complete_turn, prepare_turn, read_turn, reconcile_turn, release_turn
 from app.tenant_models.operations import Lead, Message
 from app.tenant_models.whatsapp_turn import WhatsAppTurn
@@ -207,6 +210,114 @@ class TurnRecoveryTests(PostgresCase):
         self.assertEqual(result["state"], "cancelled")
         self.assertFalse(result["claimed"])
 
+    def test_withdrawal_cancels_pending_turns_across_reauthorization_and_preserves_other_tenants(self):
+        tenant, other = self.ready(), self.ready()
+        phone = "12025550138"
+        generating = self.claim(tenant)
+        waiting = self.claim(tenant, external_message_id="waiting")
+        self.call(release_turn, tenant, waiting["turn_id"], waiting["claim_token"])
+        prepared, _ = self.prepared(tenant, external_message_id="prepared")
+        sending, _ = self.prepared(tenant, external_message_id="sending")
+        self.call(begin_turn_send, tenant, sending["turn_id"], sending["claim_token"])
+        other_turn = self.claim(other)
+        withdrawn = ConsentIn(phone=phone, accepted=False)
+        self.call(save_consent, tenant, withdrawn)
+        self.call(save_consent, tenant, withdrawn)
+        self.call(save_consent, tenant, ConsentIn(phone=phone, accepted=True))
+
+        self.assertEqual(self.claim(tenant)["state"], "cancelled")
+        self.assertEqual(self.claim(tenant, external_message_id="waiting")["state"], "cancelled")
+        self.assertEqual(self.claim(tenant, external_message_id="prepared")["state"], "cancelled")
+        cancelled = self.call(prepare_turn, tenant, generating["turn_id"], TurnPrepareIn(
+            claim_token=generating["claim_token"], reply_body="Late reply"))
+        self.assertEqual(cancelled["state"], "cancelled")
+        self.assertEqual(self.call(read_turn, tenant, prepared["turn_id"])["last_error"], "consent_withdrawn")
+        self.assertEqual(self.call(read_turn, other, other_turn["turn_id"])["state"], "generating")
+        self.assertTrue(self.claim(tenant, external_message_id="new-consultation")["claimed"])
+        completed = self.call(complete_turn, tenant, sending["turn_id"], self.acknowledgement(sending["claim_token"]))
+        self.assertEqual(completed["state"], "completed")
+        with Session(self.engine) as db:
+            events = db.scalars(select(SystemEvent).where(
+                SystemEvent.schema_name == tenant.schema_name,
+                SystemEvent.event_type == "whatsapp.consent.changed",
+            ).order_by(SystemEvent.id)).all()
+            self.assertEqual([event.payload["accepted"] for event in events], [True, False, True])
+
+    def test_client_upsert_withdrawal_leaves_turn_cancelled_after_client_reconsents(self):
+        tenant = self.ready()
+        first = self.claim(tenant)
+        payload = ClientUpsertIn(rut="wa:12025550138", nombre="Contacto de prueba", phone="12025550138",
+                                 consentimiento_datos=False)
+        self.call(upsert_client, tenant, payload)
+        self.call(upsert_client, tenant, ClientUpsertIn(rut=payload.rut, nombre="Nombre actualizado", phone=payload.phone))
+        self.assertFalse(self.call(get_consent, tenant, payload.phone)["consentimiento_datos"])
+        self.call(upsert_client, tenant, payload.model_copy(update={"consentimiento_datos": True}))
+        self.assertEqual(self.call(read_turn, tenant, first["turn_id"])["state"], "cancelled")
+
+    def test_consent_command_replays_do_not_override_a_newer_choice(self):
+        tenant, other = self.ready(), self.ready()
+        accept = ConsentIn(phone="12025550138", accepted=True, external_message_id="accept-1")
+        withdraw = ConsentIn(phone="12025550138", accepted=False, external_message_id="withdraw-1")
+        self.call(save_consent, tenant, accept)
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda _: self.call(save_consent, tenant, withdraw), range(8)))
+        self.assertEqual(sum(not result.get("duplicate", False) for result in results), 1)
+        replayed_acceptance = self.call(save_consent, tenant, accept)
+        self.assertTrue(replayed_acceptance["duplicate"])
+        self.assertFalse(replayed_acceptance["consentimiento_datos"])
+        self.assertFalse(self.call(save_consent, other, withdraw).get("duplicate", False))
+        self.call(save_consent, tenant, accept.model_copy(update={"external_message_id": "accept-2"}))
+        active = self.claim(tenant)
+        replayed_withdrawal = self.call(save_consent, tenant, withdraw)
+        self.assertTrue(replayed_withdrawal["duplicate"])
+        self.assertTrue(replayed_withdrawal["consentimiento_datos"])
+        self.assertEqual(self.call(read_turn, tenant, active["turn_id"])["state"], "generating")
+
+    def test_failed_consent_command_can_be_retried_with_the_same_identity(self):
+        tenant = self.ready()
+        first, _ = self.prepared(tenant)
+        payload = ConsentIn(phone="12025550138", accepted=False, external_message_id="withdraw-after-failure")
+        with patch("app.services.ingest_service._mark_message_processed", side_effect=RuntimeError("Injected failure")):
+            with self.assertRaises(RuntimeError):
+                self.call(save_consent, tenant, payload)
+        self.assertTrue(self.call(get_consent, tenant, payload.phone)["consentimiento_datos"])
+        self.assertEqual(self.call(read_turn, tenant, first["turn_id"])["state"], "prepared")
+        self.assertFalse(self.call(save_consent, tenant, payload).get("duplicate", False))
+        self.assertEqual(self.call(read_turn, tenant, first["turn_id"])["state"], "cancelled")
+
+    def test_withdrawal_and_cancellation_roll_back_together(self):
+        tenant = self.ready()
+        first, _ = self.prepared(tenant)
+        with patch("app.services.ingest_service.create_system_event", side_effect=RuntimeError("Injected failure")):
+            with self.assertRaises(RuntimeError):
+                self.call(save_consent, tenant, ConsentIn(phone="12025550138", accepted=False))
+        self.assertTrue(self.call(get_consent, tenant, "12025550138")["consentimiento_datos"])
+        self.assertEqual(self.call(read_turn, tenant, first["turn_id"])["state"], "prepared")
+
+    def test_send_permission_racing_an_uncommitted_withdrawal_is_denied(self):
+        tenant = self.ready()
+        first, _ = self.prepared(tenant)
+        cancellation_written, finish_withdrawal = Event(), Event()
+
+        def pause_before_commit(*args):
+            cancellation_written.set()
+            if not finish_withdrawal.wait(5):
+                raise TimeoutError("Withdrawal transaction was not released")
+            return create_system_event(*args)
+
+        with patch("app.services.ingest_service.create_system_event", side_effect=pause_before_commit):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                withdrawal = pool.submit(self.call, save_consent, tenant, ConsentIn(phone="12025550138", accepted=False))
+                try:
+                    self.assertTrue(cancellation_written.wait(5))
+                    begin = pool.submit(self.call, begin_turn_send, tenant, first["turn_id"], first["claim_token"])
+                finally:
+                    finish_withdrawal.set()
+                withdrawal.result(timeout=10)
+                result = begin.result(timeout=10)
+        self.assertEqual(result["state"], "cancelled")
+        self.assertFalse(result["claimed"])
+
     def test_untracked_legacy_messages_are_never_automatically_sent(self):
         tenant = self.ready()
         self.ingest(tenant, self.payload())
@@ -226,7 +337,8 @@ class TurnRecoveryTests(PostgresCase):
         tenant = self.ready()
         with Session(self.engine) as db:
             db.add(TenantRuntime(auth_tenant_id=101, schema_name=tenant.schema_name, tenant_slug=tenant.tenant_slug,
-                                 tenant_code=tenant.tenant_code, ingest_key_hash="unused", status="active", plan="free"))
+                                 tenant_code=tenant.tenant_code, ingest_key_hash=hash_secret("synthetic-ingest-key"),
+                                 status="active", plan="free"))
             db.commit()
 
         def sessions():
@@ -264,3 +376,62 @@ class TurnRecoveryTests(PostgresCase):
             _, result, _ = self.http("GET", turn_path, headers=headers)
             self.assertEqual(result["data"]["state"], "completed")
             self.assertIsNone(result["data"]["claim_token"])
+            consent_path = "/api/v1/ingest/whatsapp/consent"
+            withdrawal = {"phone": message["phone"], "accepted": False, "external_message_id": "withdrawal-http"}
+            legacy_headers = {"X-Tenant-Code": tenant.tenant_code, "X-Ingest-Key": "synthetic-ingest-key"}
+            timed_withdrawal = withdrawal | {"sent_at": datetime.now(timezone.utc).isoformat()}
+            self.assertEqual(self.http("POST", consent_path, timed_withdrawal, legacy_headers)[0], 401)
+            self.assertEqual(self.http("POST", consent_path, withdrawal, {
+                "X-Flowkron-Tenant": "101", "X-Baileys-Token": "untrusted",
+            })[0], 401)
+            status, decision, _ = self.http("POST", consent_path, withdrawal, headers)
+            self.assertEqual(status, 200)
+            self.assertFalse(decision["data"]["duplicate"])
+            status, decision, _ = self.http("POST", consent_path, withdrawal, headers)
+            self.assertEqual(status, 200)
+            self.assertTrue(decision["data"]["duplicate"])
+            self.assertEqual(self.http("POST", path, message | {"external_message_id": "no-consent"}, headers)[0], 403)
+            with Session(self.engine.execution_options(**tenant_exec_options(tenant.schema_name))) as db:
+                self.assertEqual(db.scalar(select(func.count()).select_from(Message)), 2)
+            self.assertEqual(self.http("POST", consent_path, {
+                "phone": message["phone"], "accepted": True,
+            }, headers)[0], 200)
+            base = "/api/v1/ingest/whatsapp/turns"
+            queued = message | {
+                "external_message_id": "queued-http", "account_key": "a" * 64,
+                "recipient_jid": f'{message["phone"]}@s.whatsapp.net',
+            }
+            self.assertEqual(self.http("POST", base + "/enqueue", queued | {"recipient_jid": "1@s.whatsapp.net"}, headers)[0], 422)
+            status, admitted, response_headers = self.http("POST", base + "/enqueue", queued, headers)
+            self.assertEqual(status, 202)
+            self.assertEqual(admitted["data"]["disposition"], "accepted")
+            self.assertEqual(response_headers[b"cache-control"], b"no-store")
+            status, ready, _ = self.http("GET", "/api/v1/ingest/whatsapp/runtime-ready", headers=headers)
+            self.assertEqual(status, 200)
+            self.assertTrue(ready["data"]["durable_turns_ready"])
+            self.assertTrue(ready["data"]["provider_receipts_ready"])
+            self.assertTrue(ready["data"]["ordered_consent_ready"])
+            self.assertEqual(self.http("POST", base + "/next", {"account_key": "a" * 64}, {
+                "X-Flowkron-Tenant": "101", "X-Baileys-Token": "untrusted",
+            })[0], 401)
+            status, claimed, _ = self.http("POST", base + "/next", {"account_key": "a" * 64}, headers)
+            self.assertEqual(status, 200)
+            self.assertEqual(claimed["data"]["job"]["turn_id"], admitted["data"]["turn_id"])
+            self.assertTrue(claimed["data"]["job"]["claimed"])
+            job = claimed["data"]["job"]
+            job_path = f"{base}/{job['turn_id']}"
+            token = {"claim_token": job["claim_token"]}
+            provider_id = "receipt-http-provider"
+            self.assertEqual(self.http("POST", job_path + "/prepare", token | {"reply_body": "Respuesta"}, headers)[0], 200)
+            self.assertEqual(self.http("POST", job_path + "/begin-send", token | {"provider_message_id": provider_id}, headers)[0], 200)
+            receipt_path = "/api/v1/ingest/whatsapp/receipts"
+            receipt = {
+                "account_key": "a" * 64, "provider_message_id": provider_id,
+                "recipient_jids": [queued["recipient_jid"]], "status": "delivered",
+            }
+            self.assertEqual(self.http("POST", receipt_path, {"receipts": [receipt]}, {
+                "X-Flowkron-Tenant": "101", "X-Baileys-Token": "untrusted",
+            })[0], 401)
+            status, applied, _ = self.http("POST", receipt_path, {"receipts": [receipt]}, headers)
+            self.assertEqual(status, 200)
+            self.assertEqual(applied["data"]["applied"], 1)

@@ -15,6 +15,7 @@ function scenario(options = {}) {
   let lostCompletion = options.lostCompletion ?? false;
   let savedReply;
   let sends = 0;
+  let canReply = true;
   const request = async (url, payload) => {
     const operation = url.href === agentUrl.href ? "agent" : url.pathname.split("/").at(-1);
     calls.push({ operation, payload });
@@ -33,6 +34,7 @@ function scenario(options = {}) {
     }
     if (operation === "begin-send") {
       state = "sending";
+      if (options.withdrawWhileGranting) canReply = false;
       if (lostBegin) throw new Error("Send permit response lost after commit");
       return { state, claimed: true };
     }
@@ -53,7 +55,7 @@ function scenario(options = {}) {
     if (options.sendFailure) throw new Error("Provider timeout after accepting the send");
     return options.noAcknowledgement ? undefined : { provider_message_id: "real-outgoing-id" };
   };
-  const run = () => processTurn({ body: "Changed replay input" }, reply, base, agentUrl, "1", request);
+  const run = () => processTurn({ body: "Changed replay input" }, reply, base, agentUrl, "1", request, () => canReply);
   return { run, calls, get sends() { return sends; }, get state() { return state; } };
 }
 
@@ -87,6 +89,14 @@ test("provider timeout never retries a possibly accepted send", async () => {
   await assert.rejects(run.run(), /requires reconciliation/);
   assert.equal(run.sends, 1);
   assert.equal(run.state, "unknown");
+});
+
+test("a withdrawal during the send permit request prevents the provider call", async () => {
+  const run = scenario({ withdrawWhileGranting: true });
+  await assert.rejects(run.run(), /send interrupted/);
+  assert.equal(run.sends, 0);
+  assert.equal(run.state, "unknown");
+  assert.equal(run.calls.at(-1).operation, "release");
 });
 
 test("missing provider acknowledgement is unknown, not a successful delivery", async () => {

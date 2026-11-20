@@ -5,7 +5,8 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from rest_framework import serializers as drf_serializers
 from rest_framework import decorators, parsers, permissions, response, status, viewsets
 from rest_framework.views import APIView
 from rest_framework.exceptions import APIException, ValidationError
@@ -29,6 +30,7 @@ from .serializers import (
     TenantMembershipSerializer,
     TenantOnboardingSerializer,
     TenantSerializer,
+    WhatsAppSessionSerializer,
     get_pending_invitation,
 )
 from .services import activate_subscription, create_owned_tenant, ensure_open_workspace, provision_operational_runtime, rotate_operational_ingest_key, sync_operational_runtime_status, stop_workspace
@@ -110,6 +112,16 @@ class TenantViewSet(viewsets.ModelViewSet):
                 queryset = queryset.none()
         return queryset
 
+    @extend_schema(
+        tags=["Tenant WhatsApp"],
+        request=None,
+        responses=inline_serializer("WhatsAppSessionResponse", fields={
+            "success": drf_serializers.BooleanField(),
+            "data": WhatsAppSessionSerializer(),
+            "status": drf_serializers.DictField(),
+            "meta": drf_serializers.DictField(),
+        }),
+    )
     @decorators.action(detail=True, methods=["get", "post", "delete"], url_path="whatsapp")
     @transaction.atomic
     def whatsapp(self, request, pk=None):
@@ -130,11 +142,16 @@ class TenantViewSet(viewsets.ModelViewSet):
                 allow_redirects=False,
             )
             result.raise_for_status()
-            state = result.json()
-            data = {"status": state["status"]}
-            if isinstance(state.get("qr"), str) and state["qr"].startswith("data:image/png;base64,"):
-                data["qr"] = state["qr"]
-        except (requests.RequestException, ValueError, KeyError):
+            snapshot = WhatsAppSessionSerializer(data=result.json())
+            if not snapshot.is_valid():
+                raise ValueError("Invalid WhatsApp session snapshot")
+            data = dict(snapshot.data)
+            expiry = snapshot.validated_data.get("diagnostics", {}).get("qr_expires_at")
+            qr = data.get("qr", "")
+            if (data["status"] != "qr_pending" or not expiry or expiry <= timezone.now()
+                    or not qr.startswith("data:image/png;base64,")):
+                data.pop("qr", None)
+        except (requests.RequestException, ValueError):
             return api_error(status=503, error_code="WHATSAPP_UNAVAILABLE", detail="No pudimos contactar el conector de WhatsApp. Reintenta en unos segundos.")
         result = ok(data)
         result["Cache-Control"] = "no-store"

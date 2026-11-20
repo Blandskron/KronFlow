@@ -1,4 +1,5 @@
-from app.tenant_models.whatsapp_turn import WhatsAppTurn
+from app.tenant_models.whatsapp_consent import WhatsAppConsentState
+from app.tenant_models.whatsapp_turn import WhatsAppSendEvidence, WhatsAppTurn, WhatsAppTurnJob
 from app.tenant_models.operations import (
     ACTIVE_TENANT_TABLE_NAMES,
     Cliente,
@@ -26,6 +27,9 @@ from app.tenant_models.context import (
 
 __all__ = [
     "WhatsAppTurn",
+    "WhatsAppConsentState",
+    "WhatsAppTurnJob",
+    "WhatsAppSendEvidence",
     "ACTIVE_TENANT_TABLE_NAMES",
     "BusinessContextDocument",
     "BusinessContextField",

@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from django.contrib.auth import get_user_model
 import json
 from django.test import TestCase, override_settings
@@ -33,6 +33,87 @@ class TenantOnboardingTests(TestCase):
         membership = TenantMembership.objects.get(user=user, tenant_id=response.data["data"]["tenant_id"])
         self.assertTrue(membership.membership_roles.filter(role__code="TENANT_OWNER").exists())
         self.assertIn("whatsapp.connect", response.data["data"]["permissions"])
+
+
+@override_settings(BAILEYS_INTERNAL_TOKEN="synthetic-connector-test-credential", BAILEYS_SERVICE_URL="http://connector.test")
+class WhatsAppDiagnosticsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(username="whatsapp-owner")
+        cls.tenant, _ = create_owned_tenant(cls.owner, "WhatsApp Test")
+        cls.other, _ = create_owned_tenant(cls.owner, "Other WhatsApp Test")
+        cls.member = get_user_model().objects.create_user(username="member-without-whatsapp")
+        TenantMembership.objects.create(
+            user=cls.member, tenant=cls.tenant, status=TenantMembership.Status.ACTIVE,
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner, token={"tenant_id": self.tenant.pk})
+        self.path = f"/api/v1/tenants/{self.tenant.pk}/whatsapp/"
+
+    def diagnostics(self, **fields):
+        return {
+            "status_changed_at": timezone.now().isoformat(),
+            "retry_attempts": 0,
+            "retry_limit": 5,
+            "retry_exhausted": False,
+            "next_action": "scan",
+            **fields,
+        }
+
+    @patch("apps.tenants.views.requests.request")
+    def test_proxies_allowlisted_diagnostics_and_an_unexpired_qr(self, upstream):
+        now = timezone.now()
+        upstream.return_value = Mock()
+        upstream.return_value.json.return_value = {
+            "status": "qr_pending",
+            "qr": "data:image/png;base64,YWJj",
+            "diagnostics": self.diagnostics(
+                qr_expires_at=(now + timezone.timedelta(seconds=25)).isoformat(),
+                recent_transitions=[{"status": "connecting", "changed_at": now.isoformat()}],
+                private_debug="private-transport-value",
+            ),
+            "session_secret": "private-session-value",
+        }
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(response.data["data"]["qr"], "data:image/png;base64,YWJj")
+        self.assertEqual(response.data["data"]["diagnostics"]["next_action"], "scan")
+        self.assertEqual(response.data["data"]["diagnostics"]["recent_transitions"][0]["status"], "connecting")
+        self.assertNotIn(b"private-", response.content)
+        self.assertTrue(upstream.call_args.args[1].endswith(f"/tenants/{self.tenant.pk}/session"))
+
+    @patch("apps.tenants.views.requests.request")
+    def test_expired_missing_and_nonpending_qrs_are_filtered(self, upstream):
+        now = timezone.now()
+        snapshots = [
+            {"status": "qr_pending", "diagnostics": self.diagnostics(qr_expires_at=(now - timezone.timedelta(seconds=1)).isoformat())},
+            {"status": "qr_pending"},
+            {"status": "connected", "diagnostics": self.diagnostics(qr_expires_at=(now + timezone.timedelta(seconds=25)).isoformat())},
+        ]
+        for snapshot in snapshots:
+            with self.subTest(status=snapshot["status"]):
+                upstream.return_value.json.return_value = snapshot | {"qr": "data:image/png;base64,YWJj"}
+                response = self.client.get(self.path)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("qr", response.data["data"])
+
+    @patch("apps.tenants.views.requests.request")
+    def test_foreign_tenant_and_missing_permission_cannot_reach_connector(self, upstream):
+        other = f"/api/v1/tenants/{self.other.pk}/whatsapp/"
+        self.assertEqual(self.client.get(other).status_code, 404)
+        self.client.force_authenticate(user=self.member, token={"tenant_id": self.tenant.pk})
+        self.assertEqual(self.client.get(self.path).status_code, 403)
+        upstream.assert_not_called()
+
+    @patch("apps.tenants.views.requests.request")
+    def test_malformed_upstream_data_is_reduced_to_a_generic_error(self, upstream):
+        upstream.return_value.json.return_value = {"status": "private-transport-value"}
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn(b"private-transport-value", response.content)
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

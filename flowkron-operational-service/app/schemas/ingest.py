@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
 
 class WhatsAppMessageIn(BaseModel):
@@ -48,12 +48,25 @@ class ConsentIn(BaseModel):
     accepted: bool = True
     channel: str = Field(default="whatsapp", max_length=40)
     policy_version: str = Field(default="v1.0", max_length=40)
+    external_message_id: str | None = Field(default=None, min_length=1, max_length=220)
+    sent_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def check_message_timestamp(self):
+        if self.sent_at is not None and self.external_message_id is None:
+            raise ValueError("A consent message timestamp requires its external ID")
+        return self
 
 
 class ConsentOut(BaseModel):
     phone: str
     consentimiento_datos: bool = False
     fecha_consentimiento: datetime | None = None
+
+
+class ConsentUpdateOut(ConsentOut):
+    duplicate: bool = False
+    stale: bool = False
 
 
 class CustomerOut(BaseModel):

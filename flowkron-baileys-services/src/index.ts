@@ -16,7 +16,9 @@ const sessions = new Map<string, WhatsAppConnection>();
 function tenantSession(id: string) {
   let session = sessions.get(id);
   if (!session) {
-    session = new WhatsAppConnection(join(directory, `tenant-${id}`), tenantIngest(id, token, operational, agent), undefined, () => canConnect(id));
+    session = new WhatsAppConnection(
+      join(directory, `tenant-${id}`), tenantIngest(id, token, operational, agent), undefined, () => canConnect(id), true
+    );
     sessions.set(id, session);
   }
   return session;
@@ -28,7 +30,10 @@ async function canConnect(id: string) {
     redirect: "error",
     signal: AbortSignal.timeout(5000)
   });
-  return response.ok;
+  if (!response.ok) return false;
+  const json = await response.json();
+  return json.data?.durable_turns_ready === true && json.data?.provider_receipts_ready === true &&
+    json.data?.ordered_consent_ready === true;
 }
 
 const server = createHttpServer(legacy, token, tenantSession);

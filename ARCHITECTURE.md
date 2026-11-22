@@ -1,5 +1,7 @@
 # Flowkron architecture
 
+See the [Community v1 roadmap](EVOLUCION_FLOWKRON.md) and [proposed architecture decisions](docs/planning/v1/02-architecture-adrs.md) for planned changes.
+
 | Boundary | Implementation | Responsibilities |
 | --- | --- | --- |
 | Browser | [CRM Angular](flowkron-front-app-angular/README.md) and [landing Angular](flowkron-front-landing-angular/README.md) | Auth and tenant context, read-only inbox, operations, agent setup, public contact form |

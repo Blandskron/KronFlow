@@ -1,0 +1,36 @@
+# Trazabilidad de tickets, código y pruebas
+
+Los estados y las dependencias están en el [roadmap canónico](../../../EVOLUCION_FLOWKRON.md). Las rutas y pruebas de esta tabla son evidencia existente, salvo donde se indica «propuesto». Cada ticket histórico conserva su ID; FK-28 a FK-30 son las brechas que necesitan entregables de producto propios. [Inventario al corte inicial](01-audit.md#reconciliación-de-los-27-tickets)
+
+| ID | Fuente o implementación observada | Evidencia actual o aceptación propuesta |
+| --- | --- | --- |
+| FK-01 | [Schema de mensaje](../../../flowkron-operational-service/app/services/tenant_message_schema.py) | [Identidad, concurrencia y upgrade](../../../flowkron-operational-service/tests/test_message_identity.py) |
+| FK-02 | [Servicio de turnos](../../../flowkron-operational-service/app/services/whatsapp_turn_service.py) | [Recuperación y reconciliación](../../../flowkron-operational-service/tests/test_turn_recovery.py) |
+| FK-03 | [Cola durable](../../../flowkron-operational-service/app/tenant_models/whatsapp_turn.py) | [Interrupción y reprogramación](../../../flowkron-operational-service/tests/test_turn_jobs.py); outbox general propuesto en el [ADR](02-architecture-adrs.md). |
+| FK-04 | [Consentimiento y cancelación](../../../flowkron-operational-service/app/services/ingest_service.py) | [Orden y baja](../../../flowkron-operational-service/tests/test_turn_jobs.py); ampliar al [gate de campañas](04-campaigns.md). |
+| FK-05 | [Endpoint IAM de WhatsApp](../../../flowkron-auth-service/apps/tenants/views.py) | [Permisos y QR](../../../flowkron-auth-service/apps/tenants/tests.py) y [Playwright con API simulada](../../../flowkron-front-app-angular/tests/visual/flowkron-front.visual.spec.ts). |
+| FK-06 | [API de conversación](../../../flowkron-operational-service/app/api/v1/conversations.py) | [E2E de control y handoff propuesto](03-inbound-crm.md#evidencia-de-aceptación-y-alcance). |
+| FK-07 | [Normalización de recibos](../../../flowkron-baileys-services/src/receipts.ts) | [Entrega incierta y evidencia monotónica](../../../flowkron-operational-service/tests/test_turn_jobs.py). |
+| FK-08 | [Queries de inbox](../../../flowkron-operational-service/app/services/conversation_service.py) | [Búsqueda, cursor, tenant y lectura](../../../flowkron-operational-service/tests/test_conversation_inbox.py). |
+| FK-09 | [Metadata HTTP](../../../flowkron-operational-service/app/core/contracts.py), [agregación](../../../flowkron-operational-service/app/services/analytics_service.py) | [Tests de metadata](../../../flowkron-operational-service/tests/test_contract_metadata.py) y [KPIs propuestos](05-analytics.md). |
+| FK-10 | [Envelope de eventos](../../../flowkron-api-contracts/schemas/events/domain-event.schema.json) | [Catálogo y replay propuestos](05-analytics.md). |
+| FK-11 | [Envelope webhook](../../../flowkron-api-contracts/schemas/webhooks/webhook-envelope.schema.json) | Aplicar [seguridad y pruebas propuestas de entrega](07-security-quality-release.md#amenazas-controles-y-evidencia-exigida). |
+| FK-12 | [API de credenciales IAM](../../../flowkron-auth-service/apps/security/views.py) | [Scope y pruebas de captura propuestas](03-inbound-crm.md#captación-y-contratos-propuestos). |
+| FK-13 | [Modelos de mensaje](../../../flowkron-operational-service/app/tenant_models/operations.py) | Probar archivo restringido por recurso, tamaño y retención al ejecutar el alcance POST-v1. |
+| FK-14 | [Conexión Baileys](../../../flowkron-baileys-services/src/connection.ts) | [Reinicio simulado](../../../flowkron-baileys-services/test/connector.test.mjs) y [gates propuestos por proveedor](04-campaigns.md). |
+| FK-15 | [Validate](../../../.github/workflows/validate.yml) y [smoke](../../../flowkron-deploy/bootstrap/smoke.py) | [Reproducción PostgreSQL](../../../flowkron-operational-service/docs/TESTING.md), [gates de upgrade y restore](RELEASE_GATES.md). |
+| FK-16 | [README](../../../README.md), [docs Operational](../../../flowkron-operational-service/docs/README.md) | [UX y mapa documental](06-ux-docs-onboarding.md); contrastar portal con runbooks y contratos. |
+| FK-17 | [Preparación de acciones en Agent Core](../../../flowkron-agent-core/app/infrastructure/external_tools/mock_tools.py) | [Aceptación de propuestas y ejecución](03-inbound-crm.md#evidencia-de-aceptación-y-alcance). |
+| FK-18 | [Plan de control e historial](03-inbound-crm.md#control-de-conversación) | Probar aprobar, rechazar, expirar y reintentar sin repetir efectos. |
+| FK-19 | [Turnos recuperables](../../../flowkron-operational-service/docs/TURN_RECOVERY.md) | [Criterios propuestos de control humano y retorno](03-inbound-crm.md#control-de-conversación). |
+| FK-20 | [Runtime de Agent](../../../flowkron-agent-core/app/application/orchestration/agent_runtime.py) | [Límites de Agent](../../../flowkron-agent-core/app/tests/test_security_boundaries.py); verificar memoria y retención por conversación. |
+| FK-21 | [API de leads](../../../flowkron-operational-service/app/api/v1/leads.py) | [Caso de datos confirmados](03-inbound-crm.md#evidencia-de-aceptación-y-alcance). |
+| FK-22 | [Historial del ticket](https://github.com/Blandskron/flowkron/blob/c5da59aed5ae8a1aa63b6413ed81b48b13c58fb7/EVOLUCION_FLOWKRON.md) | Probar conflicto de reserva y confirmación con calendario stub al ejecutar el alcance POST-v1. |
+| FK-23 | [Gateway de email](../../../smtp-http-blandskron/app/service.py) | [Tests de API de correo](../../../smtp-http-blandskron/tests/test_api.py); trazabilidad en conversación pendiente. |
+| FK-24 | [Autorización de remitente](../../../smtp-http-blandskron/app/security.py) | [Perfil y condición de habilitación por canal](04-campaigns.md#alcance-v1-y-proveedores). |
+| FK-25 | [Vista de notificaciones](../../../flowkron-front-app-angular/src/app/domains/dashboard/features/notifications-page/notifications-page.component.ts) | [Aceptación UI propuesta](06-ux-docs-onboarding.md#páginas-y-criterios-de-aceptación). |
+| FK-26 | [Rutas de trazas](../../../flowkron-agent-core/app/api/v1/routes/traces.py) | [KPIs de IA y pruebas propuestas](05-analytics.md#diccionario-de-kpis-y-reglas-de-consistencia). |
+| FK-27 | [Solicitudes en ingesta](../../../flowkron-operational-service/app/api/ingest/whatsapp.py) | [Gates de backup, retención y privacidad](RELEASE_GATES.md). |
+| FK-28 | Nueva capacidad sobre [modelos activos](../../../flowkron-operational-service/app/tenant_models/operations.py) | [Modelo canónico y prueba de deduplicación por tenant](03-inbound-crm.md#modelo-y-propietarios). |
+| FK-29 | Nueva capacidad sobre la [vista de seguimiento](../../../flowkron-front-app-angular/src/app/domains/leads/features/workflows-page/workflows-page.component.ts) | [Aceptación de etapa y cierre comercial](03-inbound-crm.md#evidencia-de-aceptación-y-alcance). |
+| FK-30 | Nuevo módulo [diseñado para Operational](04-campaigns.md) | [Gates de plantilla, aprobación, baja y comprobación por canal](04-campaigns.md#pruebas-y-secuencia-de-entrega). |

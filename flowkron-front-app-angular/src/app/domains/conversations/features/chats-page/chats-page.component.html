@@ -13,6 +13,9 @@
     <div class="inbox" [class.thread-open]="selectedChat()">
       <section class="card list glass-surface" aria-label="Lista de conversaciones">
         <div class="filters">
+          @if (contactFilter()) {
+            <p class="muted">Conversaciones de un contacto <button type="button" class="btn btn-secondary" (click)="clearFilters()">Ver todos los contactos</button></p>
+          }
           <label class="search-field">
             <svg lucideSearch size="18" aria-hidden="true"></svg>
             <input #search id="conversation-search" type="search" aria-label="Buscar conversaciones"
@@ -33,7 +36,7 @@
           <p class="muted state" role="alert">{{ loadError() }}</p>
         } @else if (chats().length === 0) {
           <div class="state">
-            @if (searchQuery().trim() || filterStatus() !== 'all') {
+            @if (searchQuery().trim() || filterStatus() !== 'all' || contactFilter()) {
               <p class="muted" role="status">No encontramos conversaciones con estos filtros.</p>
               <button class="btn btn-secondary" type="button" (click)="clearFilters(); search.focus()">Limpiar filtros</button>
             } @else {

@@ -88,3 +88,14 @@ class ContactDirectoryTests(PostgresCase):
         self.assertEqual(detail["data"], filtered["data"]["items"][0])
         self.assertEqual(http(self, "GET", path + "/31", headers={"X-Tenant-ID": "813"})[0], 404)
         self.assertEqual(http(self, "GET", path + "/0")[0], 422)
+
+        payload = {"full_name": "  Nombre actualizado  ", "expected_full_name": "Contacto 100%"}
+        self.assertEqual(http(self, "PATCH", path + "/1", payload)[0], 403)
+        permissions.append("crm.manage")
+        self.assertEqual(http(self, "PATCH", path + "/31", payload)[0], 404)
+        self.assertEqual(http(self, "PATCH", path + "/1", payload | {"full_name": "  "})[0], 422)
+        status, saved, _ = http(self, "PATCH", path + "/1", payload)
+        self.assertEqual(status, 200)
+        self.assertEqual(saved["data"], detail["data"] | {"full_name": "Nombre actualizado"})
+        self.assertEqual(http(self, "PATCH", path + "/1", payload)[0], 409)
+        self.assertEqual(http(self, "GET", path + "/1")[1]["data"]["full_name"], "Nombre actualizado")

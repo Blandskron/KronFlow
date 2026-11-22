@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -17,12 +19,18 @@ def list_endpoint(
     temperature: str | None = None,
     lifecycle_status: str | None = None,
     direction: str | None = None,
+    q: str | None = Query(default=None, max_length=120),
+    contact_id: int | None = Query(default=None, ge=1, le=9223372036854775807),
+    status_group: Literal["open", "closed"] | None = None,
     tenant: TenantContext = Depends(resolve_tenant_from_jwt),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     limit = min(limit, settings.max_page_size)
-    items, total = list_leads(db, tenant, limit, offset, temperature, lifecycle_status, direction)
+    items, total = list_leads(
+        db, tenant, limit, offset, temperature, lifecycle_status, direction,
+        search=q, contact_id=contact_id, status_group=status_group,
+    )
     return LeadListResponse(items=items, total=total, limit=limit, offset=offset)
 
 

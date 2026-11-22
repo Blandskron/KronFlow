@@ -1,14 +1,15 @@
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.core.tenant_resolver import TenantContext, resolve_tenant_from_jwt
-from app.schemas.contact import ContactListResponse, ContactOut
+from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
+from app.schemas.contact import ContactListResponse, ContactNameUpdate, ContactOut
 from app.services.tenant_data import count_for_tenant, execute_for_tenant
+from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente
 
 router = APIRouter(prefix="/api/v1/contacts", tags=["Contacts"])
@@ -71,4 +72,27 @@ def get_contact(
     contact = execute_for_tenant(db, tenant.schema_name, statement).mappings().one_or_none()
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
+    return ContactOut.model_validate(contact)
+
+
+@router.patch("/{contact_id}", response_model=ContactOut)
+def update_contact_name(
+    payload: ContactNameUpdate,
+    contact_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_crm_editor), db: Session = Depends(get_db),
+):
+    current = execute_for_tenant(db, tenant.schema_name, select(*contact_fields).where(
+        Cliente.id == contact_id,
+    ).with_for_update()).mappings().one_or_none()
+    if current is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    if current["full_name"] != payload.expected_full_name:
+        raise HTTPException(status_code=409, detail="Contact name changed since it was loaded")
+    if current["full_name"] == payload.full_name:
+        return ContactOut.model_validate(current)
+
+    statement = update(Cliente).where(Cliente.id == contact_id).values(nombre=payload.full_name).returning(*contact_fields)
+    contact = execute_for_tenant(db, tenant.schema_name, statement).mappings().one()
+    create_system_event(db, "crm.contact.renamed", tenant.auth_tenant_id, tenant.schema_name, {"contact_id": contact_id})
+    db.commit()
     return ContactOut.model_validate(contact)

@@ -19,6 +19,7 @@ export class ConversationsApiService {
     before_at?: string;
     before_id?: number;
     q?: string;
+    contact_id?: number;
   } = {}): Observable<PaginatedResponse<Conversation> & { next_cursor?: ConversationCursor | null }> {
     return this.http
       .get<ApiResponse<PaginatedResponse<Conversation> & { next_cursor?: ConversationCursor | null }>>(`${OPERATIONAL_API_BASE_URL}/conversations`, {

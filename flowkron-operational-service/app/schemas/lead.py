@@ -1,6 +1,10 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import AwareDatetime, BaseModel, Field, field_validator
+
+LeadStage = Literal["nuevo", "contactado", "en_proceso", "ganado", "perdido"]
 
 
 class LeadOut(BaseModel):
@@ -25,11 +29,26 @@ class LeadUpdate(BaseModel):
     email: str | None = Field(default=None, max_length=180)
     direction: str | None = Field(default=None, max_length=24)
     temperature: str | None = Field(default=None, max_length=24)
-    lifecycle_status: str | None = Field(default=None, max_length=32)
-    assigned_to_user_id: int | None = None
+    lifecycle_status: LeadStage | None = None
+    expected_updated_at: AwareDatetime | None = None
+    assigned_to_user_id: int | None = Field(default=None, ge=1, le=2147483647)
     score: int | None = Field(default=None, ge=0, le=100)
     tags: list[str] | None = None
     metadata: dict | None = None
+
+    @field_validator("lifecycle_status", "score", "temperature")
+    @classmethod
+    def validate_update_value(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be set to null")
+        return value
+
+    @field_validator("temperature")
+    @classmethod
+    def validate_temperature(cls, value: str) -> str:
+        if value not in {"cold", "warm", "hot", "frio", "tibio", "caliente"}:
+            raise ValueError("Unknown lead classification")
+        return value
 
 
 class LeadListResponse(BaseModel):

@@ -109,25 +109,25 @@ Los endpoints extendidos existen para que el adaptador no escriba directo en Pos
 
 ## Dashboard JWT
 
-Todas las rutas siguientes exigen `Authorization: Bearer <JWT humano>`. Se valida firma RS256, issuer, audience, expiración y claim `tenant_id`; además runtime activo y plan distinto de Free.
-
-Importante: hoy no se exigen permisos como `users.read`, `crm.manage` o `agents.create`; `require_permission` no está conectado a estos routers.
+Todas las rutas siguientes exigen `Authorization: Bearer <JWT humano>`. Se validan firma RS256, issuer, audience, expiración, tipo de token, tenant y runtime activo. Las lecturas CRM requieren `users.read`, las escrituras de CRM requieren `crm.manage` y las rutas de agentes y auditoría comprueban sus permisos específicos.
 
 ### Leads
 
 | Método y ruta | Detalle |
 | --- | --- |
-| `GET /api/v1/leads` | Paginación; filtros `temperature`, `lifecycle_status`, `direction` |
+| `GET /api/v1/leads` | Paginación por fecha de actualización e ID descendentes; filtros `q`, `contact_id`, `status_group`, `temperature`, `lifecycle_status`, `direction` |
 | `GET /api/v1/leads/{lead_id}` | Detalle adaptado al contrato frontend |
-| `PATCH /api/v1/leads/{lead_id}` | Actualiza nombre/email/clasificación/estado/ejecutivo/score |
+| `PATCH /api/v1/leads/{lead_id}` | Actualiza nombre/email/clasificación/estado/ejecutivo/score. `expected_updated_at` protege la edición contra cambios posteriores (`409`). |
 
 `direction` en el filtro: cualquier valor distinto de `inbound` fuerza una consulta vacía. En `LeadUpdate`, los campos `direction`, `tags` y `metadata` están aceptados por Pydantic pero el service no los persiste actualmente.
+
+`q` busca una subcadena literal por nombre, correo o teléfono. `status_group=closed` incluye `ganado` y `perdido`; `open` incluye las demás etapas. `contact_id` filtra por la referencia tenant del lead. Los cambios válidos de etapa quedan auditados en la misma transacción con el ID y la transición, sin copiar datos de contacto. Una etapa, clasificación, puntuación o asignación inválida devuelve `422`.
 
 ### Conversaciones y mensajes
 
 | Método y ruta | Detalle |
 | --- | --- |
-| `GET /api/v1/conversations` | Filtros SQL `status`, `channel`, `requires_human` y `q`. Admite continuación por `before_at` y `before_id`; conserva `offset` |
+| `GET /api/v1/conversations` | Filtros SQL `status`, `channel`, `requires_human`, `q` y `contact_id`. Admite continuación por `before_at` y `before_id`; conserva `offset` |
 | `GET /api/v1/conversations/{id}` | Detalle |
 | `POST /api/v1/conversations/{id}/read` | Lectura compartida hasta `through_message_id`, con permiso `crm.manage`. Devuelve el contador `no_leidos` |
 | `GET /api/v1/conversations/{id}/messages` | Mensajes asociados por `session_id/whatsapp_id` |
@@ -140,11 +140,15 @@ Los mensajes de salida exponen `delivery_status` y el motivo normalizado cuando 
 
 El modelo activo de conversación es un JSON por `session_id`, no la tabla relacional descrita por los módulos legacy.
 
+`contact_id` incluye hilos cuyo lead asociado en la Bandeja referencia ese contacto. Los hilos sin un lead asociado quedan fuera de ese filtro.
+
 ### Contactos
 
 `GET /api/v1/contacts` consulta el directorio de la empresa autenticada con `users.read`. Admite `limit`, `offset`, `source` para filtrar por origen exacto y `q` para buscar por nombre, correo, teléfono e identificador WhatsApp sin distinguir mayúsculas. Las consultas con formato telefónico y al menos cuatro dígitos comparan también los números sin puntuación. El orden es fecha de creación e ID descendentes. `data` incluye `items`, `total`, `limit` y `offset`.
 
-`GET /api/v1/contacts/sources` devuelve hasta cien orígenes únicos ordenados de la empresa activa. `GET /api/v1/contacts/{contact_id}` devuelve el mismo tipo de contacto que el listado o `404` cuando no existe en la empresa. Ambos requieren `users.read`. Los contactos devuelven ID, nombre, correo y teléfono opcionales, origen y fecha de creación. Estos endpoints son de lectura y su alcance excluye datos fiscales y decisiones de consentimiento.
+`GET /api/v1/contacts/sources` devuelve hasta cien orígenes únicos ordenados de la empresa activa. `GET /api/v1/contacts/{contact_id}` devuelve el mismo tipo de contacto que el listado o `404` cuando no existe en la empresa. Ambos requieren `users.read`. Los contactos devuelven ID, nombre, correo y teléfono opcionales, origen y fecha de creación.
+
+`PATCH /api/v1/contacts/{contact_id}` requiere `crm.manage` y guarda `full_name` si `expected_full_name` coincide con el registro bajo bloqueo. Devuelve `409` si el contacto cambió y registra una auditoría con el ID al guardar un nombre distinto. La operación conserva los datos de contacto y las decisiones de consentimiento existentes.
 
 ### Analytics
 

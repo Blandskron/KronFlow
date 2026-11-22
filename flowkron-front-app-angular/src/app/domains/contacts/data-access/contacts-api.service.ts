@@ -32,4 +32,10 @@ export class ContactsApiService {
     return this.http.get<ApiResponse<Contact>>(`${OPERATIONAL_API_BASE_URL}/contacts/${encodeURIComponent(id)}`)
       .pipe(map(({ data }) => data));
   }
+
+  rename(id: number, fullName: string, expectedName: string) {
+    return this.http.patch<ApiResponse<Contact>>(`${OPERATIONAL_API_BASE_URL}/contacts/${id}`, {
+      full_name: fullName, expected_full_name: expectedName
+    }).pipe(map(({ data }) => data));
+  }
 }

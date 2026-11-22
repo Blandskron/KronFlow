@@ -5,13 +5,14 @@ from time import perf_counter
 from unittest import skipUnless
 from unittest.mock import patch
 
-from sqlalchemy import event, text, update
+from sqlalchemy import event, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import CurrentPrincipal, get_current_principal
 from app.core.tenant_resolver import quote_identifier
 from app.main import app
+from app.public_models.system_event import SystemEvent
 from app.public_models.tenant_runtime import TenantRuntime
 from app.services.analytics_service import analytics_summary
 from app.services.conversation_service import get_conversation, list_conversations, mark_conversation_read
@@ -187,6 +188,65 @@ class ConversationInboxTests(PostgresCase):
         status, result, _ = http(self, "POST", path, payload)
         self.assertEqual(status, 200)
         self.assertEqual(result["data"]["no_leidos"], 0)
+
+    def test_contact_activity_and_commercial_stage_updates(self):
+        tenant, other = self.tenant(), self.tenant()
+        first = self.insert(tenant, "first", "12025550138", full_name="Contacto 100%")
+        second = self.insert(tenant, "second", "12025550139", full_name="Contacto dos")
+        self.insert(other, "foreign", "12025550138", full_name="Contacto ajeno")
+
+        with Session(self.engine.execution_options(**tenant_exec_options(tenant.schema_name))) as db:
+            contact_id = db.get(Lead, first["lead_id"]).cliente_id
+            db.execute(update(Lead).where(Lead.id == second["lead_id"]).values(estado="perdido"))
+            db.execute(update(Lead).where(Lead.id == first["lead_id"]).values(estado="nuevo"))
+            db.commit()
+        with Session(self.engine) as db:
+            db.add(TenantRuntime(auth_tenant_id=814, schema_name=tenant.schema_name, tenant_slug=tenant.tenant_slug,
+                                 tenant_code=tenant.tenant_code, ingest_key_hash="unused", status="active", plan="free"))
+            db.commit()
+
+        def sessions():
+            with Session(self.engine) as db:
+                yield db
+
+        permissions = ["users.read"]
+        app.dependency_overrides[get_db] = sessions
+        app.dependency_overrides[get_current_principal] = lambda: CurrentPrincipal("viewer", 814, None, [], permissions, {}, {})
+        self.addCleanup(app.dependency_overrides.clear)
+        http = test_turn_recovery.TurnRecoveryTests.http
+        path = "/api/v1/leads"
+        status, activity, _ = http(self, "GET", f"{path}?contact_id={contact_id}&status_group=open&q=100%25")
+        self.assertEqual(status, 200)
+        self.assertEqual(activity["data"]["total"], 1)
+        lead = activity["data"]["items"][0]
+        self.assertEqual(lead["id"], first["lead_id"])
+        self.assertEqual(http(self, "GET", path + "?q=ajeno")[1]["data"]["total"], 0)
+        ids = [http(self, "GET", f"{path}?limit=1&offset={offset}")[1]["data"]["items"][0]["id"] for offset in (0, 1)]
+        self.assertEqual(ids, [second["lead_id"], first["lead_id"]])
+        closed = http(self, "GET", path + "?status_group=closed&limit=1")[1]["data"]
+        self.assertEqual([item["id"] for item in closed["items"]], [second["lead_id"]])
+        threads = http(self, "GET", f"/api/v1/conversations?contact_id={contact_id}")[1]["data"]
+        self.assertEqual([item["id"] for item in threads["items"]], [first["conversation_id"]])
+
+        resource = f"{path}/{lead['id']}"
+        move = {"lifecycle_status": "contactado", "expected_updated_at": lead["updated_at"]}
+        self.assertEqual(http(self, "PATCH", resource, move)[0], 403)
+        permissions.append("crm.manage")
+        self.assertEqual(http(self, "PATCH", resource, {"lifecycle_status": "invalido"})[0], 422)
+        self.assertEqual(http(self, "PATCH", resource, {"score": None})[0], 422)
+        self.assertEqual(http(self, "PATCH", resource, {"assigned_to_user_id": 123456})[0], 422)
+        status, updated, _ = http(self, "PATCH", resource, move)
+        self.assertEqual(status, 200)
+        self.assertEqual(updated["data"]["lifecycle_status"], "contactado")
+        self.assertEqual(http(self, "PATCH", resource, move | {"lifecycle_status": "ganado"})[0], 409)
+
+        with Session(self.engine) as db:
+            events = db.scalars(select(SystemEvent).where(
+                SystemEvent.schema_name == tenant.schema_name, SystemEvent.event_type == "crm.lead.stage.changed",
+            )).all()
+            self.assertEqual([event.payload for event in events], [
+                {"lead_id": lead["id"], "previous_stage": "nuevo", "stage": "contactado"},
+            ])
 
     @skipUnless(os.getenv("FLOWKRON_TEST_INBOX_BENCHMARK") == "1", "Set FLOWKRON_TEST_INBOX_BENCHMARK=1 for volume checks")
     def test_inbox_query_budget(self):

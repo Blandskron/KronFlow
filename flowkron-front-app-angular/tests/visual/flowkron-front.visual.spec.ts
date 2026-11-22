@@ -3,6 +3,89 @@ import { expect, test } from '@playwright/test';
 const baseUrl = process.env['BASE_URL'] ?? 'http://127.0.0.1:8081';
 
 test.describe('Flowkron app visual smoke', () => {
+  test('contact activity opens leads and saves changes with the expected versions', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowkron.access_token', 'synthetic-test-session');
+      localStorage.setItem('flowkron.tenant_id', '1');
+    });
+    const timestamp = '2026-01-01T12:00:00Z';
+    let fullName = 'Contacto inicial';
+    let stage = 'nuevo';
+    const patches: unknown[] = [];
+    const leadFilters: string[] = [];
+    await page.route('**/api/v1/**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-tenant-id, x-correlation-id, content-type',
+        'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS'
+      };
+      const respond = (data: object) => route.fulfill({ headers, json: { success: true, data } });
+      if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+      if (url.pathname.endsWith('/auth/me/')) return respond({
+        user: { id: 1, email: 'operator@example.test', first_name: 'Operador' },
+        tenant: { id: 1, name: 'Empresa sintética', status: 'active', slug: 'test' },
+        permissions: ['users.read', 'crm.manage'], roles: [], subscription: null
+      });
+      if (url.pathname.endsWith('/contacts/1')) {
+        if (request.method() === 'PATCH') {
+          const data = request.postDataJSON();
+          patches.push(data);
+          fullName = data.full_name;
+        }
+        return respond({ id: 1, full_name: fullName, email: null, phone: null, source: 'web', created_at: timestamp });
+      }
+      const lead = () => ({ id: 2, full_name: fullName, lifecycle_status: stage, updated_at: timestamp });
+      if (url.pathname.endsWith('/leads/2') && request.method() === 'PATCH') {
+        const data = request.postDataJSON();
+        patches.push(data);
+        stage = data.lifecycle_status;
+        return respond(lead());
+      }
+      if (url.pathname.endsWith('/leads')) {
+        leadFilters.push(url.search);
+        return respond({ items: [lead()], total: 1, limit: Number(url.searchParams.get('limit')), offset: 0 });
+      }
+      if (url.pathname.endsWith('/conversations')) return respond({
+        items: [{
+          id: 3, lead_name: fullName, last_message_at: timestamp, updated_at: timestamp,
+          channel: 'whatsapp', status: 'new', no_leidos: 0
+        }], total: 7, limit: 5, offset: 0
+      });
+      return route.fulfill({ status: 404, headers });
+    });
+
+    await page.goto(`${baseUrl}/app/contacts/1`);
+    await expect(page.getByRole('heading', { name: 'Contacto inicial' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('region', { name: 'Conversaciones vinculadas' })
+      .locator('a[href="/app/conversations?conversation=3"]')).toBeVisible();
+    await expect(page.getByText('Lead #2 · Nuevo')).toBeVisible();
+    await page.getByRole('textbox', { name: 'Nombre del contacto' }).fill('Contacto actualizado');
+    await page.getByRole('button', { name: 'Guardar nombre' }).click();
+    await expect(page.getByRole('heading', { name: 'Contacto actualizado' })).toBeVisible();
+    await page.getByRole('link', { name: 'Ver seguimiento de leads' }).click();
+    await expect(page.getByRole('heading', { name: 'Seguimiento de leads' })).toBeVisible();
+    await page.getByRole('combobox', { name: 'Estado' }).selectOption('open');
+    await page.getByRole('searchbox', { name: 'Buscar lead' }).fill('actualizado');
+    await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Contacto actualizado' })).toBeVisible();
+    await page.getByRole('combobox', { name: 'Etapa' }).selectOption('contactado');
+    await page.getByRole('button', { name: 'Guardar etapa' }).click();
+    await expect(page.getByText('Etapa guardada.')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Etapa' })).toHaveValue('contactado');
+    expect(patches).toEqual([
+      { full_name: 'Contacto actualizado', expected_full_name: 'Contacto inicial' },
+      { lifecycle_status: 'contactado', expected_updated_at: timestamp }
+    ]);
+    expect(leadFilters.some((params) => ['contact_id=1', 'q=actualizado', 'status_group=open'].every((part) => params.includes(part)))).toBe(true);
+    await page.getByRole('link', { name: 'Volver a la ficha' }).click();
+    await page.getByRole('link', { name: 'Ver todas las conversaciones' }).click();
+    await expect(page).toHaveURL(/\/conversations\?contact_id=1$/);
+    await page.getByRole('button', { name: 'Ver todos los contactos' }).click();
+    await expect(page).toHaveURL(/\/conversations$/);
+  });
+
   test('contacts directory filters, restores navigation and opens contact details', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('flowkron.access_token', 'synthetic-test-session');

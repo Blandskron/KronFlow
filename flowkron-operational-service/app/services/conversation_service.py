@@ -77,8 +77,11 @@ def list_conversations(
     *,
     search: str | None = None,
     before: tuple[datetime, int] | None = None,
+    contact_id: int | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     statement = _inbox_threads()
+    if contact_id is not None:
+        statement = statement.where(Lead.cliente_id == contact_id)
     effective_status, human = _inbox_state()
     if status:
         statement = statement.where(effective_status == status)

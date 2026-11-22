@@ -1,0 +1,51 @@
+<section class="leads">
+  <h1>Seguimiento de leads</h1>
+  <a routerLink="/app/workflows">Ver tablero de conversaciones</a>
+  @if (contactFilter) {
+    <p>Mostrando los leads de un contacto. <a [routerLink]="['/app/contacts', contactFilter]">Volver a la ficha</a></p>
+  }
+  <form class="filters" role="search" (submit)="$event.preventDefault(); search(query.value, group.value)">
+    <label>Buscar lead <input #query class="field" type="search" maxlength="120" /></label>
+    <label>Estado
+      <select #group class="field">
+        <option value="">Todos</option><option value="open">Abiertos</option><option value="closed">Cerrados</option>
+      </select>
+    </label>
+    <button class="btn btn-primary" type="submit">Buscar</button>
+    <button class="btn btn-secondary" type="button" (click)="refresh()">Actualizar</button>
+  </form>
+  @if (notice(); as result) { <p [attr.role]="result.error ? 'alert' : 'status'">{{ result.message }}</p> }
+
+  @if (queue(); as state) {
+    @if (state.status === 'loading') { <p role="status">Consultando leads…</p> }
+    @if (state.status === 'error') { <p role="alert">No pudimos consultar los leads.</p> }
+    @if (state.status === 'ready') {
+      @for (lead of state.page.items; track lead.id) {
+        <article class="card item">
+          <div>
+            <h2>{{ lead.full_name || 'Lead sin nombre' }}</h2>
+            <p class="muted">{{ stageLabel(lead.lifecycle_status) }} · {{ lead.updated_at | date:'dd/MM/yyyy HH:mm' }}</p>
+          </div>
+          @if (auth.hasPermission('crm.manage')) {
+            <form class="stage" (submit)="$event.preventDefault(); updateStage(lead, stage.value)">
+              <label [for]="'lead-stage-' + lead.id">Etapa</label>
+              <select #stage class="field" [id]="'lead-stage-' + lead.id" [disabled]="saving() !== null">
+                @for (option of stages; track option.id) {
+                  <option [value]="option.id" [selected]="option.id === lead.lifecycle_status">{{ option.label }}</option>
+                }
+              </select>
+              <button class="btn btn-secondary" type="submit" [disabled]="saving() !== null">Guardar etapa</button>
+            </form>
+          }
+        </article>
+      } @empty { <p>No hay leads en esta página.</p> }
+      @if (state.page.offset || state.page.total > state.page.limit) {
+        <nav class="pagination" aria-label="Páginas de leads">
+          <button class="btn btn-secondary" type="button" [disabled]="!state.page.offset" (click)="page(state.page.offset - state.page.limit)">Anterior</button>
+          <span class="muted">{{ state.page.total }} leads</span>
+          <button class="btn btn-secondary" type="button" [disabled]="state.page.offset + state.page.limit >= state.page.total" (click)="page(state.page.offset + state.page.limit)">Siguiente</button>
+        </nav>
+      }
+    }
+  }
+</section>

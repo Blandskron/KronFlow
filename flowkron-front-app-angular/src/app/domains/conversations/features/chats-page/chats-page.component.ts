@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, Subscription, debounceTime, timer } from 'rxjs';
 import {
   LucideArrowLeft,
@@ -77,6 +77,7 @@ export class ChatsPageComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly backButton = viewChild<ElementRef<HTMLButtonElement>>('backButton');
   private readonly filtersChanged = new Subject<void>();
   private readonly readThrough = new Map<number, number>();
@@ -85,6 +86,7 @@ export class ChatsPageComponent implements OnInit {
 
   readonly searchQuery = signal('');
   readonly filterStatus = signal('all');
+  readonly contactFilter = signal<number | undefined>(undefined);
   readonly selectedChatId = signal<number | null>(null);
   private readonly selectedContact = signal<ChatContact | null>(null);
   readonly selectedChat = computed(() => this.chats().find((chat) => chat.id === this.selectedChatId()) ?? this.selectedContact());
@@ -110,6 +112,8 @@ export class ChatsPageComponent implements OnInit {
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
+    const contactId = Number(params.get('contact_id'));
+    if (Number.isSafeInteger(contactId) && contactId > 0) this.contactFilter.set(contactId);
     const status = this.statuses.find((item) => item.id === params.get('status'));
     if (status) this.filterStatus.set(status.id);
     const requested = Number(params.get('conversation'));
@@ -141,6 +145,7 @@ export class ChatsPageComponent implements OnInit {
       limit: 40,
       q: this.searchQuery().trim() || undefined,
       status: this.filterStatus() === 'all' ? undefined : this.filterStatus(),
+      contact_id: this.contactFilter(),
       ...cursor
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
@@ -225,8 +230,15 @@ export class ChatsPageComponent implements OnInit {
   }
 
   clearFilters(): void {
+    const params = this.route.snapshot.queryParamMap;
+    if (params.has('contact_id') || params.has('status')) {
+      void this.router.navigate([], {
+        relativeTo: this.route, queryParams: { contact_id: null, status: null }, queryParamsHandling: 'merge', replaceUrl: true
+      });
+    }
     this.searchQuery.set('');
     this.filterStatus.set('all');
+    this.contactFilter.set(undefined);
     this.reloadFilters();
   }
 

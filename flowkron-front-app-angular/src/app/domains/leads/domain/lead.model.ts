@@ -14,3 +14,11 @@ export interface Lead {
   created_at: string;
   updated_at: string;
 }
+
+export const leadStages = [
+  { id: 'nuevo', label: 'Nuevo' },
+  { id: 'contactado', label: 'Contactado' },
+  { id: 'en_proceso', label: 'En proceso' },
+  { id: 'ganado', label: 'Ganado' },
+  { id: 'perdido', label: 'Perdido' }
+] as const;

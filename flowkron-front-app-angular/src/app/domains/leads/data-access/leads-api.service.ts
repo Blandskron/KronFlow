@@ -16,11 +16,20 @@ export class LeadsApiService {
     direction?: string;
     limit?: number;
     offset?: number;
+    q?: string;
+    contact_id?: number;
+    status_group?: 'open' | 'closed';
   } = {}): Observable<PaginatedResponse<Lead>> {
     return this.http
       .get<ApiResponse<PaginatedResponse<Lead>>>(`${OPERATIONAL_API_BASE_URL}/leads`, {
         params: toParams(filters)
       })
       .pipe(map((response) => response.data));
+  }
+
+  updateStage(lead: Lead, stage: string) {
+    return this.http.patch<ApiResponse<Lead>>(`${OPERATIONAL_API_BASE_URL}/leads/${lead.id}`, {
+      lifecycle_status: stage, expected_updated_at: lead.updated_at
+    }).pipe(map(({ data }) => data));
   }
 }

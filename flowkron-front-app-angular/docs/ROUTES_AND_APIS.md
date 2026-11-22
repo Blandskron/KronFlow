@@ -20,7 +20,8 @@ Rutas hijas reales bajo `/app`:
 | `/app/business-context` | Contexto Empresarial integrado con Agent Core |
 | `/app/conversations` | Bandeja con búsqueda, historial y marca de lectura; `?status=waiting` abre las pendientes |
 | `/app/contacts` | Directorio de lectura con búsqueda, origen y paginación del servidor. La URL conserva origen y página; el término de búsqueda queda en el historial de navegación de esa pestaña. |
-| `/app/contacts/:id` | Ficha de lectura con retorno al directorio en el mismo contexto |
+| `/app/contacts/:id` | Ficha con leads y conversaciones vinculadas. `crm.manage` permite editar el nombre. |
+| `/app/leads` | Seguimiento de leads de la empresa con búsqueda, filtros y paginación. `?contact_id=` acota a la ficha de origen. `crm.manage` permite guardar etapas. |
 | `/app/workflows` | Tablero derivado de conversaciones y leads |
 | `/app/whatsapp`, `/app/integrations` | Vinculación y diagnóstico de WhatsApp; `integrations` redirige a `whatsapp` |
 | `/app/analytics` | Resumen operacional |
@@ -54,7 +55,9 @@ Base: `environment.operationalApiUrl`, sin slash final.
 | GET | `/contacts` | Directorio de contactos (`users.read`) |
 | GET | `/contacts/sources` | Sugerencias de origen en Contactos (`users.read`) |
 | GET | `/contacts/{id}` | Ficha de contacto (`users.read`) |
-| GET | `/leads` | Workflow |
+| PATCH | `/contacts/{id}` | Editar nombre con comprobación de valor esperado (`crm.manage`) |
+| GET | `/leads` | Workflow, actividad del contacto y seguimiento paginado |
+| PATCH | `/leads/{id}` | Guardar etapa con comprobación de `updated_at` (`crm.manage`) |
 | GET | `/analytics/summary` | Analytics |
 | GET | `/agents` | Servicio disponible, sin pantalla actual |
 | POST | `/agents/configure` | Stub de configuración; devuelve 501 |

@@ -14,7 +14,7 @@ from starlette.requests import Request
 from app.core.config import Settings
 from app.core.database import get_db
 from app.core.security import CurrentPrincipal, get_current_principal, require_internal_token
-from app.core.tenant_resolver import resolve_tenant_from_ingest_headers
+from app.core.tenant_resolver import TenantContext, resolve_tenant_from_ingest_headers
 from app.core import admission
 from app.main import app
 from app.schemas.ingest import ConsentIn
@@ -24,6 +24,7 @@ from app.services.ingest_service import save_consent
 from app.services.tenant_data import lead_to_dict
 from app.services.tenant_provisioning_service import provision_tenant
 from app.tenant_models.operations import Cliente, Lead
+from app.tenant_models.whatsapp_consent import WhatsAppConsentState
 
 
 def request(path="/api/v1/leads", method="GET"):
@@ -102,14 +103,22 @@ class SecurityTests(unittest.TestCase):
         db.scalar.assert_not_called()
 
     def test_consent_preserves_existing_name_and_withdraws(self):
-        client = SimpleNamespace(nombre="Existing customer", fecha_consentimiento=None)
+        phone = "12025550138"
+        tenant = TenantContext(1, "test", "tenant_test", "test", "free", "active")
+        client = Cliente(id=1, rut=f"wa:{phone}", nombre="Existing customer",
+                         whatsapp_id=phone, consentimiento_datos=False)
+        decision = WhatsAppConsentState(client_id=client.id, decision_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
         db = MagicMock()
         db.scalar.return_value = client
-        with patch("app.services.ingest_service.bind_tenant_session"), patch("app.services.ingest_service.get_consent", return_value={}):
+        db.get.return_value = decision
+        with patch("app.services.ingest_service.bind_tenant_session"), patch("app.services.ingest_service.inspect") as inspect_db:
+            inspect_db.return_value.has_table.return_value = True
             for accepted in (True, False, True):
-                save_consent(db, SimpleNamespace(schema_name="tenant_test"), ConsentIn(phone="12025550138", accepted=accepted, policy_version="test"))
-                self.assertEqual(client.nombre, "Existing customer")
-                self.assertEqual(client.consentimiento_datos, accepted)
+                with self.subTest(accepted=accepted):
+                    result = save_consent(db, tenant, ConsentIn(phone=phone, accepted=accepted, policy_version="test"))
+                    self.assertEqual(client.nombre, "Existing customer")
+                    self.assertEqual(client.consentimiento_datos, accepted)
+                    self.assertEqual(result["consentimiento_datos"], accepted)
 
     def test_reprovision_does_not_resume_suspended_runtime(self):
         runtime = SimpleNamespace(auth_tenant_id=1, schema_name="tenant_test", status="suspended")

@@ -45,14 +45,16 @@ Los planes contaron 10.000 y 111 filas coincidentes mediante `WindowAgg` y orden
 python -m unittest discover -s tests -v
 ```
 
-Para incluir las pruebas PostgreSQL, definir `FLOWKRON_TEST_POSTGRES_BIN` con el directorio de binarios instalados (`initdb` y `pg_ctl`) y ejecutar el mismo comando. La suite crea un cluster nuevo temporal en loopback y lo elimina al terminar; no usa `DATABASE_URL`. Sin esa variable se omiten explícitamente las ocho pruebas de integración, no se reportan como aprobadas.
+Para incluir las pruebas PostgreSQL, definir `FLOWKRON_TEST_POSTGRES_BIN` con el directorio de binarios instalados (`initdb` y `pg_ctl`) y ejecutar el mismo comando. El fixture de integración crea un clúster temporal en loopback y lo elimina al terminar. Para crear ese clúster prescinde de `DATABASE_URL`. Sin la variable se omiten las pruebas marcadas para PostgreSQL descartable.
 
 ```powershell
 $env:FLOWKRON_TEST_POSTGRES_BIN = 'C:\Program Files\PostgreSQL\18\bin'
 python -m unittest discover -s tests -p test_message_identity.py -v
 ```
 
-Validación FK-01: 9 pruebas aprobadas (8 con PostgreSQL 18.3 y 1 de contrato de entrada). La suite del conector también aprobó sus 10 pruebas. El intento de ejecutar toda la suite Operational encontró una limitación previa del entorno: `test_security.py` no se pudo importar porque la versión instalada de Starlette solicita `httpx2`, mientras `requirements-dev.txt` declara `httpx`. No se cambiaron dependencias en FK-01. Esta suite completa queda sin validar hasta resolver esa compatibilidad.
+Validación FK-01: 9 pruebas aprobadas (8 con PostgreSQL 18.3 y 1 de contrato de entrada). La suite del conector también aprobó sus 10 pruebas. Durante FK-01, `test_security.py` no se pudo importar porque la versión instalada de Starlette solicitaba `httpx2`, mientras `requirements-dev.txt` declaraba `httpx`.
+
+El 22 de noviembre de 2026 se reprodujo el fallo del fixture de consentimiento del [job Validate](https://github.com/Blandskron/flowkron/actions/runs/44824257725) sobre `3e538686`. Tras corregir el fixture, la ejecución local de `python -m unittest discover -s tests -v` con PostgreSQL 18.3 descartable registró 57 pruebas aprobadas y una omitida, la medición opcional del inbox. Para que `TestClient` cargara con el Starlette 1.10.0 local, se usó `httpx2==2.16.2` desde un directorio temporal mediante `PYTHONPATH`. Queda pendiente reproducir la validación con las dependencias declaradas en CI.
 
 Los scripts bajo `scripts/` son utilidades manuales y no deben ejecutarse contra una base compartida por inspección. La [decisión FK-01](MESSAGE_IDENTITY.md) detalla las verificaciones de migración, compatibilidad y concurrencia.
 

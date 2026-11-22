@@ -55,16 +55,15 @@ def _inbox_state():
     return effective_status, human
 
 
-def inbox_counts(db: Session, tenant: TenantContext) -> tuple[int, int]:
+def inbox_counts_statement():
     status, human = _inbox_state()
     threads = _inbox_threads().with_only_columns(
         Conversation.id, status.label("status"), human.label("requires_human"),
     ).subquery()
-    statement = select(
-        func.count().filter(threads.c.status != "closed"), func.count().filter(threads.c.requires_human),
+    return select(
+        func.count().filter(threads.c.status != "closed").label("open_conversations"),
+        func.count().filter(threads.c.requires_human).label("requires_human"),
     )
-    opened, waiting = execute_for_tenant(db, tenant.schema_name, statement).one()
-    return opened, waiting
 
 
 def list_conversations(

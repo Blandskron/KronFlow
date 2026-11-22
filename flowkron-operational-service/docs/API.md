@@ -142,11 +142,13 @@ El modelo activo de conversación es un JSON por `session_id`, no la tabla relac
 
 ### Contactos
 
-`GET /api/v1/contacts` consulta el directorio de la empresa autenticada con `users.read`. Admite `limit`, `offset` y `q` de hasta 120 caracteres. Busca coincidencias literales por nombre, correo, teléfono e identificador WhatsApp sin distinguir mayúsculas, y ordena por fecha de creación e ID descendentes. El envelope incluye `items`, `total`, `limit` y `offset` en `data`. Cada elemento contiene ID, nombre, correo y teléfono opcionales, origen y fecha de creación. La ruta de lectura conserva los contactos existentes y su alcance excluye datos fiscales y decisiones de consentimiento.
+`GET /api/v1/contacts` consulta el directorio de la empresa autenticada con `users.read`. Admite `limit`, `offset`, `source` para filtrar por origen exacto y `q` para buscar por nombre, correo, teléfono e identificador WhatsApp sin distinguir mayúsculas. Las consultas con formato telefónico y al menos cuatro dígitos comparan también los números sin puntuación. El orden es fecha de creación e ID descendentes. `data` incluye `items`, `total`, `limit` y `offset`.
+
+`GET /api/v1/contacts/sources` devuelve hasta cien orígenes únicos ordenados de la empresa activa. `GET /api/v1/contacts/{contact_id}` devuelve el mismo tipo de contacto que el listado o `404` cuando no existe en la empresa. Ambos requieren `users.read`. Los contactos devuelven ID, nombre, correo y teléfono opcionales, origen y fecha de creación. Estos endpoints son de lectura y su alcance excluye datos fiscales y decisiones de consentimiento.
 
 ### Analytics
 
-`GET /api/v1/analytics/summary` devuelve conteos de leads por clasificación, hilos abiertos del inbox, hilos en espera de atención y mensajes. Las ventanas de mensajes son desde medianoche UTC y los últimos siete días hasta el instante de evaluación. El resumen usa los mismos hilos y estados que la Bandeja.
+`GET /api/v1/analytics/summary` devuelve conteos de leads por clasificación, hilos abiertos del inbox, hilos en espera de atención y mensajes. Las ventanas de mensajes son desde medianoche UTC y los últimos siete días hasta el instante de evaluación. El resumen usa los mismos hilos y estados que la Bandeja y calcula todos los conteos sobre una misma instantánea de PostgreSQL.
 
 ### Agents (stub)
 

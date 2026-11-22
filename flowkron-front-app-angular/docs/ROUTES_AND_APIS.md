@@ -19,7 +19,8 @@ Rutas hijas reales bajo `/app`:
 | `/app/home` | Resumen de sesion, tenant y plan |
 | `/app/business-context` | Contexto Empresarial integrado con Agent Core |
 | `/app/conversations` | Bandeja con búsqueda, historial y marca de lectura; `?status=waiting` abre las pendientes |
-| `/app/contacts` | Directorio de lectura con búsqueda y paginación del servidor |
+| `/app/contacts` | Directorio de lectura con búsqueda, origen y paginación del servidor. La URL conserva origen y página; el término de búsqueda queda en el historial de navegación de esa pestaña. |
+| `/app/contacts/:id` | Ficha de lectura con retorno al directorio en el mismo contexto |
 | `/app/workflows` | Tablero derivado de conversaciones y leads |
 | `/app/whatsapp`, `/app/integrations` | Vinculación y diagnóstico de WhatsApp; `integrations` redirige a `whatsapp` |
 | `/app/analytics` | Resumen operacional |
@@ -51,6 +52,8 @@ Base: `environment.operationalApiUrl`, sin slash final.
 | GET | `/conversations` | Chats y workflow |
 | GET | `/conversations/{id}/messages` | Detalle de chat |
 | GET | `/contacts` | Directorio de contactos (`users.read`) |
+| GET | `/contacts/sources` | Sugerencias de origen en Contactos (`users.read`) |
+| GET | `/contacts/{id}` | Ficha de contacto (`users.read`) |
 | GET | `/leads` | Workflow |
 | GET | `/analytics/summary` | Analytics |
 | GET | `/agents` | Servicio disponible, sin pantalla actual |

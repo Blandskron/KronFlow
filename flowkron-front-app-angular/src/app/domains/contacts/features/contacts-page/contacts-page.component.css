@@ -1,10 +1,10 @@
 .page-section { padding: clamp(18px, 3vw, 32px); }
 h1 { margin: 0 0 16px; }
 
-.search { margin-block-end: 18px; }
-.search label { display: block; margin-block-end: 6px; }
-.search div, .pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.search input { width: min(24rem, 100%); }
+.search, .pagination { display: flex; flex-wrap: wrap; gap: 8px; }
+.search { align-items: end; margin-block-end: 18px; }
+.search label { display: grid; gap: 6px; max-width: 100%; }
+.search input { width: 100%; }
 
 .contacts { list-style: none; padding: 0 16px; margin: 0; }
 .contacts li {
@@ -16,8 +16,9 @@ h1 { margin: 0 0 16px; }
   overflow-wrap: anywhere;
 }
 .contacts li + li { border-block-start: 1px solid var(--border); }
-.contacts strong, .contacts li div span { display: block; }
-.pagination { margin-block-start: 14px; }
+.contacts a, .contacts li div span { display: block; }
+.contacts a { font-weight: 700; text-decoration: underline; }
+.pagination { align-items: center; margin-block-start: 14px; }
 
 @media (max-width: 560px) {
   .contacts li { grid-template-columns: minmax(0, 1fr) auto; }

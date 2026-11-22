@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 from sqlalchemy.orm import Session
 
@@ -16,12 +17,16 @@ class ContactDirectoryTests(PostgresCase):
     def test_search_pagination_and_access_are_tenant_scoped(self):
         tenant, other = self.tenant(), self.tenant()
         created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        for workspace, names in ((tenant, ("Contacto 100%", "Contacto nuevo")), (other, ("Contacto ajeno",))):
+        for workspace, contacts in (
+            (tenant, (("Contacto 100%", "web", "+56 (9) 1234-5678"), ("Contacto nuevo", "whatsapp_directo", None))),
+            (other, (("Contacto ajeno", "origen_ajeno", "56912345678"),)),
+        ):
             with Session(self.engine.execution_options(**tenant_exec_options(workspace.schema_name))) as db:
                 db.add_all([
-                    Cliente(rut=f"synthetic-{index}", nombre=name, creado_en=created_at,
+                    Cliente(id=index, rut=f"synthetic-{index}", nombre=name, creado_en=created_at,
+                            canal_origen=source, telefono=phone,
                             email="contact@example.test" if index == 1 else None)
-                    for index, name in enumerate(names, start=1)
+                    for index, (name, source, phone) in enumerate(contacts, start=1 if workspace == tenant else 31)
                 ])
                 db.commit()
 
@@ -46,6 +51,8 @@ class ContactDirectoryTests(PostgresCase):
             "user-test", 812, None, [], permissions, {}, {},
         )
         self.assertEqual(http(self, "GET", path)[0], 403)
+        self.assertEqual(http(self, "GET", path + "/1")[0], 403)
+        self.assertEqual(http(self, "GET", path + "/sources")[0], 403)
         permissions.append("users.read")
 
         status, first, _ = http(self, "GET", path + "?limit=1", headers={"X-Tenant-ID": "813"})
@@ -62,3 +69,22 @@ class ContactDirectoryTests(PostgresCase):
         _, email, _ = http(self, "GET", path + "?q=EXAMPLE.TEST")
         self.assertEqual(email["data"]["total"], 1)
         self.assertEqual(http(self, "GET", path + "?q=" + "x" * 121)[0], 422)
+
+        _, sources, _ = http(self, "GET", path + "/sources", headers={"X-Tenant-ID": "813"})
+        self.assertEqual(sources["data"], ["web", "whatsapp_directo"])
+        _, filtered, _ = http(self, "GET", path + "?source=web")
+        self.assertEqual(filtered["data"]["items"][0]["full_name"], "Contacto 100%")
+        self.assertEqual(filtered["data"]["total"], 1)
+        _, hidden, _ = http(self, "GET", path + "?source=origen_ajeno")
+        self.assertEqual(hidden["data"]["total"], 0)
+
+        for query in ("56912345678", "+56 9 1234 5678"):
+            _, phone_match, _ = http(self, "GET", path + "?" + urlencode({"q": query, "source": "web"}))
+            self.assertEqual(phone_match["data"]["total"], 1)
+            self.assertEqual(phone_match["data"]["items"][0]["phone"], "+56 (9) 1234-5678")
+
+        status, detail, _ = http(self, "GET", path + "/1", headers={"X-Tenant-ID": "813"})
+        self.assertEqual(status, 200)
+        self.assertEqual(detail["data"], filtered["data"]["items"][0])
+        self.assertEqual(http(self, "GET", path + "/31", headers={"X-Tenant-ID": "813"})[0], 404)
+        self.assertEqual(http(self, "GET", path + "/0")[0], 422)

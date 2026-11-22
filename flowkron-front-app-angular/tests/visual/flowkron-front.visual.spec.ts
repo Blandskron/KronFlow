@@ -3,12 +3,15 @@ import { expect, test } from '@playwright/test';
 const baseUrl = process.env['BASE_URL'] ?? 'http://127.0.0.1:8081';
 
 test.describe('Flowkron app visual smoke', () => {
-  test('contacts directory searches, pages and recovers from a failed request', async ({ page }) => {
+  test('contacts directory filters, restores navigation and opens contact details', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('flowkron.access_token', 'synthetic-test-session');
       localStorage.setItem('flowkron.tenant_id', '1');
     });
-    const requests: { q: string | null; offset: string | null }[] = [];
+    const requests: { q: string | null; source: string | null; offset: string | null }[] = [];
+    const contact = {
+      id: 1, email: 'contact@example.test', phone: '+56 9 1234 5678', source: 'web', created_at: '2026-01-01T12:00:00Z'
+    };
     let fail = true;
     await page.route('**/api/v1/**', async (route) => {
       const url = new URL(route.request().url());
@@ -26,18 +29,20 @@ test.describe('Flowkron app visual smoke', () => {
           permissions: ['users.read'], roles: [], subscription: null
         });
       }
+      if (url.pathname.endsWith('/contacts/sources')) return respond(['web', 'whatsapp_directo']);
+      if (url.pathname.endsWith('/contacts/1')) return respond({ ...contact, full_name: 'Contacto buscado' });
       if (!url.pathname.endsWith('/contacts')) return route.fulfill({ status: 404, headers });
       const q = url.searchParams.get('q');
+      const source = url.searchParams.get('source');
       const offset = url.searchParams.get('offset');
-      requests.push({ q, offset });
+      requests.push({ q, source, offset });
       if (fail) {
         fail = false;
         return route.fulfill({ status: 503, headers });
       }
       return respond({
         items: [{
-          id: 1, full_name: q ? 'Contacto buscado' : offset === '25' ? 'Contacto página dos' : 'Contacto inicial',
-          email: null, phone: null, source: 'whatsapp_directo', created_at: '2026-01-01T12:00:00Z'
+          ...contact, full_name: q ? 'Contacto buscado' : offset === '25' ? 'Contacto página dos' : 'Contacto inicial'
         }],
         total: q ? 1 : 26, limit: 25, offset: Number(offset)
       });
@@ -51,11 +56,28 @@ test.describe('Flowkron app visual smoke', () => {
     await expect(page.getByText('Contacto inicial')).toBeVisible();
     await page.getByRole('button', { name: 'Siguiente' }).click();
     await expect(page.getByText('Contacto página dos')).toBeVisible();
+    await expect(page).toHaveURL(/\/contacts\?offset=25$/);
+    await page.reload();
+    await expect(page.getByText('Contacto página dos')).toBeVisible();
+
+    await page.getByLabel('Origen', { exact: true }).fill('web');
+    await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+    await expect(page).toHaveURL(/\/contacts\?source=web$/);
+    await expect(page.getByText('Contacto inicial')).toBeVisible();
+
     await page.getByRole('searchbox').fill('Buscado');
     await page.getByRole('button', { name: 'Buscar', exact: true }).click();
     await expect(page.getByText('Contacto buscado')).toBeVisible();
-    expect(requests).toContainEqual({ q: null, offset: '25' });
-    expect(requests).toContainEqual({ q: 'Buscado', offset: '0' });
+    await expect(page).toHaveURL(/\/contacts\?source=web$/);
+    expect(requests).toContainEqual({ q: null, source: null, offset: '25' });
+    expect(requests).toContainEqual({ q: 'Buscado', source: 'web', offset: '0' });
+
+    await page.getByRole('link', { name: 'Contacto buscado' }).click();
+    await expect(page.getByRole('heading', { name: 'Contacto buscado' })).toBeVisible();
+    await expect(page.getByText('contact@example.test', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Volver a Contactos' }).click();
+    await expect(page.getByRole('searchbox')).toHaveValue('Buscado');
+    await expect(page.getByRole('link', { name: 'Contacto buscado' })).toBeVisible();
   });
 
   test('login screen renders without blank screens', async ({ page }) => {

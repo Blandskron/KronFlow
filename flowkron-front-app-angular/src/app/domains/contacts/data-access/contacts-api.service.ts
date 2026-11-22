@@ -18,9 +18,18 @@ export interface Contact {
 export class ContactsApiService {
   private readonly http = inject(HttpClient);
 
-  list(q: string, limit: number, offset: number) {
+  list(q: string, source: string, limit: number, offset: number) {
     return this.http.get<ApiResponse<PaginatedResponse<Contact>>>(`${OPERATIONAL_API_BASE_URL}/contacts`, {
-      params: toParams({ q, limit, offset })
+      params: toParams({ q, source, limit, offset })
     }).pipe(map(({ data }) => data));
+  }
+
+  sources() {
+    return this.http.get<ApiResponse<string[]>>(`${OPERATIONAL_API_BASE_URL}/contacts/sources`).pipe(map(({ data }) => data));
+  }
+
+  get(id: string) {
+    return this.http.get<ApiResponse<Contact>>(`${OPERATIONAL_API_BASE_URL}/contacts/${encodeURIComponent(id)}`)
+      .pipe(map(({ data }) => data));
   }
 }

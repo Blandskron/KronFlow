@@ -708,7 +708,13 @@ paths:
       parameters:
         - name: q
           in: query
-          description: Búsqueda literal sin distinción de mayúsculas por nombre, correo, teléfono o identificador WhatsApp.
+          description: Búsqueda literal sin distinción de mayúsculas por nombre, correo, teléfono o identificador WhatsApp. Las consultas con formato telefónico y al menos cuatro dígitos también comparan los dígitos sin puntuación.
+          schema:
+            type: string
+            maxLength: 120
+        - name: source
+          in: query
+          description: Origen exacto del contacto, según el catálogo de la empresa.
           schema:
             type: string
             maxLength: 120
@@ -725,6 +731,72 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /api/v1/contacts/sources:
+    get:
+      summary: Listar orígenes de contactos de la empresa activa
+      description: Requiere users.read. Devuelve hasta cien orígenes únicos ordenados.
+      operationId: contacts_sources
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Orígenes disponibles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    maxItems: 100
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/contacts/{contact_id}:
+    get:
+      summary: Consultar la ficha de un contacto
+      description: Requiere users.read. Solo devuelve contactos de la empresa autenticada.
+      operationId: contacts_get
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contact_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 9223372036854775807
+      responses:
+        '200':
+          description: Ficha del contacto
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ContactOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ─── Analytics (Dashboard JWT) ──────────────────────────────────────────────
 

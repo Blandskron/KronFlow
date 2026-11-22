@@ -102,7 +102,17 @@ class ConversationInboxTests(PostgresCase):
             db.add(Lead(cliente=Cliente(rut="no-thread", nombre="Lead sin conversación")))
             db.commit()
 
-        counts = self.call(analytics_summary, tenant)
+        statements = []
+
+        def collect(_conn, _cursor, statement, *_):
+            statements.append(statement)
+
+        event.listen(self.engine, "before_cursor_execute", collect)
+        try:
+            counts = self.call(analytics_summary, tenant)
+        finally:
+            event.remove(self.engine, "before_cursor_execute", collect)
+        self.assertEqual(len(statements), 1)
         inbox, total = self.call(list_conversations, tenant, 10, 0)
         self.assertEqual(total, 2)
         self.assertEqual(counts["total_leads"], 3)

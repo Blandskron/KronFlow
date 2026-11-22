@@ -1,11 +1,16 @@
 <section class="page-section">
   <h1>Contactos</h1>
-  <form class="search" role="search" (submit)="$event.preventDefault(); search(query.value)">
-    <label for="contacts-search">Buscar por nombre, correo o teléfono</label>
-    <div>
-      <input #query class="field" id="contacts-search" type="search" maxlength="120" />
-      <button class="btn btn-primary" type="submit">Buscar</button>
-    </div>
+  <form class="search" role="search" (submit)="$event.preventDefault(); search(query.value, source.value)">
+    <label for="contacts-search">Buscar por nombre, correo o teléfono
+      <input #query class="field" id="contacts-search" type="search" maxlength="120" [value]="filters().query" />
+    </label>
+    <label for="contacts-source">Origen
+      <input #source class="field" id="contacts-source" list="contact-sources" maxlength="120" [value]="filters().source" />
+      <datalist id="contact-sources">
+        @for (item of sources(); track item) { <option [value]="item"></option> }
+      </datalist>
+    </label>
+    <button class="btn btn-primary" type="submit">Buscar</button>
   </form>
 
   @if (directory(); as state) {
@@ -21,7 +26,8 @@
             @for (contact of state.page.items; track contact.id) {
               <li>
                 <div>
-                  <strong>{{ contact.full_name || 'Contacto sin nombre' }}</strong>
+                  <a [routerLink]="['/app/contacts', contact.id]" queryParamsHandling="preserve"
+                    [state]="{ contactSearch: filters().query }">{{ contact.full_name || 'Contacto sin nombre' }}</a>
                   <span class="muted">{{ contact.email || 'Sin correo' }}</span>
                 </div>
                 <span>{{ contact.phone || 'Sin teléfono' }}</span>

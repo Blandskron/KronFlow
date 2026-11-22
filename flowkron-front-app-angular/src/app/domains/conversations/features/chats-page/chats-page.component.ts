@@ -109,7 +109,10 @@ export class ChatsPageComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    const requested = Number(this.route.snapshot.queryParamMap.get('conversation'));
+    const params = this.route.snapshot.queryParamMap;
+    const status = this.statuses.find((item) => item.id === params.get('status'));
+    if (status) this.filterStatus.set(status.id);
+    const requested = Number(params.get('conversation'));
     if (Number.isSafeInteger(requested) && requested > 0) this.openDeepLink(requested);
     this.filtersChanged.pipe(debounceTime(250), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadConversations());

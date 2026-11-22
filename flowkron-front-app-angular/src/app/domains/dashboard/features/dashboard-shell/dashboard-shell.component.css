@@ -160,7 +160,7 @@
 
   .sidebar .product-brand, .sidebar > flowkron-theme-toggle { display: none; }
 
-  .sidebar nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sidebar nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .sidebar nav a {
     min-width: 0;
     justify-content: center;

@@ -140,9 +140,13 @@ Los mensajes de salida exponen `delivery_status` y el motivo normalizado cuando 
 
 El modelo activo de conversación es un JSON por `session_id`, no la tabla relacional descrita por los módulos legacy.
 
+### Contactos
+
+`GET /api/v1/contacts` consulta el directorio de la empresa autenticada con `users.read`. Admite `limit`, `offset` y `q` de hasta 120 caracteres. Busca coincidencias literales por nombre, correo, teléfono e identificador WhatsApp sin distinguir mayúsculas, y ordena por fecha de creación e ID descendentes. El envelope incluye `items`, `total`, `limit` y `offset` en `data`. Cada elemento contiene ID, nombre, correo y teléfono opcionales, origen y fecha de creación. La ruta de lectura conserva los contactos existentes y su alcance excluye datos fiscales y decisiones de consentimiento.
+
 ### Analytics
 
-`GET /api/v1/analytics/summary` devuelve conteos de leads por clasificación, abiertos, handoff y mensajes de hoy/últimos siete días. Se calculan en vivo.
+`GET /api/v1/analytics/summary` devuelve conteos de leads por clasificación, hilos abiertos del inbox, hilos en espera de atención y mensajes. Las ventanas de mensajes son desde medianoche UTC y los últimos siete días hasta el instante de evaluación. El resumen usa los mismos hilos y estados que la Bandeja.
 
 ### Agents (stub)
 

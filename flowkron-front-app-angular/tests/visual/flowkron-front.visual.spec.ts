@@ -3,14 +3,70 @@ import { expect, test } from '@playwright/test';
 const baseUrl = process.env['BASE_URL'] ?? 'http://127.0.0.1:8081';
 
 test.describe('Flowkron app visual smoke', () => {
+  test('contacts directory searches, pages and recovers from a failed request', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowkron.access_token', 'synthetic-test-session');
+      localStorage.setItem('flowkron.tenant_id', '1');
+    });
+    const requests: { q: string | null; offset: string | null }[] = [];
+    let fail = true;
+    await page.route('**/api/v1/**', async (route) => {
+      const url = new URL(route.request().url());
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-tenant-id, x-correlation-id, content-type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      };
+      const respond = (data: object) => route.fulfill({ headers, json: { success: true, data } });
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+      if (url.pathname.endsWith('/auth/me/')) {
+        return respond({
+          user: { id: 1, email: 'operator@example.test', first_name: 'Operador' },
+          tenant: { id: 1, name: 'Empresa sintética', status: 'active', slug: 'test' },
+          permissions: ['users.read'], roles: [], subscription: null
+        });
+      }
+      if (!url.pathname.endsWith('/contacts')) return route.fulfill({ status: 404, headers });
+      const q = url.searchParams.get('q');
+      const offset = url.searchParams.get('offset');
+      requests.push({ q, offset });
+      if (fail) {
+        fail = false;
+        return route.fulfill({ status: 503, headers });
+      }
+      return respond({
+        items: [{
+          id: 1, full_name: q ? 'Contacto buscado' : offset === '25' ? 'Contacto página dos' : 'Contacto inicial',
+          email: null, phone: null, source: 'whatsapp_directo', created_at: '2026-01-01T12:00:00Z'
+        }],
+        total: q ? 1 : 26, limit: 25, offset: Number(offset)
+      });
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/app/contacts`);
+    await expect(page.getByRole('link', { name: 'Contactos' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('alert')).toContainText('No pudimos consultar los contactos');
+    await page.getByRole('button', { name: 'Reintentar' }).click();
+    await expect(page.getByText('Contacto inicial')).toBeVisible();
+    await page.getByRole('button', { name: 'Siguiente' }).click();
+    await expect(page.getByText('Contacto página dos')).toBeVisible();
+    await page.getByRole('searchbox').fill('Buscado');
+    await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+    await expect(page.getByText('Contacto buscado')).toBeVisible();
+    expect(requests).toContainEqual({ q: null, offset: '25' });
+    expect(requests).toContainEqual({ q: 'Buscado', offset: '0' });
+  });
+
   test('login screen renders without blank screens', async ({ page }) => {
     await page.goto(baseUrl);
     await expect(page).toHaveURL(/\/login$/);
 
     await page.evaluate(() => localStorage.setItem('theme', 'light'));
     await page.goto(`${baseUrl}/login`);
-    await expect(page.getByRole('heading', { name: /bienvenido/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /accede con tu correo electronico/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Correo electrónico' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible();
     await page.screenshot({ path: 'visual-test-results/login.png', fullPage: true });
   });
 
@@ -119,6 +175,9 @@ test.describe('Flowkron app visual smoke', () => {
         });
       }
       if (url.pathname.endsWith('/conversations')) {
+        const pending = { ...previous, status: 'waiting', requires_human: true };
+        if (url.searchParams.get('requires_human') === 'true') return respond({ items: [pending], total: 26 });
+        if (url.searchParams.get('status') === 'waiting') return respond({ items: [pending], total: 1 });
         const query = url.searchParams.get('q');
         const before = url.searchParams.get('before_id');
         listRequests.push({ query, before });
@@ -168,5 +227,11 @@ test.describe('Flowkron app visual smoke', () => {
     await expect(page.getByText('Entregado', { exact: true })).toBeVisible();
     await expect(page.getByText('Entrega desconocida', { exact: true })).toBeVisible();
     await expect(page.getByText('WhatsApp restringió el envío desde esta cuenta.')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Notificaciones' }).click();
+    await page.getByRole('link', { name: 'Ver todas las pendientes' }).click();
+    await expect(page).toHaveURL(/\/conversations\?status=waiting$/);
+    await expect(page.getByRole('button', { name: 'Necesitan atención' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /Contacto antiguo/ })).toBeVisible();
   });
 });

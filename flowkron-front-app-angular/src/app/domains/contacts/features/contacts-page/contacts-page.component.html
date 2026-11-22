@@ -1,0 +1,47 @@
+<section class="page-section">
+  <h1>Contactos</h1>
+  <form class="search" role="search" (submit)="$event.preventDefault(); search(query.value)">
+    <label for="contacts-search">Buscar por nombre, correo o teléfono</label>
+    <div>
+      <input #query class="field" id="contacts-search" type="search" maxlength="120" />
+      <button class="btn btn-primary" type="submit">Buscar</button>
+    </div>
+  </form>
+
+  @if (directory(); as state) {
+    @switch (state.status) {
+      @case ('loading') { <p class="muted" role="status">Consultando contactos…</p> }
+      @case ('error') {
+        <p role="alert">{{ state.message }}</p>
+        <button class="btn btn-secondary" type="button" (click)="retry()">Reintentar</button>
+      }
+      @case ('ready') {
+        @if (state.page.items.length) {
+          <ul class="card contacts">
+            @for (contact of state.page.items; track contact.id) {
+              <li>
+                <div>
+                  <strong>{{ contact.full_name || 'Contacto sin nombre' }}</strong>
+                  <span class="muted">{{ contact.email || 'Sin correo' }}</span>
+                </div>
+                <span>{{ contact.phone || 'Sin teléfono' }}</span>
+                <time class="muted" [attr.datetime]="contact.created_at">{{ contact.created_at | date:'dd/MM/yyyy' }}</time>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted" role="status">No hay contactos en esta página.</p>
+        }
+        @if (state.page.offset || state.page.total > state.page.limit) {
+          <nav class="pagination" aria-label="Páginas de contactos">
+            <button class="btn btn-secondary" type="button" [disabled]="!state.page.offset"
+              (click)="loadPage(state.page.offset - state.page.limit)">Anterior</button>
+            <span class="muted">{{ state.page.total }} contactos</span>
+            <button class="btn btn-secondary" type="button" [disabled]="state.page.offset + state.page.limit >= state.page.total"
+              (click)="loadPage(state.page.offset + state.page.limit)">Siguiente</button>
+          </nav>
+        }
+      }
+    }
+  }
+</section>

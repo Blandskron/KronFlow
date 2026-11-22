@@ -7,11 +7,12 @@ Fuente única de contexto e instrucciones agenticas para `flowkron-front-app-ang
 SPA Angular 21 privada que consume `flowkron-auth-service`, `flowkron-operational-service` y `flowkron-agent-core`. No confundas UI con capacidad backend:
 
 - No existe ruta `/app/agents`; las capacidades visibles de agente estan en `/app/business-context`.
-- `/app/integrations` es placeholder.
-- Chats consulta conversaciones/mensajes; no envía mensajes.
+- `/app/integrations` redirige a `/app/whatsapp`, donde se vincula y diagnostica la conexión.
+- La Bandeja consulta conversaciones y mensajes y usa `crm.manage` para marcar lectura. El envío manual queda pendiente.
+- `/app/contacts` consulta el directorio con búsqueda y paginación del servidor.
 - Workflow transforma conversaciones/leads en columnas; no tiene CRUD de workflows.
-- Notificaciones no consume API.
-- Pricing abre WhatsApp; no llama `activateSubscription`.
+- Notificaciones consulta handoffs de Operational y dirige a la Bandeja filtrada por pendientes.
+- `/app/pricing` redirige a `/app/home`.
 - Contexto Empresarial usa Agent Core para plantillas, documentos, setup chat, simulacion y reglas de correccion.
 - Métodos de runtime/provisión/suscripción existen en `TenantService`, pero ninguna pantalla los invoca.
 - `npm test` está declarado, pero no hay target `test`, runner ni specs Angular.
@@ -24,7 +25,8 @@ SPA Angular 21 privada que consume `flowkron-auth-service`, `flowkron-operationa
 | `src/app/core/interceptors/auth.interceptor.ts` | Correlation ID, bearer, tenant y retry 401 |
 | `src/app/domains/auth/` | Identidad, tenant, onboarding, perfil, miembros e invitaciones |
 | `src/app/domains/agents/` | Contexto Empresarial, Agent Core y configuracion de agente operacional |
-| `src/app/domains/conversations/` | Conversaciones y mensajes solo lectura |
+| `src/app/domains/conversations/` | Bandeja, historial y marcas de lectura |
+| `src/app/domains/contacts/` | Directorio de contactos en modo lectura |
 | `src/app/domains/leads/` | Leads usados por workflows |
 | `src/app/domains/analytics/` | Resumen operacional |
 | `src/app/domains/dashboard/` | Shell, home, workflows, integraciones, pricing, settings y notificaciones |

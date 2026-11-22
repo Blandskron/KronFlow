@@ -46,7 +46,7 @@ flowchart LR
 | FK-06 · Atención humana y envío | IN_PROGRESS | F2 · P0 · L | Operational, IAM, CRM, Conector | FK-02/04/19 | Handoff visible. Restan reclamar, responder, resolver y devolver control con un único actor activo. R2/R3. |
 | FK-07 · Recibos y estados | DONE | F1 · P0 · M | Operational, Conector, CRM | FK-01/02 | Recibos normalizados de WhatsApp directo y estados inciertos reconciliables. R2/R3. |
 | FK-08 · Inbox y búsqueda | DONE | F1 · P1 · M | Operational, CRM | FK-01 | Paginación, búsqueda SQL y marcas de lectura concurrentes. R1/R2. |
-| FK-09 · Trazas y métricas | IN_PROGRESS | F4 · P1 · M | Operational, Agent, CRM | FK-01/02/03/10 | Metadata tenant cubierta. Completar KPIs coherentes y correlación entre servicios. R1/R2. |
+| FK-09 · Trazas y métricas | IN_PROGRESS | F4 · P1 · M | Operational, Agent, CRM | FK-01/02/03/10 | Metadata tenant y conteo de Bandeja alineados. Completar KPIs por eventos y correlación entre servicios. R1/R2. |
 | FK-10 · Eventos de dominio | IN_PROGRESS | F2 · P1 · M | Operational, Contratos | FK-01/02 | Envelope existente. Persistir eventos versionados con replay y suscripciones tenantizadas. R2/R3. |
 | FK-11 · Entrega fiable de webhooks | TODO | POST-v1 · P2 · L | Operational, Deploy, CRM | FK-03/09/10 | Firma, intentos acotados, dedup y diagnóstico por suscripción. R2/R3. |
 | FK-12 · Credenciales acotadas | IN_PROGRESS | F2 · P0 · M | IAM, Operational | FK-10 | Emitir, usar y revocar scope `leads:create`; verificar expiración y credencial ajena. R1/R3. |
@@ -62,10 +62,10 @@ flowchart LR
 | FK-22 · Agenda conversacional | TODO | POST-v1 · P2 · L | Operational, Agent, CRM | FK-17/18/20/24 | Simular y luego confirmar disponibilidad sin reservar doble. R2/R3. |
 | FK-23 · Correo vinculado a conversación | TODO | SHOULD F3 · P2 · L | Operational, Gateway, CRM | FK-17/18; FK-24 si delegado | Envío y evidencia visibles en el hilo bajo permisos. El transporte existente se reutiliza para FK-30. R3. |
 | FK-24 · Integraciones delegadas | IN_PROGRESS | F3 · P1 · L | IAM, Operational, Deploy, CRM | FK-04/09 inicial | Remitente o cuenta vinculada al tenant, rotación y revocación verificadas. R1/R3. |
-| FK-25 · Notificaciones | IN_PROGRESS | SHOULD F4 · P2 · M | Operational, CRM, Gateway | FK-02/03/09 | Historial persistente de alertas y entregas cubiertas por permisos. R1/R2. |
+| FK-25 · Notificaciones | IN_PROGRESS | SHOULD F4 · P2 · M | Operational, CRM, Gateway | FK-02/03/09 | Alertas de handoff enlazan a la Bandeja filtrada. Falta historial persistente de alertas y entregas bajo permisos. R1/R2. |
 | FK-26 · Evaluación y presupuestos de IA | IN_PROGRESS | F4 · P1 · M | Agent, Operational, Contratos | FK-09/20 | Dataset de evaluación aislado, cobertura de trazas y presupuesto configurable; coste solo observado. R1/R2. |
 | FK-27 · Privacidad y retención | IN_PROGRESS | F5 · P0 · L | Operational, IAM, CRM, Deploy | FK-03/04/09 | Resolver solicitudes y comprobar retención sobre almacenes activos y backups. R2/R3. |
-| FK-28 · Directorio y captación CRM | TODO | F2 · P0 · L | Operational, CRM, IAM | FK-04/12 | Contacto canónico, form público e ingesta privada idempotentes, segmentación básica y consentimiento por canal/propósito. R2/R3. |
+| FK-28 · Directorio y captación CRM | IN_PROGRESS | F2 · P0 · L | Operational, CRM, IAM | FK-04/12 | Directorio de lectura tenantizado. Quedan puntos de contacto normalizados, captación idempotente y consentimiento por canal/propósito. R2/R3. |
 | FK-29 · Pipeline comercial | TODO | F2 · P1 · M | Operational, CRM | FK-28 | Oportunidad persistente con etapas, responsable y resultado para dos tenants. R1/R2. |
 | FK-30 · Campañas y plantillas | TODO | F3 · P0 · L | Operational, Canales, CRM | FK-03/04/10/14/24/28 | Versionar plantilla, aprobar snapshot, enviar con stub, aplicar BAJA y verificar recibos; habilitación real por canal. R2/R3. |
 
@@ -74,5 +74,6 @@ flowchart LR
 ## Ejecución y cierre
 
 - **Primera entrega acotada de FK-15:** habilitado PostgreSQL descartable en el job existente y corregido el fixture para correr sin privilegios. Validado en Ubuntu 24.04 con PG 16.15 y dependencias declaradas, y en Windows con PG 18.3. En ambos entornos pasaron 57 pruebas y se omitió el benchmark opcional. OpenAPI pasó en Ubuntu. Queda la ejecución remota del nuevo workflow, además de los gates de restore y release. [Evidencia](flowkron-operational-service/docs/TESTING.md#integración-postgresql-en-validate-fk-15)
-- **Siguiente entrega:** FK-28, primer corte de modelo y lectura del directorio tenantizado. Acotar a puntos de contacto inequívocos y paginación, preservar `Cliente` y referencias activas, demostrar aislamiento y repetir backfill en un schema de prueba. Captación pública y acciones humanas se entregan posteriormente con sus dependencias.
+- **Primer corte de FK-28:** `/api/v1/contacts` y `/app/contacts` exponen búsqueda y paginación sobre `Cliente`. Preservan clientes y referencias existentes. [Contrato y alcance](flowkron-operational-service/docs/API.md#contactos)
+- **Siguiente entrega:** FK-28, puntos de contacto normalizados. Perfilar duplicados, preservar `Cliente` y sus referencias, ensayar backfill repetible en un schema de prueba y documentar rollback. Captación pública y acciones humanas conservan sus dependencias.
 - **Cierre por ticket:** comparar con el contrato vigente, documentar cambio, rollback y riesgos, probar éxito, errores y aislamiento aplicables con datos sintéticos y enlazar evidencia exacta. Marcar `DONE` al cumplir el alcance. **Cierre de v1:** satisfacer [alcance y gates](docs/planning/v1/RELEASE_GATES.md) sobre un SHA y declarar explícitamente canales/funciones habilitadas.

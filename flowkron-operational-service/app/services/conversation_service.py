@@ -34,6 +34,39 @@ def _to_item(summary, conversation, lead):
     return item
 
 
+def _inbox_threads():
+    first_conversations = (
+        select(Conversation.session_id, func.min(Conversation.id).label("conversation_id"))
+        .group_by(Conversation.session_id).subquery()
+    )
+    return _conversation_rows().join_from(Conversation, first_conversations, first_conversations.c.conversation_id == Conversation.id)
+
+
+def _inbox_state():
+    raw_status = func.lower(func.btrim(Conversation.message["status"].astext))
+    human = func.coalesce(Lead.estado_seguimiento == "requiere_humano", False) | func.coalesce(
+        raw_status.in_(("waiting", "requires_human", "requiere_humano")), False
+    )
+    effective_status = case(
+        (human, "waiting"),
+        (raw_status.in_(("new", "active", "closed")), raw_status),
+        else_=case(STATUS_TO_API, value=Lead.estado, else_="active"),
+    )
+    return effective_status, human
+
+
+def inbox_counts(db: Session, tenant: TenantContext) -> tuple[int, int]:
+    status, human = _inbox_state()
+    threads = _inbox_threads().with_only_columns(
+        Conversation.id, status.label("status"), human.label("requires_human"),
+    ).subquery()
+    statement = select(
+        func.count().filter(threads.c.status != "closed"), func.count().filter(threads.c.requires_human),
+    )
+    opened, waiting = execute_for_tenant(db, tenant.schema_name, statement).one()
+    return opened, waiting
+
+
 def list_conversations(
     db: Session,
     tenant: TenantContext,
@@ -46,21 +79,9 @@ def list_conversations(
     search: str | None = None,
     before: tuple[datetime, int] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    first_conversations = (
-        select(Conversation.session_id, func.min(Conversation.id).label("conversation_id"))
-        .group_by(Conversation.session_id).subquery()
-    )
-    statement = _conversation_rows().join_from(Conversation, first_conversations, first_conversations.c.conversation_id == Conversation.id)
-    raw_status = func.lower(func.btrim(Conversation.message["status"].astext))
-    human = func.coalesce(Lead.estado_seguimiento == "requiere_humano", False) | func.coalesce(
-        raw_status.in_(("waiting", "requires_human", "requiere_humano")), False
-    )
+    statement = _inbox_threads()
+    effective_status, human = _inbox_state()
     if status:
-        effective_status = case(
-            (human, "waiting"),
-            (raw_status.in_(("new", "active", "closed")), raw_status),
-            else_=case(STATUS_TO_API, value=Lead.estado, else_="active"),
-        )
         statement = statement.where(effective_status == status)
     if channel:
         statement = statement.where(func.coalesce(

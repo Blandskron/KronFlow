@@ -24,6 +24,8 @@ tags:
     description: Ingesta de eventos desde un adaptador de WhatsApp (auth por X-Tenant-Code + X-Ingest-Key)
   - name: Leads
     description: CRUD de leads del tenant (auth JWT Bearer)
+  - name: Contacts
+    description: Directorio de contactos del tenant (auth JWT Bearer)
   - name: Conversations
     description: Lecttura de conversaciones y mensajes del tenant (auth JWT Bearer)
   - name: Analytics
@@ -694,6 +696,35 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/v1/contacts:
+    get:
+      summary: Consultar el directorio de contactos
+      description: Requiere users.read. Orden descendente por fecha de creación e ID.
+      operationId: contacts_list
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda literal sin distinción de mayúsculas por nombre, correo, teléfono o identificador WhatsApp.
+          schema:
+            type: string
+            maxLength: 120
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Página de contactos de la empresa autenticada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   # ─── Analytics (Dashboard JWT) ──────────────────────────────────────────────
 
@@ -2766,6 +2797,49 @@ components:
                 type: string
                 enum: [queued, sending, unknown, not_sent]
 
+    ContactOut:
+      type: object
+      required: [id, full_name, email, phone, source, created_at]
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        email:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        source:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ContactListResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ContactOut'
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+        meta:
+          type: object
+        status:
+          type: object
+
     # ── Analytics ──────────────────────────────────────────────────────────────
 
     AnalyticsSummary:
@@ -2781,8 +2855,10 @@ components:
           type: integer
         open_conversations:
           type: integer
+          description: Hilos visibles en el inbox que no están cerrados.
         requires_human:
           type: integer
+          description: Hilos visibles en espera de atención humana según el filtro del inbox.
         messages_today:
           type: integer
         messages_last_7_days:

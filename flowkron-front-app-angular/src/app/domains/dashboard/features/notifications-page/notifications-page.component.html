@@ -23,7 +23,7 @@
         <p class="muted">No hay conversaciones pendientes de atención.</p>
       }
       @if (total() > conversations().length) {
-        <p><a routerLink="/app/conversations">Ver todas en Conversaciones</a></p>
+        <p><a routerLink="/app/conversations" [queryParams]="{ status: 'waiting' }">Ver todas las pendientes</a></p>
       }
     }
   </div>

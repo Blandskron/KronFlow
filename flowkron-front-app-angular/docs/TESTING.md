@@ -9,7 +9,7 @@ El único spec Playwright, `tests/visual/flowkron-front.visual.spec.ts`, valida:
 - `/` redirige a `/login`;
 - headings/texto de login;
 
-No usa mocks, backends, login real, `toHaveScreenshot` ni baselines. Es smoke de render público con evidencia visual, no integración end-to-end ni regresión visual automatizada.
+Los casos de WhatsApp, Bandeja y Contactos sustituyen las APIs por respuestas sintéticas. Comprueban estados de conexión, paginación, lectura y navegación al filtro de atención, además de búsqueda, paginación y recuperación de un error en Contactos. El login público conserva su captura de render. Estas pruebas no verifican proveedores ni credenciales reales y prescinden de baselines.
 
 ## Comandos válidos
 

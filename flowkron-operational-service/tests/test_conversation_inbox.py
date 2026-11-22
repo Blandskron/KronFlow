@@ -3,6 +3,7 @@ import os
 from statistics import quantiles
 from time import perf_counter
 from unittest import skipUnless
+from unittest.mock import patch
 
 from sqlalchemy import event, text, update
 from sqlalchemy.orm import Session
@@ -12,9 +13,10 @@ from app.core.security import CurrentPrincipal, get_current_principal
 from app.core.tenant_resolver import quote_identifier
 from app.main import app
 from app.public_models.tenant_runtime import TenantRuntime
+from app.services.analytics_service import analytics_summary
 from app.services.conversation_service import get_conversation, list_conversations, mark_conversation_read
 from app.services.tenant_data import tenant_exec_options
-from app.tenant_models.operations import Conversation, Lead
+from app.tenant_models.operations import Cliente, Conversation, Lead
 from test_message_identity import PostgresCase
 import test_turn_recovery
 
@@ -87,6 +89,45 @@ class ConversationInboxTests(PostgresCase):
         page, total = self.call(list_conversations, tenant, 10, 0, before=(tail["last_message_at"], tail["id"]))
         self.assertEqual(total, 6)
         self.assertEqual([item["id"] for item in top + page], [5, 4, 3, 2, 1])
+
+    def test_analytics_matches_inbox_threads_instead_of_lead_counts(self):
+        tenant, other = self.tenant(), self.tenant()
+        waiting = self.insert(tenant, "waiting", "12025550138")
+        closed = self.insert(tenant, "closed", "12025550139")
+        self.insert(other, "hidden", "12025550138")
+        with Session(self.engine.execution_options(**tenant_exec_options(tenant.schema_name))) as db:
+            db.get(Conversation, waiting["conversation_id"]).message = {"status": " Waiting "}
+            db.get(Conversation, closed["conversation_id"]).message = {"status": "closed"}
+            db.add(Conversation(session_id="12025550138", message={"status": "active"}))
+            db.add(Lead(cliente=Cliente(rut="no-thread", nombre="Lead sin conversación")))
+            db.commit()
+
+        counts = self.call(analytics_summary, tenant)
+        inbox, total = self.call(list_conversations, tenant, 10, 0)
+        self.assertEqual(total, 2)
+        self.assertEqual(counts["total_leads"], 3)
+        self.assertEqual(counts["open_conversations"], 1)
+        self.assertEqual(counts["requires_human"], 1)
+        self.assertEqual(counts["open_conversations"], sum(item["status"] != "closed" for item in inbox))
+        self.assertEqual(counts["requires_human"], sum(item["requires_human"] for item in inbox))
+
+    def test_analytics_message_windows_exclude_future_and_expired_timestamps(self):
+        tenant = self.tenant()
+        now = datetime(2026, 1, 8, 12, tzinfo=timezone.utc)
+        for identifier, sent_at in (
+            ("today", datetime(2026, 1, 8, tzinfo=timezone.utc)),
+            ("week-start", datetime(2026, 1, 1, 12, tzinfo=timezone.utc)),
+            ("outside-week", datetime(2026, 1, 1, 11, 59, tzinfo=timezone.utc)),
+            ("future", datetime(2026, 1, 8, 13, tzinfo=timezone.utc)),
+        ):
+            self.insert(tenant, identifier, sent_at=sent_at)
+
+        with patch("app.services.analytics_service.datetime") as clock:
+            clock.now.return_value = now
+            counts = self.call(analytics_summary, tenant)
+
+        self.assertEqual(counts["messages_today"], 1)
+        self.assertEqual(counts["messages_last_7_days"], 2)
 
     def test_shared_read_is_monotonic_and_keeps_new_arrivals_and_agent_replies(self):
         tenant = self.tenant()

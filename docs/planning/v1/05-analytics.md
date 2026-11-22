@@ -1,6 +1,6 @@
 # Eventos, métricas y observabilidad de Community v1
 
-**Estado:** especificación propuesta. `analytics_summary` consulta `Lead` y `Message` en el schema tenant. `open_conversations` cuenta leads por estado, y `requires_human` usa el estado del lead. FK-09 ya verifica el tenant del envelope. Estos resultados necesitan nombres y fuentes coherentes antes de usarlos como KPIs. [Implementación actual](../../../flowkron-operational-service/app/services/analytics_service.py) · [Pruebas de metadata](../../../flowkron-operational-service/tests/test_contract_metadata.py) · [Roadmap](../../../EVOLUCION_FLOWKRON.md)
+**Estado:** especificación propuesta. El primer ajuste de FK-09 alinea `open_conversations` y `requires_human` con los hilos de la Bandeja y mantiene los conteos de leads y mensajes en el schema tenant. FK-09 también verifica el tenant del envelope. Los KPIs de eventos de este documento requieren instrumentar sus fuentes. [Implementación actual](../../../flowkron-operational-service/app/services/analytics_service.py) · [Pruebas de Bandeja](../../../flowkron-operational-service/tests/test_conversation_inbox.py) · [Roadmap](../../../EVOLUCION_FLOWKRON.md)
 
 ## Contratos y catálogo mínimo
 

@@ -30,6 +30,7 @@ class TurnRecoveryTests(PostgresCase):
     def http(self, method, path, payload=None, headers=None):
         # Exercise the real ASGI application without TestClient/httpx. This
         # avoids the pre-existing optional HTTP-client dependency mismatch.
+        route_path, _, query = path.partition("?")
         async def run():
             data = json.dumps(payload).encode() if payload is not None else b""
             delivered = False
@@ -47,7 +48,7 @@ class TurnRecoveryTests(PostgresCase):
 
             scope = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.4"},
                      "method": method, "scheme": "http", "http_version": "1.1", "root_path": "",
-                     "path": path, "raw_path": path.encode(), "query_string": b"",
+                     "path": route_path, "raw_path": route_path.encode(), "query_string": query.encode(),
                      "headers": [(b"content-type", b"application/json")] +
                                 [(key.lower().encode(), value.encode()) for key, value in (headers or {}).items()],
                      "client": ("127.0.0.1", 1), "server": ("test", 80)}

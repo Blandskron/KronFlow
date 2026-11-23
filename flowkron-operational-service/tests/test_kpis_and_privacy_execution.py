@@ -160,7 +160,15 @@ class KpisAndPrivacyExecutionTests(PostgresCase):
             self.assertEqual((anon_client.nombre, anon_client.email, anon_client.consentimiento_datos), ("Anonimizado", None, False))
             self.assertEqual(db.get(Message, 1).mensaje, "[REDACTED_PRIVACY]")
             self.assertEqual(
-                evaluate_persisted_consent(db, tenant, client_id=1, channel="whatsapp", destination=phone, purpose="marketing", now=T0),
+                evaluate_persisted_consent(
+                    db,
+                    tenant,
+                    client_id=1,
+                    channel="whatsapp",
+                    destination=phone,
+                    purpose="marketing",
+                    now=datetime.now(timezone.utc) + timedelta(seconds=1),
+                ),
                 "suppressed",
             )
 

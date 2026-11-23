@@ -18,19 +18,22 @@ Rutas hijas reales bajo `/app`:
 | `/app` | Redirige a `/app/home` |
 | `/app/home` | Resumen de sesion, tenant y plan |
 | `/app/business-context` | Contexto Empresarial integrado con Agent Core |
-| `/app/conversations` | Bandeja con búsqueda, historial y marca de lectura; `?status=waiting` abre las pendientes |
+| `/app/conversations` | Bandeja con búsqueda, historial, marca de lectura y barra HITL (`Reclamar`, `Responder`, `Devolver a IA`, `Resolver`); `?status=waiting` abre las pendientes |
 | `/app/contacts` | Directorio de lectura con búsqueda, origen y paginación del servidor. La URL conserva origen y página; el término de búsqueda queda en el historial de navegación de esa pestaña. |
 | `/app/contacts/new` | Alta manual con `crm.manage`, nombre obligatorio y puntos de contacto opcionales. El reintento reutiliza la solicitud. |
 | `/app/contacts/:id` | Ficha con leads y conversaciones vinculadas, con reintentos por sección. Muestra el correo y teléfono normalizados cuando están disponibles y usa el valor original en los demás casos. `crm.manage` permite editar el nombre. Un conflicto ofrece recargar la ficha con el nombre vigente. |
 | `/app/leads` | Seguimiento de leads de la empresa. La URL conserva `contact_id`, `status_group`, `temperature` y `offset`. El término de búsqueda se guarda en el historial de navegación de la pestaña. Se puede quitar el filtro de contacto desde la lista. |
 | `/app/leads/:id` | Ficha con enlace al contacto, calificación por etapa y temperatura con `crm.manage`, e historial con `audit.read`. Se abre desde Contactos o Seguimiento. |
 | `/app/workflows` | Tablero derivado de conversaciones y leads |
+| `/app/opportunities` | Pipeline comercial (`FK-29`): alta de oportunidades, cambio de etapa con versión optimista y cierre ganada/perdida (`crm.manage`). |
+| `/app/campaigns` | Campañas y conexiones delegadas (`FK-30`/`FK-24`): conexiones de correo, plantillas aprobadas, campañas con snapshot y despacho stub (`crm.manage`). |
+| `/app/ai-proposals` | Bandeja de revisión de propuestas tipadas de IA (`FK-17`/`FK-18`): aprobar, rechazar y ejecutar efectos versionados (`crm.manage`). |
 | `/app/whatsapp`, `/app/integrations` | Vinculación y diagnóstico de WhatsApp; `integrations` redirige a `whatsapp` |
-| `/app/analytics` | Resumen operacional y tabla de actividad por intervalo y zona. El intervalo inicial incluye los últimos siete días calendario en la zona del navegador. |
+| `/app/analytics` | Resumen operacional, tabla de actividad por intervalo/zona e indicadores consolidados (`/analytics/kpis`). |
 | `/app/notifications` | Cola paginada de atención actual con enlaces a la Bandeja y vista `?view=history` para derivaciones registradas. |
 | `/app/pricing` | Redirige a `/app/home` |
 | `/app/settings` | Perfil, empresa, miembros e invitaciones |
-| `/app/settings/privacy` | Bandeja de privacidad con `audit.read`. `crm.manage` habilita el registro de revisión y cierre. |
+| `/app/settings/privacy` | Bandeja de privacidad con `audit.read`. `crm.manage` habilita revisión, cierre, exportación JSON (`/export`), borrado/anonimización (`/erase`) y barrido de retención (`/retention/sweep`). |
 | `/app/settings/audit-events` | Historial de auditoría con filtros por evento y UUID, paginación y enlaces al CRM. Requiere `audit.read`. |
 
 No existe ruta `/app/agents` en el router actual.
@@ -71,9 +74,15 @@ Base: `environment.operationalApiUrl`, sin slash final.
 | GET | `/leads/{id}/activity` | Historial de alta y cambios de etapa o temperatura (`audit.read`) |
 | GET | `/analytics/summary` | Analytics |
 | GET | `/analytics/activity` | Actividad diaria y totales por fecha y zona (`users.read`) |
+| GET | `/analytics/kpis` | Indicadores consolidados de pipeline, campañas, eventos y gobernanza (`users.read`) |
+| GET/POST | `/conversations/{id}/control`, `/claim`, `/messages`, `/return-to-ai`, `/resolve` | Control HITL de conversación y respuesta humana en outbox (`crm.manage`) |
+| GET/POST/PATCH | `/opportunities/stages`, `/opportunities`, `/opportunities/{id}` | Pipeline comercial con versión optimista y cierre `won`/`lost` (`crm.manage`) |
+| GET/POST | `/ai-proposals`, `/ai-proposals/{id}/approve`, `/reject`, `/execute` | Revisión y ejecución `at-most-once` de propuestas IA (`crm.manage`) |
+| GET/POST | `/channels/connections`, `/templates`, `/campaigns`, `/campaigns/{id}/approve`, `/campaigns/dispatch-stub` | Conexiones delegadas de correo y campañas con worker stub (`crm.manage`) |
 | GET | `/operational/privacy-cases` | Seguimiento de solicitudes (`audit.read`) |
 | GET | `/operational/audit-events` | Consulta histórica filtrada por tipo y correlación (`audit.read`) |
 | PATCH | `/operational/privacy-cases/{id}` | Registrar transición confirmada (`audit.read` y `crm.manage`) |
+| POST | `/operational/privacy-cases/{id}/export`, `/erase`, `/operational/retention/sweep` | Exportación JSON, anonimización/supresión y barrido de retención (`audit.read` y `crm.manage`) |
 | GET | `/agents` | Servicio disponible, sin pantalla actual |
 | POST | `/agents/configure` | Stub de configuración; devuelve 501 |
 

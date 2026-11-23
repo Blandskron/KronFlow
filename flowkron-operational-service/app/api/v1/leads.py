@@ -1,13 +1,13 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
-from app.schemas.lead import LeadListResponse, LeadOut, LeadUpdate
-from app.services.lead_service import get_lead, list_leads, update_lead
+from app.core.tenant_resolver import TenantContext, resolve_audit_reader, resolve_crm_editor, resolve_tenant_from_jwt
+from app.schemas.lead import LeadActivityItem, LeadListResponse, LeadOut, LeadUpdate
+from app.services.lead_service import get_lead, list_lead_activity, list_leads, update_lead
 
 router = APIRouter(prefix="/api/v1/leads", tags=["Leads"])
 
@@ -48,4 +48,13 @@ def update(lead_id: int, payload: LeadUpdate, tenant: TenantContext = Depends(re
     if not lead:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
     return lead
+
+
+@router.get("/{lead_id}/activity", response_model=list[LeadActivityItem])
+def activity(
+    lead_id: int = Path(ge=1, le=9223372036854775807),
+    limit: int = Query(default=25, ge=1, le=50),
+    tenant: TenantContext = Depends(resolve_audit_reader), db: Session = Depends(get_db),
+):
+    return list_lead_activity(db, tenant, lead_id, limit)
 

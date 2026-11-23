@@ -15,7 +15,7 @@
 | Campañas y plantillas, rutas propuestas | Editor con vista previa, audiencia, canal habilitado y acciones según permiso. Exponer borradores, revisión y resultados. | El envío de prueba de demo se distingue del real. Un canal sin credenciales y gates aprobados explica el requisito sin abrir una ruta de envío. |
 | `/app/business-context` | Reutilizar carga de documentos y simulador. Separar configuración del agente y estado persistente, según modo soportado. | Archivo inválido, error de procesamiento y falta de permiso mantienen feedback. El simulador muestra modo demo o proveedor. |
 | `/app/whatsapp` y alias `/app/integrations` | Reutilizar diagnósticos, QR y estados de conexión. Incorporar credenciales acotadas solo al disponer de una API habilitada. | QR vencido desaparece. Las acciones de vinculación dependen de `whatsapp.connect` y de una empresa activa. |
-| `/app/notifications` | Mantener handoffs como lista. Incorporar historial solamente al habilitar FK-25. | Se distingue alerta pendiente de historial y se navega a la conversación aún accesible. |
+| `/app/notifications` | Cola de atención e historial de derivaciones persistidas, con paginación y enlaces a destinos disponibles. | Se distingue alerta pendiente de historial. [Prueba manual](MANUAL_NOTIFICATIONS_QA.md) |
 | `/app/settings` | Reutilizar perfil, miembros, invitaciones y ciclo de empresa. Usar autorización de IAM para cada acción. | Roles, últimos propietarios, suspensiones y errores de invitación tienen estado explícito. |
 | Landing `/` y `/politica-privacidad` | Preservar CTA actuales, contacto institucional y aviso de privacidad. Agregar navegación de documentación y enlace al onboarding. | Enlaces validados en un checkout limpio y formulario operativo con error, éxito y protección CSRF. |
 
@@ -48,3 +48,5 @@ La landing puede indexar páginas públicas con metadatos, canonical y sitemap. 
 - [ ] Ejecutar el [smoke estándar y demo](../../../flowkron-deploy/bootstrap/smoke.py), Playwright para rutas y los recorridos nuevos contra API controlada. Confirmar alta, login, documentos y simulación de demo. Agregar una prueba real E2E por cada módulo habilitado con datos sintéticos y ejecutar además la matriz responsive/teclado.
 
 Resultado esperado de v1. La instalación local llega a un CRM utilizable sin cuentas externas. Las capacidades reales de proveedor se habilitan después de validar su configuración. La UI y la documentación reflejan las capacidades comprobadas del release.
+
+El [recorrido manual de seguimiento](MANUAL_CRM_QA.md) cubre el lead inicial, la calificación, el historial y los conflictos en la demo con un contacto que carece de vinculación de canal.

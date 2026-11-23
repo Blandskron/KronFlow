@@ -1,0 +1,69 @@
+<section class="lead-detail">
+  <a class="btn btn-secondary" routerLink="/app/leads" queryParamsHandling="preserve" [state]="backState">Volver a seguimiento</a>
+  @if (notice(); as result) { <p [attr.role]="result.error ? 'alert' : 'status'">{{ result.message }}</p> }
+  @switch (detail().status) {
+    @case ('loading') { <p role="status">Consultando lead…</p> }
+    @default {
+      @let state = detail();
+      @if (state.status === 'error') {
+        <h1>Ficha del lead</h1>
+        <p role="alert">{{ state.message }}</p>
+        @if (state.retryable) { <button class="btn btn-secondary" type="button" (click)="retry()">Reintentar</button> }
+      } @else if (state.status === 'ready') {
+        @let lead = state.lead;
+        <h1>{{ lead.full_name || 'Lead sin nombre' }}</h1>
+        @if (lead.contact_id) { <a [routerLink]="['/app/contacts', lead.contact_id]">Abrir ficha del contacto</a> }
+        <div class="card">
+          <dl>
+            <div><dt>Etapa</dt><dd>{{ stageLabel(lead.lifecycle_status) }}</dd></div>
+            <div><dt>Temperatura</dt><dd>{{ temperatureLabel(lead.temperature) }}</dd></div>
+            <div><dt>Puntuación</dt><dd>{{ lead.score }}</dd></div>
+            <div><dt>Contacto</dt><dd>{{ lead.email || lead.phone || 'Sin canal registrado' }}</dd></div>
+            <div><dt>Origen</dt><dd>{{ lead.source || 'Sin origen' }}</dd></div>
+            <div><dt>Actualización</dt><dd>{{ lead.updated_at | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+          </dl>
+        </div>
+        @if (auth.hasPermission('crm.manage')) {
+          <section class="card" aria-labelledby="lead-edit">
+            <h2 id="lead-edit">Calificar lead</h2>
+            <form (submit)="$event.preventDefault(); save(lead, stage.value, temperature.value)">
+              <label>Etapa
+                <select #stage class="field" [disabled]="saving()">
+                  @for (option of stages; track option.id) {
+                    <option [value]="option.id" [selected]="option.id === lead.lifecycle_status">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+              <label>Temperatura
+                <select #temperature class="field" [disabled]="saving()">
+                  @for (option of temperatures; track option.id) {
+                    <option [value]="option.id" [selected]="option.id === lead.temperature">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+              <button class="btn btn-primary" type="submit" [disabled]="saving()">Guardar cambios</button>
+            </form>
+          </section>
+        }
+        @if (auth.hasPermission('audit.read')) {
+          <section class="card history" aria-labelledby="lead-history">
+            <h2 id="lead-history">Historial del lead</h2>
+            @let events = history();
+            @if (events) {
+              @if (events.length) {
+                <ol>
+                  @for (event of events; track event.id) {
+                    <li>{{ activityLabel(event) }} · <time [attr.datetime]="event.created_at">{{ event.created_at | date:'dd/MM/yyyy HH:mm' }}</time></li>
+                  }
+                </ol>
+              } @else { <p>Sin cambios registrados.</p> }
+            } @else if (events === null) {
+              <p role="alert">No pudimos consultar el historial.</p>
+              <button class="btn btn-secondary" type="button" (click)="retryHistory()">Reintentar historial</button>
+            } @else { <p role="status">Consultando historial…</p> }
+          </section>
+        }
+      }
+    }
+  }
+</section>

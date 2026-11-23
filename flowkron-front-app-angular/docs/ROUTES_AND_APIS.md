@@ -20,14 +20,18 @@ Rutas hijas reales bajo `/app`:
 | `/app/business-context` | Contexto Empresarial integrado con Agent Core |
 | `/app/conversations` | Bandeja con búsqueda, historial y marca de lectura; `?status=waiting` abre las pendientes |
 | `/app/contacts` | Directorio de lectura con búsqueda, origen y paginación del servidor. La URL conserva origen y página; el término de búsqueda queda en el historial de navegación de esa pestaña. |
-| `/app/contacts/:id` | Ficha con leads y conversaciones vinculadas. `crm.manage` permite editar el nombre. |
-| `/app/leads` | Seguimiento de leads de la empresa con búsqueda, filtros y paginación. `?contact_id=` acota a la ficha de origen. `crm.manage` permite guardar etapas. |
+| `/app/contacts/new` | Alta manual con `crm.manage`, nombre obligatorio y puntos de contacto opcionales. El reintento reutiliza la solicitud. |
+| `/app/contacts/:id` | Ficha con leads y conversaciones vinculadas, con reintentos por sección. Muestra el correo y teléfono normalizados cuando están disponibles y usa el valor original en los demás casos. `crm.manage` permite editar el nombre. Un conflicto ofrece recargar la ficha con el nombre vigente. |
+| `/app/leads` | Seguimiento de leads de la empresa. La URL conserva `contact_id`, `status_group`, `temperature` y `offset`. El término de búsqueda se guarda en el historial de navegación de la pestaña. Se puede quitar el filtro de contacto desde la lista. |
+| `/app/leads/:id` | Ficha con enlace al contacto, calificación por etapa y temperatura con `crm.manage`, e historial con `audit.read`. Se abre desde Contactos o Seguimiento. |
 | `/app/workflows` | Tablero derivado de conversaciones y leads |
 | `/app/whatsapp`, `/app/integrations` | Vinculación y diagnóstico de WhatsApp; `integrations` redirige a `whatsapp` |
-| `/app/analytics` | Resumen operacional |
-| `/app/notifications` | Lista de handoffs de la API con enlace a la Bandeja filtrada |
+| `/app/analytics` | Resumen operacional y tabla de actividad por intervalo y zona. El intervalo inicial incluye los últimos siete días calendario en la zona del navegador. |
+| `/app/notifications` | Cola paginada de atención actual con enlaces a la Bandeja y vista `?view=history` para derivaciones registradas. |
 | `/app/pricing` | Redirige a `/app/home` |
 | `/app/settings` | Perfil, empresa, miembros e invitaciones |
+| `/app/settings/privacy` | Bandeja de privacidad con `audit.read`. `crm.manage` habilita el registro de revisión y cierre. |
+| `/app/settings/audit-events` | Historial de auditoría con filtros por evento y UUID, paginación y enlaces al CRM. Requiere `audit.read`. |
 
 No existe ruta `/app/agents` en el router actual.
 
@@ -52,17 +56,30 @@ Base: `environment.operationalApiUrl`, sin slash final.
 | --- | --- | --- |
 | GET | `/conversations` | Chats y workflow |
 | GET | `/conversations/{id}/messages` | Detalle de chat |
+| GET | `/conversations/handoff-history` | Derivaciones históricas con enlaces a destinos vigentes (`users.read`) |
 | GET | `/contacts` | Directorio de contactos (`users.read`) |
 | GET | `/contacts/sources` | Sugerencias de origen en Contactos (`users.read`) |
 | GET | `/contacts/{id}` | Ficha de contacto (`users.read`) |
+| GET | `/contacts/{id}/whatsapp-consent` | Estado e historial de consentimiento de WhatsApp desde la ficha (`audit.read`) |
+| POST | `/contacts` | Alta manual con reintento por UUID (`crm.manage`) |
+| PATCH | `/contacts/{id}/points` | Actualizar o borrar correo y teléfono de contactos manuales con precondición (`crm.manage`) |
 | PATCH | `/contacts/{id}` | Editar nombre con comprobación de valor esperado (`crm.manage`) |
+| POST | `/contacts/{id}/lead` | Iniciar seguimiento y abrir el lead existente o recién creado (`crm.manage`) |
 | GET | `/leads` | Workflow, actividad del contacto y seguimiento paginado |
-| PATCH | `/leads/{id}` | Guardar etapa con comprobación de `updated_at` (`crm.manage`) |
+| GET | `/leads/{id}` | Ficha y contacto vinculado (`users.read`) |
+| PATCH | `/leads/{id}` | Guardar etapa y temperatura con comprobación de `updated_at` (`crm.manage`) |
+| GET | `/leads/{id}/activity` | Historial de alta y cambios de etapa o temperatura (`audit.read`) |
 | GET | `/analytics/summary` | Analytics |
+| GET | `/analytics/activity` | Actividad diaria y totales por fecha y zona (`users.read`) |
+| GET | `/operational/privacy-cases` | Seguimiento de solicitudes (`audit.read`) |
+| GET | `/operational/audit-events` | Consulta histórica filtrada por tipo y correlación (`audit.read`) |
+| PATCH | `/operational/privacy-cases/{id}` | Registrar transición confirmada (`audit.read` y `crm.manage`) |
 | GET | `/agents` | Servicio disponible, sin pantalla actual |
 | POST | `/agents/configure` | Stub de configuración; devuelve 501 |
 
 Operational usa `ApiResponse<T>` para todas las respuestas JSON. El frontend privado no consume endpoints `/internal/*`.
+
+Tras un conflicto de etapa, el seguimiento consulta la lista con los filtros vigentes y muestra el estado devuelto por el servidor. El operador puede elegir una etapa y confirmar otro intento. Si el cambio deja la página fuera del rango de resultados, la lista vuelve a la última página válida.
 
 ## Agent Core
 

@@ -1,30 +1,93 @@
 <section class="page-section">
   <h1>Notificaciones</h1>
-  <p class="muted">Conversaciones que el agente dejó pendientes de atención.</p>
-  <div class="card list">
-    @if (loading()) {
-      <p class="muted" role="status">Consultando solicitudes pendientes…</p>
-    } @else if (failed()) {
-      <p role="alert">No pudimos consultar las solicitudes.</p>
-      <button class="btn btn-secondary" type="button" (click)="refresh()">Reintentar</button>
-    } @else {
-      @for (conversation of conversations(); track conversation.id) {
-        <article>
-          <span aria-hidden="true"><svg lucideMessageSquare size="20"></svg></span>
-          <div>
-            <a routerLink="/app/conversations" [queryParams]="{ conversation: conversation.id }">
-              {{ conversation.lead_name || 'Contacto sin nombre' }}
-            </a>
-            <p class="muted">Requiere atención</p>
-          </div>
-          <small class="muted">{{ (conversation.last_message_at || conversation.updated_at) | date:'dd/MM HH:mm' }}</small>
-        </article>
-      } @empty {
-        <p class="muted">No hay conversaciones pendientes de atención.</p>
-      }
-      @if (total() > conversations().length) {
-        <p><a routerLink="/app/conversations" [queryParams]="{ status: 'waiting' }">Ver todas las pendientes</a></p>
+  @let selection = activeView();
+  <nav class="views" aria-label="Vistas de notificaciones">
+    <a class="btn btn-secondary" routerLink="." [attr.aria-current]="selection.view === 'pending' ? 'page' : null">
+      Pendientes
+    </a>
+    <a class="btn btn-secondary" routerLink="." [queryParams]="{ view: 'history' }"
+      [attr.aria-current]="selection.view === 'history' ? 'page' : null">Historial</a>
+    <button class="btn btn-secondary" type="button" [disabled]="state().status === 'loading'" (click)="refresh()">Actualizar</button>
+  </nav>
+
+  @let result = state();
+  @switch (result.status) {
+    @case ('loading') { <p class="muted" role="status">Consultando notificaciones…</p> }
+    @case ('error') {
+      @if (result.forbidden) {
+        <p role="alert">No tienes permiso para consultar las notificaciones de esta empresa.</p>
+      } @else {
+        <p role="alert">No pudimos consultar las notificaciones.</p>
+        <button class="btn btn-secondary" type="button" (click)="refresh()">Reintentar</button>
       }
     }
-  </div>
+    @case ('pending') {
+      @if (result.page.total) {
+        <p class="muted">{{ result.page.total }} conversaciones pendientes ·
+          <a routerLink="/app/conversations" [queryParams]="{ status: 'waiting' }">Ver pendientes en Bandeja</a>
+        </p>
+      }
+      <div class="card list">
+        @for (conversation of result.page.items; track conversation.id) {
+          <article>
+            <span aria-hidden="true"><svg lucideMessageSquare size="20"></svg></span>
+            <div>
+              <a routerLink="/app/conversations" [queryParams]="{ status: 'waiting', conversation: conversation.id }">
+                {{ conversation.lead_name || 'Contacto sin nombre' }}
+              </a>
+              <p class="muted">Requiere atención</p>
+            </div>
+            <time class="muted" [attr.datetime]="conversation.last_message_at || conversation.updated_at">
+              {{ (conversation.last_message_at || conversation.updated_at) | date:'dd/MM HH:mm' }}
+            </time>
+          </article>
+        } @empty {
+          <p class="muted">{{ result.page.offset ? 'No quedan conversaciones pendientes en esta página.' : 'No hay conversaciones pendientes de atención.' }}</p>
+        }
+      </div>
+      @if (result.page.offset || result.page.offset + result.page.limit < result.page.total) {
+        <nav class="pager" aria-label="Páginas de pendientes">
+          @if (result.page.offset) {
+            <a class="btn btn-secondary" routerLink="." [queryParams]="{ offset: previousOffset(result.page.offset, result.page.limit) }">Anterior</a>
+          }
+          @if (result.page.offset + result.page.limit < result.page.total) {
+            <a class="btn btn-secondary" routerLink="." [queryParams]="{ offset: result.page.offset + result.page.limit }">Siguiente</a>
+          }
+        </nav>
+      }
+    }
+    @case ('history') {
+      <div class="card list">
+        @for (event of result.page.items; track event.id) {
+          <article>
+            <span aria-hidden="true"><svg lucideMessageSquare size="20"></svg></span>
+            <div>
+              <strong>{{ event.contact_name || 'Derivación registrada' }}</strong>
+              <p class="muted">{{ event.kind === 'whatsapp_turn' ? 'Derivación por WhatsApp' : 'Derivación de entrada' }}</p>
+              @if (event.conversation_id) {
+                <a routerLink="/app/conversations" [queryParams]="{ conversation: event.conversation_id }">Abrir conversación</a>
+              } @else if (event.lead_id) {
+                <a [routerLink]="['/app/leads', event.lead_id]">Abrir lead</a>
+              } @else {
+                <p class="muted">Registro vinculado no disponible</p>
+              }
+            </div>
+            <time class="muted" [attr.datetime]="event.occurred_at">{{ event.occurred_at | date:'dd/MM/yyyy HH:mm' }}</time>
+          </article>
+        } @empty {
+          <p class="muted">No hay derivaciones registradas en esta página.</p>
+        }
+      </div>
+      @if ((selection.view === 'history' && selection.beforeId) || result.page.next_before_id) {
+        <nav class="pager" aria-label="Páginas del historial">
+          @if (selection.view === 'history' && selection.beforeId) {
+            <a class="btn btn-secondary" routerLink="." [queryParams]="{ view: 'history' }">Más recientes</a>
+          }
+          @if (result.page.next_before_id) {
+            <a class="btn btn-secondary" routerLink="." [queryParams]="{ view: 'history', before_id: result.page.next_before_id }">Ver anteriores</a>
+          }
+        </nav>
+      }
+    }
+  }
 </section>

@@ -50,6 +50,28 @@ Extender el API v1 de Operational con lista y edición de plantillas, borrador d
 4. Cuando no se pueda determinar el resultado, pasar a `unknown`. La recuperación consulta un estado externo o espera un recibo firmado y correlacionado. Una vez vencida la ventana de idempotencia, la resolución manual requiere evidencia de que el envío previo no fue aceptado. Al reanudar tras reinicio, reclamar trabajos disponibles por lease y conservar resultados ya aceptados o terminales.
 5. Todas las bajas se registran de forma durable mediante enlace acotado a la finalidad o el mecanismo del canal. La respuesta es genérica e idempotente. La baja se refleja en segmentos, vista previa y siguiente intento. Conservar la evidencia mínima necesaria para evitar reapertura por importación o fusión. Los cambios de consentimiento conservan fuente, hora y versión de política.
 
+### Prueba local de elegibilidad por destinatario
+
+El [evaluador de Operational](../../../flowkron-operational-service/app/services/campaign_eligibility.py) decide por empresa, punto de contacto, canal y finalidad. Exige un punto activo y verificado y una decisión explícita para ese alcance. Si hay empate en la fecha efectiva, prevalece la denegación. Una supresión para la finalidad o para todas las finalidades del punto prevalece sobre un opt-in. La consulta distingue la hora efectiva de la hora de registro para repetir una evaluación con la evidencia conocida entonces.
+
+Desde `flowkron-operational-service`, ejecuta este recorrido con Python. Usa IDs sintéticos en memoria.
+
+```powershell
+python -m scripts.demo_campaign_eligibility
+python -m unittest discover -s tests -p test_campaign_eligibility.py -v
+```
+
+| Caso | Resultado esperado |
+| --- | --- |
+| Opt-in vigente y punto verificado | `stub_accepted`. |
+| Punto verificado sin opt-in o opt-in de otra empresa, canal o finalidad | `consent_missing` en aprobación y `outside_snapshot` en despacho. |
+| Baja, supresión o pérdida de verificación después de aprobar | `eligible` en aprobación y `consent_denied`, `suppressed` o `point_unavailable` en despacho. |
+| Opt-in registrado después de aprobar | `outside_snapshot` para esa campaña. |
+| Decisiones contradictorias con la misma hora efectiva | `consent_denied`. |
+| Baja recibida tarde con fecha efectiva anterior a una renovación | `stub_accepted` si la renovación sigue vigente y no hay supresión aplicable. |
+
+El total esperado es dos aceptaciones simuladas de once casos. `stub_accepted` es el resultado del recorrido local. Para integrarlo con el worker quedan el almacenamiento de la evidencia, el snapshot persistido y la reserva transaccional del permiso. El punto de contacto debe identificar la dirección concreta que se verificó. Un cambio de dirección requiere un punto nuevo o invalidar la evidencia anterior antes de volver a usarlo. El consentimiento histórico de WhatsApp permanece en su contexto de atención directa.
+
 ## Evidencia y métricas
 
 La respuesta de transporte crea evidencia `accepted` al devolver un ID de proveedor. El estado `delivered` requiere un recibo compatible y verificable con la cuenta y el envío. Para email representa aceptación del servidor receptor. Un rebote, queja y baja se registran por separado, incluso cuando llegan tras la confirmación. Un recibo duplicado no cambia conteos. Una transición tardía puede incorporar evidencia nueva sin revertir un estado confirmado por uno preliminar. Si faltan evidencias, mostrar `unknown` o `accepted` según lo observado. [Estados de entrega de Resend](https://resend.com/guides/email/users-never-got-login-code)

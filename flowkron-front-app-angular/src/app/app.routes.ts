@@ -82,6 +82,12 @@ export const routes: Routes = [
           import('@domains/contacts/features/contacts-page/contacts-page.component').then((m) => m.ContactsPageComponent)
       },
       {
+        path: 'contacts/new',
+        title: 'Nuevo contacto · Flowkron',
+        loadComponent: () =>
+          import('@domains/contacts/features/contact-create-page/contact-create-page.component').then((m) => m.ContactCreatePageComponent)
+      },
+      {
         path: 'contacts/:id',
         title: 'Ficha de contacto · Flowkron',
         loadComponent: () =>
@@ -91,6 +97,11 @@ export const routes: Routes = [
         path: 'leads',
         title: 'Seguimiento de leads · Flowkron',
         loadComponent: () => import('@domains/leads/features/leads-page/leads-page.component').then((m) => m.LeadsPageComponent)
+      },
+      {
+        path: 'leads/:id',
+        title: 'Ficha del lead · Flowkron',
+        loadComponent: () => import('@domains/leads/features/lead-detail-page/lead-detail-page.component').then((m) => m.LeadDetailPageComponent)
       },
       {
         path: 'workflows',
@@ -124,6 +135,18 @@ export const routes: Routes = [
           )
       },
       { path: 'pricing', redirectTo: 'home' },
+      {
+        path: 'settings/audit-events',
+        title: 'Eventos de auditoría · Flowkron',
+        loadComponent: () => import('@domains/settings/features/audit-events-page/audit-events-page.component')
+          .then((m) => m.AuditEventsPageComponent)
+      },
+      {
+        path: 'settings/privacy',
+        title: 'Solicitudes de privacidad · Flowkron',
+        loadComponent: () => import('@domains/settings/features/privacy-cases-page/privacy-cases-page.component')
+          .then((m) => m.PrivacyCasesPageComponent)
+      },
       {
         path: 'settings',
         title: 'Configuración · Flowkron',

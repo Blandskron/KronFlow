@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload } from '@lucide/angular';
 import { InviteMemberResponse, TenantInvitation, TenantMembership } from '@domains/auth/domain/auth.model';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
@@ -18,7 +18,7 @@ interface AlertState {
 @Component({
   selector: 'flowkron-settings-page',
   standalone: true,
-  imports: [ReactiveFormsModule, LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload],
+  imports: [ReactiveFormsModule, RouterLink, LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload],
   templateUrl: './settings-page.component.html',
   styleUrl: './settings-page.component.css'
 })

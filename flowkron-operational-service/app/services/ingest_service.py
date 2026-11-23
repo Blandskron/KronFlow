@@ -20,6 +20,7 @@ from app.schemas.ingest import (
     WhatsAppMessageIn,
     WhatsAppStatusIn,
 )
+from app.services.lead_service import get_or_create_initial_lead
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente, Conversation, Ejecutivo, InventarioVehiculo, Lead, MensajeProcesado, Message, SolicitudDerecho
@@ -76,16 +77,6 @@ def _get_or_create_cliente(
     db.add(cliente)
     db.flush()
     return cliente
-
-
-def _get_or_create_lead(db: Session, cliente: Cliente) -> Lead:
-    lead = db.scalar(select(Lead).where(Lead.cliente_id == cliente.id))
-    if lead:
-        return lead
-    lead = Lead(cliente_id=cliente.id)
-    db.add(lead)
-    db.flush()
-    return lead
 
 
 def _get_or_create_conversation(db: Session, session_id: str, payload: dict) -> Conversation:
@@ -173,7 +164,7 @@ def ingest_whatsapp_message(
         email=payload.email,
         source=payload.channel,
     )
-    lead = _get_or_create_lead(db, cliente)
+    lead, _ = get_or_create_initial_lead(db, cliente.id)
     conversation = _get_or_create_conversation(db, session_id, conversation_payload)
     _mark_message_processed(db, payload.external_message_id)
 
@@ -207,7 +198,7 @@ def ingest_whatsapp_message(
 def apply_lead_classification(db: Session, tenant: TenantContext, payload: LeadClassificationIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
     cliente = _get_or_create_cliente(db, payload.phone)
-    lead = _get_or_create_lead(db, cliente)
+    lead, _ = get_or_create_initial_lead(db, cliente.id)
 
     if payload.temperature is not None:
         lead.clasificacion = {"cold": "frio", "warm": "tibio", "hot": "caliente"}.get(payload.temperature, payload.temperature)
@@ -226,7 +217,7 @@ def apply_lead_classification(db: Session, tenant: TenantContext, payload: LeadC
 def create_handoff(db: Session, tenant: TenantContext, payload: HandoffIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
     cliente = _get_or_create_cliente(db, payload.phone)
-    lead = _get_or_create_lead(db, cliente)
+    lead, _ = get_or_create_initial_lead(db, cliente.id)
     lead.estado = "en_proceso"
     lead.estado_seguimiento = "requiere_humano"
     create_system_event(db, "ingest.handoff.created", tenant.auth_tenant_id, tenant.schema_name, {"lead_id": lead.id})
@@ -429,6 +420,8 @@ def upsert_client(db: Session, tenant: TenantContext, payload: ClientUpsertIn) -
 
 def upsert_lead(db: Session, tenant: TenantContext, payload: LeadUpsertIn) -> dict:
     bind_tenant_session(db, tenant.schema_name)
+    if db.scalar(select(Cliente.id).where(Cliente.id == payload.cliente_id).with_for_update()) is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
     lead = db.scalar(select(Lead).where(Lead.cliente_id == payload.cliente_id).order_by(Lead.creado_en.desc()))
     if not lead:
         lead = Lead(cliente_id=payload.cliente_id)

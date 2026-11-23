@@ -1,6 +1,7 @@
 import json
 import re
 import uuid
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import Any
 
@@ -15,6 +16,17 @@ from app.core.config import get_settings
 SKIP_CONTRACT_PATHS = {"/openapi.json", "/docs", "/redoc"}
 SERVICE_NAME = "agent-core"
 ERROR_PREFIX = "AGENT_CORE"
+active_correlation = ContextVar[str | None]("agent_core_correlation", default=None)
+
+
+def _correlation_uuid(value: str) -> str | None:
+    if len(value) != 36:
+        return None
+    try:
+        parsed = str(uuid.UUID(value))
+    except ValueError:
+        return None
+    return parsed if parsed == value.lower() else None
 
 
 def request_meta(request: Request) -> dict[str, Any]:
@@ -99,7 +111,11 @@ async def api_contract_middleware(request: Request, call_next):
     request.state.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.correlation_id = request.headers.get("X-Correlation-ID") or request.state.request_id
 
-    response = await call_next(request)
+    correlation = active_correlation.set(_correlation_uuid(request.state.correlation_id))
+    try:
+        response = await call_next(request)
+    finally:
+        active_correlation.reset(correlation)
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Correlation-ID"] = request.state.correlation_id
 

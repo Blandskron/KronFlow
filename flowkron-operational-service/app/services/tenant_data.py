@@ -46,8 +46,9 @@ def count_for_tenant(db: Session, schema_name: str, statement: Select) -> int:
 
 def lead_to_dict(lead: Lead) -> dict[str, Any]:
     cliente = lead.cliente
+    rut = cliente.rut if cliente and not cliente.rut.startswith("crm:") else ""
     metadata = {
-        "rut": cliente.rut if cliente else "",
+        "rut": rut,
         "tipo_cliente": cliente.tipo_cliente if cliente else "prospecto",
         "plazo_compra": lead.plazo_compra,
         "requiere_credito": lead.requiere_credito,
@@ -59,7 +60,7 @@ def lead_to_dict(lead: Lead) -> dict[str, Any]:
     return {
         "id": lead.id,
         "cliente_id": lead.cliente_id,
-        "rut": cliente.rut if cliente else "",
+        "rut": rut,
         "nombre": cliente.nombre if cliente else "",
         "email": (cliente.email or "") if cliente else "",
         "telefono": cliente.telefono if cliente else "",
@@ -78,7 +79,7 @@ def lead_to_dict(lead: Lead) -> dict[str, Any]:
         "creado_en": lead.creado_en,
         "actualizado_en": lead.actualizado_en,
         "full_name": cliente.nombre if cliente else "",
-        "phone": cliente.telefono or cliente.whatsapp_id if cliente else "",
+        "phone": (cliente.telefono or cliente.whatsapp_id or "") if cliente else "",
         "source": cliente.canal_origen if cliente else "whatsapp_directo",
         "direction": "inbound",
         "temperature": TEMPERATURE_TO_API.get(lead.clasificacion, "cold"),

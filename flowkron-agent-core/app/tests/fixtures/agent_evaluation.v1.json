@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "source_text": {
+    "tenant-a": "Horario de atención Alpha: abre a las nueve.",
+    "tenant-b": "Horario de atención Beta: abre a las once."
+  },
+  "cases": [
+    {"id": "saludo-es", "tenant": "tenant-a", "question": "¡Buenos días!", "retrieval": "skip", "expect_text": "¡Hola!"},
+    {"id": "saludo-en", "tenant": "tenant-a", "question": "Hi!", "retrieval": "skip", "expect_text": "¡Hola!"},
+    {"id": "agradecimiento", "tenant": "tenant-a", "question": "¡Muchas gracias!", "retrieval": "skip", "expect_text": "¡De nada!"},
+    {"id": "derivacion-explicita", "tenant": "tenant-a", "question": "Quiero hablar con una persona", "retrieval": "skip", "reason": "customer_requested_human"},
+    {"id": "sin-fuente", "tenant": "tenant-a", "question": "¿Envían a Marte?", "retrieval": "empty", "reason": "insufficient_context"},
+    {"id": "baja-confianza", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "retrieval": "weak", "provider": "must_not_call", "reason": "insufficient_context"},
+    {"id": "umbral-inclusivo", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "retrieval": "threshold", "expect_text": "abre a las nueve", "source_count": 1},
+    {"id": "respuesta-local-a", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "expect_text": "abre a las nueve", "source_count": 1},
+    {"id": "respuesta-local-b", "tenant": "tenant-b", "question": "¿Cuál es el horario?", "expect_text": "abre a las once", "source_count": 1},
+    {"id": "proveedor-responde", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "provider": "success", "expect_text": "abre a las nueve", "source_count": 1},
+    {"id": "exceso-de-presupuesto", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "provider": "must_not_call", "budget": 1, "reason": "chat_input_budget_exceeded"},
+    {"id": "limite-del-proveedor", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "provider": "rate_limited", "reason": "chat_provider_unavailable"},
+    {"id": "timeout-del-proveedor", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "provider": "timeout", "reason": "chat_provider_unavailable"},
+    {"id": "proveedor-sin-respuesta-valida", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "provider": "invalid", "reason": "chat_provider_unavailable"},
+    {"id": "contexto-no-disponible", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "retrieval": "unavailable", "provider": "must_not_call", "reason": "context_unavailable"},
+    {"id": "contexto-malformado", "tenant": "tenant-a", "question": "¿Cuál es el horario?", "retrieval": "invalid", "provider": "must_not_call", "reason": "context_unavailable"}
+  ]
+}

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
+import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { Contact, ContactsApiService } from '@domains/contacts/data-access/contacts-api.service';
 import { PaginatedResponse } from '@shared/types/api.types';
 import { Subject, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, startWith, switchMap } from 'rxjs';
@@ -25,6 +26,7 @@ export class ContactsPageComponent {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly refresh = new Subject<void>();
+  readonly auth = inject(AuthService);
 
   private readonly filters$ = this.router.events.pipe(
     filter((event) => event instanceof NavigationEnd),

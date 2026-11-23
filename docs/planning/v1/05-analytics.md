@@ -2,6 +2,10 @@
 
 **Estado:** especificación propuesta. El primer ajuste de FK-09 alinea `open_conversations` y `requires_human` con los hilos de la Bandeja y mantiene los conteos de leads y mensajes en el schema tenant. FK-09 también verifica el tenant del envelope. Los KPIs de eventos de este documento requieren instrumentar sus fuentes. [Implementación actual](../../../flowkron-operational-service/app/services/analytics_service.py) · [Pruebas de Bandeja](../../../flowkron-operational-service/tests/test_conversation_inbox.py) · [Roadmap](../../../EVOLUCION_FLOWKRON.md)
 
+La primera serie diaria está disponible en `/api/v1/analytics/activity`. Cuenta altas de contactos y leads y mensajes por dirección desde las tablas operacionales. El intervalo está acotado a 31 días, usa la zona IANA solicitada e indica el corte parcial. [Contrato de actividad](../../../flowkron-operational-service/docs/API.md#analytics)
+
+Operational expone una proyección histórica versionada de eventos seleccionados en `/api/v1/operational/audit-events`. Usa transacciones de la auditoría ya persistida. Agent Core propaga el UUID de correlación a las llamadas internas de contexto. [Contrato y alcance](../../../flowkron-operational-service/docs/API.md#eventos-de-auditoría)
+
 ## Contratos y catálogo mínimo
 
 Conservar el envelope `domain-event`: `event_id`, `event_type`, `event_version`, `occurred_at`, `producer`, `correlation_id`, `trace_id` y `data`. Para nuevos eventos operativos, exigir `tenant_id` resuelto en el productor. Guardar `recorded_at` en el registro persistido. Definir `resource_id`, `causation_id` y el actor mínimo (`kind` y referencia interna cuando haga falta) en el schema de `data` de cada tipo. El envelope vigente restringe propiedades adicionales. `async-job` representa el estado consultable de un trabajo y el evento registra la transición observada. [Evento](../../../flowkron-api-contracts/schemas/events/domain-event.schema.json) · [Trabajo](../../../flowkron-api-contracts/schemas/jobs/async-job.schema.json) · [ADR de eventos](../../../flowkron-api-contracts/docs/decisions/ADR-0004-event-contracts.md)

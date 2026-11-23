@@ -1,5 +1,9 @@
 <section class="page-section">
   <h1>Contactos</h1>
+  @if (auth.hasPermission('crm.manage')) {
+    <a class="btn btn-primary" routerLink="/app/contacts/new" queryParamsHandling="preserve"
+      [state]="{ contactSearch: filters().query }">Nuevo contacto</a>
+  }
   <form class="search" role="search" (submit)="$event.preventDefault(); search(query.value, source.value)">
     <label for="contacts-search">Buscar por nombre, correo o teléfono
       <input #query class="field" id="contacts-search" type="search" maxlength="120" [value]="filters().query" />

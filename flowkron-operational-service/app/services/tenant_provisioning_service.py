@@ -9,12 +9,14 @@ from sqlalchemy.orm import Session
 
 from app.core.database import Base
 from app.core.config import get_settings
+from app.core.contracts import audit_correlation
 from app.core.security import generate_ingest_key, generate_tenant_code, hash_secret
 from app.core.tenant_resolver import sanitize_schema_name
 from app.public_models.migration_registry import MigrationRegistry
 from app.public_models.system_event import SystemEvent
 from app.public_models.tenant_runtime import TenantRuntime
 from app.schemas.tenant import TenantProvisionRequest
+from app.services.audit_event_catalog import EVENTS
 from app.services.tenant_data import tenant_exec_options
 from app.services.tenant_message_schema import upgrade_message_schema
 from app import tenant_models
@@ -214,12 +216,15 @@ def create_system_event(
     schema_name: str | None = None,
     payload: dict | None = None,
 ) -> None:
+    document = dict(payload or {})
+    if event_type in EVENTS and (correlation := audit_correlation.get()) is not None:
+        document["_correlation_id"] = correlation
     db.add(
         SystemEvent(
             auth_tenant_id=auth_tenant_id,
             schema_name=schema_name,
             event_type=event_type,
-            payload=payload or {},
+            payload=document,
         )
     )
 

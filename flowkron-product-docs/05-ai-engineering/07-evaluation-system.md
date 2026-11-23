@@ -2,10 +2,10 @@
 
 Versión: 1.1
 Tipo: arquitectura objetivo
-Estado: `NOT_IMPLEMENTED`
-Última verificación técnica: 2026-07-23
+Estado: `PARTIAL`
+Última verificación técnica: 2026-11-23
 
-No existe dataset versionado, harness, evaluadores automáticos ni quality gate.
+Agent Core incluye un dataset sintético versionado y una suite reproducible para formato, fuentes, derivación, aislamiento básico y escenarios de proveedor simulado. El presupuesto por solicitud limita la entrada por caracteres y solicita un máximo de tokens de salida. La observación registra latencia y tokens cuando el proveedor los informa. Quedan pendientes la evaluación semántica con un modelo autorizado, los costos y la evidencia de release. [Evaluación del runtime](../../flowkron-agent-core/docs/agent/EVALUATION.md)
 
 ## Evaluación mínima
 

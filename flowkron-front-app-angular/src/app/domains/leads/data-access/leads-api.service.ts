@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { OPERATIONAL_API_BASE_URL } from '@core/config/api.config';
 import { ApiResponse, PaginatedResponse } from '@shared/types/api.types';
-import { Lead } from '../domain/lead.model';
+import { InitialLeadResult, Lead, LeadActivity } from '../domain/lead.model';
 import { toParams } from '@shared/utils/http.utils';
 
 @Injectable({ providedIn: 'root' })
@@ -28,8 +28,27 @@ export class LeadsApiService {
   }
 
   updateStage(lead: Lead, stage: string) {
+    return this.update(lead, { lifecycle_status: stage });
+  }
+
+  get(id: string) {
+    return this.http.get<ApiResponse<Lead>>(`${OPERATIONAL_API_BASE_URL}/leads/${encodeURIComponent(id)}`)
+      .pipe(map(({ data }) => data));
+  }
+
+  activity(id: number) {
+    return this.http.get<ApiResponse<LeadActivity[]>>(`${OPERATIONAL_API_BASE_URL}/leads/${id}/activity`)
+      .pipe(map(({ data }) => data));
+  }
+
+  start(contactId: number) {
+    return this.http.post<ApiResponse<InitialLeadResult>>(`${OPERATIONAL_API_BASE_URL}/contacts/${contactId}/lead`, null)
+      .pipe(map(({ data }) => data));
+  }
+
+  update(lead: Lead, changes: { lifecycle_status?: string; temperature?: string }) {
     return this.http.patch<ApiResponse<Lead>>(`${OPERATIONAL_API_BASE_URL}/leads/${lead.id}`, {
-      lifecycle_status: stage, expected_updated_at: lead.updated_at
+      ...changes, expected_updated_at: lead.updated_at
     }).pipe(map(({ data }) => data));
   }
 }

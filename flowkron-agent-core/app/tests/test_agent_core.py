@@ -1,7 +1,9 @@
 from pathlib import Path
 import os
 from types import SimpleNamespace
+from uuid import uuid4
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 Path("flowkron_agent_core.db").unlink(missing_ok=True)
@@ -11,6 +13,7 @@ os.environ["ALLOW_INSECURE_TENANT_HEADER"] = "true"
 os.environ["CHAT_PROVIDER"] = "local"
 
 from app.core.database import create_tables
+from app.core.contracts import api_contract_middleware
 from app.infrastructure.operational_context import OperationalContextClient
 from app.main import app
 from app.services import template_catalog
@@ -227,3 +230,37 @@ def test_operational_context_client_unwraps_standard_success_envelope(monkeypatc
     monkeypatch.setattr("app.infrastructure.operational_context.httpx.Client", FakeHttpClient)
 
     assert OperationalContextClient()._request("POST", "/internal/tenants/2/context/documents") == document_payload
+
+
+def test_context_link_forwards_opaque_request_correlation_without_crossing_requests(monkeypatch):
+    sent = []
+
+    class FakeHttpClient:
+        def __init__(self, timeout):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def request(self, method, url, headers, **kwargs):
+            sent.append(headers.get("X-Correlation-ID"))
+            return SimpleNamespace(status_code=200, json=lambda: {"success": True, "data": {}})
+
+    monkeypatch.setattr("app.infrastructure.operational_context.httpx.Client", FakeHttpClient)
+    probe = FastAPI()
+    probe.middleware("http")(api_contract_middleware)
+
+    @probe.get("/")
+    def request_context():
+        return OperationalContextClient().get_status("synthetic-tenant")
+
+    first, last = str(uuid4()), str(uuid4())
+    with TestClient(probe) as isolated:
+        for value in (first, "private@example.test", last):
+            response = isolated.get("/", headers={"X-Correlation-ID": value})
+            assert response.status_code == 200
+            assert response.json()["meta"]["correlation_id"] == value
+    assert sent == [first, None, last]

@@ -1,0 +1,63 @@
+<section class="page-section">
+  <a class="btn btn-secondary" routerLink="/app/settings">Volver a Configuración</a>
+  <h1>Eventos de auditoría</h1>
+  @let query = filters();
+  @if (auth.hasPermission('audit.read')) {
+    <form (submit)="$event.preventDefault(); search(eventType.value, correlation.value)">
+      <label>Evento
+        <select #eventType class="field">
+          <option value="" [selected]="!query.event_type">Todos</option>
+          @for (kind of eventTypes; track kind) {
+            <option [value]="kind" [selected]="kind === query.event_type">{{ eventLabels[kind] }}</option>
+          }
+        </select>
+      </label>
+      <label>ID de correlación
+        <input #correlation class="field" type="text" maxlength="36" [value]="query.correlation_id"
+          pattern="[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}" />
+      </label>
+      <button class="btn btn-primary" type="submit">Aplicar filtros</button>
+    </form>
+  }
+  @let state = result();
+  @switch (state.status) {
+    @case ('loading') { <p role="status">Consultando eventos…</p> }
+    @case ('error') {
+      @if (state.statusCode === 403) { <p role="alert">No tienes permiso para consultar estos eventos.</p> }
+      @else if (state.statusCode === 422) { <p role="alert">Revisa el tipo de evento y el ID de correlación.</p> }
+      @else {
+        <p role="alert">No pudimos consultar los eventos.</p>
+        <button class="btn btn-secondary" type="button" (click)="retry()">Reintentar</button>
+      }
+    }
+    @case ('ready') {
+      @for (event of state.page.items; track event.event_id) {
+        <article class="card event">
+          <h2>{{ eventLabels[event.event_type] || event.event_type }}</h2>
+          <time class="muted" [attr.datetime]="event.occurred_at">{{ event.occurred_at | date:'dd/MM/yyyy HH:mm:ss' }}</time>
+          <p>Evento <code>{{ event.event_id }}</code></p>
+          @if (event.correlation_id !== event.event_id) {
+            <p>Correlación <code>{{ event.correlation_id }}</code></p>
+          } @else { <p class="muted">Sin correlación HTTP registrada</p> }
+          @if (event.data['previous_stage'] && event.data['stage']) {
+            <p>Etapa {{ event.data['previous_stage'] }} → {{ event.data['stage'] }}</p>
+          }
+          @if (event.data['contact_id']; as id) { <a [routerLink]="['/app/contacts', id]">Abrir contacto</a> }
+          @if (event.data['lead_id']; as id) { <a [routerLink]="['/app/leads', id]">Abrir lead</a> }
+          @if (event.data['case_id']) { <a routerLink="/app/settings/privacy">Abrir solicitudes de privacidad</a> }
+        </article>
+      } @empty { <p>No hay eventos para estos filtros.</p> }
+      @if (query.before_id || state.page.next_before_id) {
+        <nav class="pagination" aria-label="Páginas de eventos">
+          @if (query.before_id) {
+            <a class="btn btn-secondary" routerLink="." [queryParams]="{ before_id: null }" queryParamsHandling="merge">Más recientes</a>
+          }
+          @if (state.page.next_before_id) {
+            <a class="btn btn-secondary" routerLink="." [queryParams]="{ before_id: state.page.next_before_id }"
+              queryParamsHandling="merge">Ver anteriores</a>
+          }
+        </nav>
+      }
+    }
+  }
+</section>

@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { OPERATIONAL_API_BASE_URL } from '@core/config/api.config';
 import { ApiResponse } from '@shared/types/api.types';
-import { AnalyticsSummary } from '../domain/analytics.model';
+import { toParams } from '@shared/utils/http.utils';
+import { ActivityFilters, AnalyticsActivity, AnalyticsSummary } from '../domain/analytics.model';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
@@ -13,5 +14,11 @@ export class AnalyticsApiService {
     return this.http
       .get<ApiResponse<AnalyticsSummary>>(`${OPERATIONAL_API_BASE_URL}/analytics/summary`)
       .pipe(map((response) => response.data));
+  }
+
+  activity(filters: ActivityFilters): Observable<AnalyticsActivity> {
+    return this.http.get<ApiResponse<AnalyticsActivity>>(`${OPERATIONAL_API_BASE_URL}/analytics/activity`, {
+      params: toParams({ ...filters })
+    }).pipe(map(({ data }) => data));
   }
 }

@@ -31,11 +31,12 @@ class Settings(BaseSettings):
     allowed_upload_extensions: Annotated[List[str], NoDecode] = Field(
         default_factory=lambda: [".pdf", ".docx", ".csv", ".xlsx", ".txt", ".md"]
     )
-    low_confidence_threshold: float = 0.35
+    low_confidence_threshold: float = Field(default=0.35, ge=0, le=1)
     chat_provider: Literal["auto", "groq", "local"] = "auto"
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-20b"
-    chat_completion_max_tokens: int = 2000
+    chat_input_max_chars: int = Field(default=12000, gt=0)
+    chat_completion_max_tokens: int = Field(default=2000, gt=0)
     chat_completion_temperature: float = 0.3
     chat_completion_timeout_seconds: int = 60
 

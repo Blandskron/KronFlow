@@ -40,6 +40,7 @@
 - Los documentos completados desde plantillas Word/PDF se deben subir por `POST /api/v1/context/documents/upload-file` como `multipart/form-data`; el core extrae texto antes de indexarlo para simulacion/RAG.
 - El estado agregado de Contexto Empresarial se expone por `GET /api/v1/context/status`; el frontend no debe inferir progreso, estado del agente, ultima actualizacion ni capacidades de acciones documentales.
 - En modo operacional, Agent Core consume `/internal/tenants/{tenant_id}/context/*` y desempaqueta el envelope estandar de Operational antes de validar sus propios `response_model`.
+- Las llamadas internas de contexto propagan `X-Correlation-ID` cuando el identificador de la solicitud es un UUID. La prueba del middleware usa transporte simulado y comprueba que la correlación no se arrastra a otra solicitud. La propagación conserva la autenticación interna existente.
 - Agent Core selecciona Groq para generación de texto cuando `CHAT_PROVIDER=auto` y existe una clave. La recuperación de contexto conserva su implementación actual. El runtime usa los mismos contratos independientemente del proveedor.
 - Operational debe versionar documentos repetidos por `(tenant_id, filename)` para evitar violar `uniq_document_tenant_filename_version`; una segunda carga del mismo archivo debe retornar una nueva `version`.
 
@@ -59,6 +60,13 @@
 - La busqueda RAG es lexical y mock; embeddings/vector DB reales requieren decision de proveedor.
 - La integracion con operational para crear leads, handoff o tickets aun no tiene contrato seguro en este servicio.
 - `X-Tenant-Id` local no debe habilitarse en produccion.
+
+## Evaluación y presupuesto de chat
+
+- El presupuesto por solicitud usa caracteres de entrada y un máximo de tokens de salida solicitado al proveedor. Los conteos de uso de los logs provienen del proveedor y pueden estar ausentes.
+- El agente utiliza el umbral de recuperación léxica en ambos modos. Una coincidencia débil, una recuperación no disponible o un fallo de proveedor producen una propuesta de derivación. Los rechazos de acceso del servicio de contexto se propagan.
+- Una respuesta generada incluye las referencias de los extractos enviados. En derivaciones se pueden conservar referencias recuperadas como evidencia para revisión. Los IDs de fuente mantienen su formato por modo.
+- La evaluación usa documentos sintéticos, SQLite aislado y `httpx.MockTransport`. Cubre comportamiento y contratos del runtime con los stubs definidos. La calidad de un modelo real, el coste y los cupos acumulados siguen pendientes. [Ejecución y rúbrica](EVALUATION.md)
 
 ## Supuestos no verificados
 

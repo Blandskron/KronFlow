@@ -5,6 +5,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from app.core.config import get_settings
+from app.core.contracts import active_correlation
 from app.infrastructure.document_processing.chunker import chunk_text
 
 
@@ -65,16 +66,20 @@ class OperationalContextClient:
             f"/internal/tenants/{tenant_id}/context/retrieve",
             json={"query": query, "limit": limit},
         )
-        return [
-            OperationalContextSource(
+        sources = []
+        for item in payload:
+            score = float(item["score"])
+            content = item["content"]
+            if not 0.0 <= score <= 1.0 or not isinstance(content, str) or not content.strip():
+                raise ValueError("Invalid Operational context source")
+            sources.append(OperationalContextSource(
                 document_id=int(item["document_id"]),
                 chunk_id=int(item["chunk_id"]),
                 title=str(item["title"]),
-                score=float(item["score"]),
-                content=str(item["content"]),
-            )
-            for item in payload
-        ]
+                score=score,
+                content=content,
+            ))
+        return sources
 
     def require_active_workspace(self, tenant_id: str) -> None:
         runtime = self._request("GET", f"/internal/tenants/{int(tenant_id)}/runtime")
@@ -86,6 +91,8 @@ class OperationalContextClient:
         url = f"{settings.operational_service_url.rstrip('/')}{path}"
         headers = dict(kwargs.pop("headers", {}) or {})
         headers["X-Internal-Token"] = settings.internal_token
+        if (correlation := active_correlation.get()) is not None:
+            headers["X-Correlation-ID"] = correlation
         try:
             with httpx.Client(timeout=15) as client:
                 response = client.request(method, url, headers=headers, **kwargs)

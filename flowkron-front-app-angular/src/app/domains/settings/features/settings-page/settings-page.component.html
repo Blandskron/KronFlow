@@ -3,6 +3,12 @@
       <div class="heading">
         <div>
           <h1>Configuración</h1>
+          @if (auth.hasPermission('audit.read')) {
+            <nav class="settings-links" aria-label="Auditoría y privacidad">
+              <a routerLink="/app/settings/privacy">Solicitudes de privacidad</a>
+              <a routerLink="/app/settings/audit-events">Eventos de auditoría</a>
+            </nav>
+          }
           <p class="muted">Empresa, perfil y equipo del tenant activo.</p>
         </div>
         @if (auth.currentTenant(); as tenant) {
@@ -259,4 +265,3 @@
         </article>
       }
     </section>
-  

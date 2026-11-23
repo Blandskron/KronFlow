@@ -37,3 +37,17 @@ export interface PendingReply {
   inbound_message_id: number;
   status: 'queued' | 'sending' | 'unknown' | 'not_sent';
 }
+
+export interface HandoffHistoryItem {
+  id: number;
+  kind: 'whatsapp_turn' | 'inbound_handoff';
+  occurred_at: string;
+  conversation_id: number | null;
+  lead_id: number | null;
+  contact_name: string | null;
+}
+
+export interface HandoffHistoryPage {
+  items: HandoffHistoryItem[];
+  next_before_id: number | null;
+}

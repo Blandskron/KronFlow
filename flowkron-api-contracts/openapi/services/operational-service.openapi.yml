@@ -545,6 +545,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /api/v1/leads/{lead_id}/activity:
+    get:
+      summary: Consultar historial comercial del lead
+      description: Requiere audit.read. Devuelve los cambios CRM recientes de la empresa autenticada.
+      operationId: lead_activity
+      tags: [Leads]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lead_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1, maximum: 9223372036854775807 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 25 }
+      responses:
+        '200':
+          description: Actividad comercial en orden descendente
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeadActivityItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ─── Conversations (Dashboard JWT) ──────────────────────────────────────────
 
   /api/v1/conversations:
@@ -612,6 +649,46 @@ paths:
                 $ref: '#/components/schemas/ConversationListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/conversations/handoff-history:
+    get:
+      summary: Consultar derivaciones registradas de la empresa
+      description: Requiere users.read. Devuelve eventos persistidos por ID descendente. La referencia al destino es nula si el registro ya no está disponible.
+      operationId: conversations_handoff_history
+      tags: [Conversations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 25 }
+        - name: before_id
+          in: query
+          schema: { type: integer, format: int32, minimum: 1, maximum: 2147483647 }
+      responses:
+        '200':
+          description: Página de derivaciones registradas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    $ref: '#/components/schemas/HandoffHistoryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Límite o cursor inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   /api/v1/conversations/{conversation_id}:
     get:
@@ -768,6 +845,53 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+    post:
+      summary: Crear un contacto manual
+      description: Requiere crm.manage. Repetir el UUID de solicitud dentro de la misma empresa devuelve el contacto existente.
+      operationId: contacts_create
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCreateIn'
+      responses:
+        '200':
+          description: Contacto creado o recuperado al reintentar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    required: [created, contact]
+                    properties:
+                      created: { type: boolean }
+                      contact:
+                        $ref: '#/components/schemas/ContactDetailOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Referencia de creación no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Solicitud o datos de contacto inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /api/v1/contacts/sources:
     get:
       summary: Listar orígenes de contactos de la empresa activa
@@ -800,7 +924,7 @@ paths:
   /api/v1/contacts/{contact_id}:
     get:
       summary: Consultar la ficha de un contacto
-      description: Requiere users.read. Solo devuelve contactos de la empresa autenticada.
+      description: Requiere users.read. Devuelve los datos de la empresa autenticada y sus formatos normalizados cuando se pueden derivar.
       operationId: contacts_get
       tags: [Contacts]
       security:
@@ -826,7 +950,7 @@ paths:
                   success:
                     const: true
                   data:
-                    $ref: '#/components/schemas/ContactOut'
+                    $ref: '#/components/schemas/ContactDetailOut'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -887,6 +1011,137 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /api/v1/contacts/{contact_id}/points:
+    patch:
+      summary: Actualizar correo y teléfono de un contacto manual
+      description: Requiere crm.manage y los valores anteriores de ambos campos. Usar null para borrar un valor.
+      operationId: contacts_update_points
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contact_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1, maximum: 9223372036854775807 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactPointsUpdate'
+      responses:
+        '200':
+          description: Ficha con los datos actualizados
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    $ref: '#/components/schemas/ContactDetailOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Los valores cambiaron o el contacto es gestionado por su integración de origen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Datos de contacto inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/contacts/{contact_id}/whatsapp-consent:
+    get:
+      summary: Consultar el consentimiento de WhatsApp y su historial
+      description: Requiere audit.read. El cursor pagina los eventos por ID de registro descendente y conserva el estado vigente.
+      operationId: contacts_whatsapp_consent
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contact_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1, maximum: 9223372036854775807 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 15, minimum: 1, maximum: 50 }
+        - name: before_id
+          in: query
+          schema: { type: integer, format: int32, minimum: 1, maximum: 2147483647 }
+      responses:
+        '200':
+          description: Estado vigente y página de evidencia
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    $ref: '#/components/schemas/ContactConsentOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Identificador o paginación inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/contacts/{contact_id}/lead:
+    post:
+      summary: Iniciar seguimiento comercial de un contacto
+      description: Requiere crm.manage. Devuelve el lead inicial existente o lo crea si el contacto no tiene lead.
+      operationId: contacts_start_lead
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contact_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1, maximum: 9223372036854775807 }
+      responses:
+        '200':
+          description: Lead inicial creado o recuperado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    required: [lead, created]
+                    properties:
+                      lead:
+                        $ref: '#/components/schemas/LeadOut'
+                      created: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ─── Analytics (Dashboard JWT) ──────────────────────────────────────────────
 
   /api/v1/analytics/summary:
@@ -905,6 +1160,58 @@ paths:
                 $ref: '#/components/schemas/AnalyticsSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/analytics/activity:
+    get:
+      summary: Actividad diaria de la empresa autenticada
+      description: Requiere users.read. El intervalo incluye ambos días y admite hasta 31 días. La fecha de hoy en la zona solicitada puede ser parcial.
+      operationId: analytics_activity
+      tags: [Analytics]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: time_zone
+          in: query
+          schema:
+            type: string
+            maxLength: 64
+            pattern: '^(UTC|[A-Za-z_]+(?:/[A-Za-z0-9_+\-]+)+)$'
+            default: UTC
+          example: America/Santiago
+      responses:
+        '200':
+          description: Serie diaria y totales acumulados en el mismo corte
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    $ref: '#/components/schemas/AnalyticsActivity'
+                  meta: { type: object }
+                  status: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Intervalo o zona horaria no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   # ─── Agents STUB (Dashboard JWT) ─────────────────────────────────────────────
 
@@ -1070,6 +1377,155 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OperationalPaginatedResponse'
+
+  /api/v1/operational/audit-events:
+    get:
+      summary: Consultar eventos auditados de la empresa
+      description: Requiere audit.read. Proyección histórica de eventos seleccionados, ordenada por ID descendente.
+      operationId: audit_events_list
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 25 }
+        - name: before_id
+          in: query
+          schema: { type: integer, format: int32, minimum: 1, maximum: 2147483647 }
+        - name: event_type
+          in: query
+          schema:
+            type: string
+            enum: [contact.created, contact.renamed, contact.points.changed, lead.created, lead.stage.changed, lead.temperature.changed, conversation.handoff.requested, privacy.case.state.changed]
+        - name: correlation_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Eventos auditados y cursor para consultar los anteriores
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    required: [items, next_before_id]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: ../../schemas/events/domain-event.schema.json
+                      next_before_id: { type: [integer, 'null'] }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Filtro o cursor inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/operational/privacy-cases:
+    get:
+      summary: Consultar solicitudes de privacidad de la empresa
+      description: Requiere audit.read. Devuelve metadatos de seguimiento sin identificador de canal ni notas.
+      operationId: privacy_cases_list
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          schema: { type: string, enum: [pendiente, en_proceso, completada] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Página de solicitudes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    required: [items, total, limit, offset]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PrivacyCaseOut'
+                      total: { type: integer, minimum: 0 }
+                      limit: { type: integer, minimum: 1 }
+                      offset: { type: integer, minimum: 0 }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/operational/privacy-cases/{case_id}:
+    patch:
+      summary: Registrar revisión o cierre de una solicitud
+      description: Requiere audit.read y crm.manage. El cierre es un registro de la gestión realizada por el operador.
+      operationId: privacy_case_transition
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: case_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1, maximum: 9223372036854775807 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expected_state, state]
+              properties:
+                expected_state: { type: string, enum: [pendiente, en_proceso] }
+                state: { type: string, enum: [en_proceso, completada] }
+                confirmed: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Solicitud con su estado vigente
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    $ref: '#/components/schemas/PrivacyCaseOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El estado cambió desde la lectura
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Transición inválida o confirmación ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   /api/v1/operational/solicitudes-derechos:
     get:
@@ -2724,6 +3180,8 @@ components:
       properties:
         id:
           type: integer
+        contact_id:
+          type: [integer, 'null']
         full_name:
           type: string
         phone:
@@ -2756,6 +3214,16 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    LeadActivityItem:
+      type: object
+      required: [id, kind, created_at]
+      properties:
+        id: { type: integer }
+        kind: { type: string, enum: [created, stage, temperature] }
+        created_at: { type: string, format: date-time }
+        previous: { type: [string, 'null'] }
+        value: { type: [string, 'null'] }
 
     LeadUpdate:
       type: object
@@ -2911,6 +3379,35 @@ components:
           format: date-time
 
 
+    PrivacyCaseOut:
+      type: object
+      required: [id, kind, state, requested_at, due_at, completed_at]
+      properties:
+        id: { type: integer, format: int64 }
+        kind: { type: string, enum: [acceso, rectificacion, eliminacion, oposicion, portabilidad] }
+        state: { type: string, enum: [pendiente, en_proceso, completada] }
+        requested_at: { type: string, format: date-time }
+        due_at: { type: string, format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+
+    HandoffHistoryPage:
+      type: object
+      required: [items, next_before_id]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, kind, occurred_at, conversation_id, lead_id, contact_name]
+            properties:
+              id: { type: integer }
+              kind: { type: string, enum: [whatsapp_turn, inbound_handoff] }
+              occurred_at: { type: string, format: date-time }
+              conversation_id: { type: [integer, 'null'] }
+              lead_id: { type: [integer, 'null'] }
+              contact_name: { type: [string, 'null'] }
+        next_before_id: { type: [integer, 'null'] }
+
     ConversationListResponse:
       type: object
       properties:
@@ -2978,6 +3475,70 @@ components:
           type: string
           format: date-time
 
+    ContactCreateIn:
+      type: object
+      additionalProperties: false
+      required: [request_id, full_name]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          description: UUID v4 único para cada alta en la empresa
+        full_name: { type: string, minLength: 1, maxLength: 180 }
+        email: { type: [string, 'null'], maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 80 }
+
+    ContactPointsUpdate:
+      type: object
+      additionalProperties: false
+      required: [email, phone, expected_email, expected_phone]
+      properties:
+        email: { type: [string, 'null'], maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 80 }
+        expected_email: { type: [string, 'null'] }
+        expected_phone: { type: [string, 'null'] }
+
+    ConsentEvidenceItem:
+      type: object
+      required: [id, kind, accepted, effective_at, recorded_at, policy_version, source]
+      properties:
+        id: { type: integer, format: int32 }
+        kind: { type: string, enum: [decision, prior_withdrawal] }
+        accepted: { type: [boolean, 'null'] }
+        effective_at: { type: [string, 'null'], format: date-time }
+        recorded_at: { type: string, format: date-time }
+        policy_version: { type: [string, 'null'] }
+        source: { type: [string, 'null'], enum: [whatsapp_message, operational, null] }
+
+    ContactConsentOut:
+      type: object
+      required: [channel, state, decision_at, authorized_from, policy_version, items, next_before_id]
+      properties:
+        channel: { const: whatsapp }
+        state: { type: string, enum: [unlinked, unrecorded, granted, not_granted] }
+        decision_at: { type: [string, 'null'], format: date-time }
+        authorized_from: { type: [string, 'null'], format: date-time }
+        policy_version: { type: [string, 'null'] }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentEvidenceItem'
+        next_before_id: { type: [integer, 'null'], format: int32 }
+
+    ContactDetailOut:
+      allOf:
+        - $ref: '#/components/schemas/ContactOut'
+        - type: object
+          properties:
+            normalized_email:
+              type: [string, 'null']
+              description: Correo con dominio en minúsculas y parte local conservada, si el formato es compatible.
+              examples: ['Contacto+ventas@example.test']
+            normalized_phone:
+              type: [string, 'null']
+              description: Teléfono con prefijo internacional explícito, sin separadores. La disponibilidad del número requiere verificación.
+              examples: ['+56912345678']
+
     ContactListResponse:
       type: object
       required: [success, data]
@@ -3026,6 +3587,41 @@ components:
           type: integer
         messages_last_7_days:
           type: integer
+
+    AnalyticsActivityCounts:
+      type: object
+      required: [contacts_created, leads_created, inbound_messages, outbound_messages]
+      properties:
+        contacts_created: { type: integer, minimum: 0 }
+        leads_created: { type: integer, minimum: 0 }
+        inbound_messages: { type: integer, minimum: 0 }
+        outbound_messages:
+          type: integer
+          minimum: 0
+          description: Mensajes salientes registrados en Operational, cualquiera que sea su estado de entrega.
+
+    AnalyticsActivity:
+      type: object
+      required: [start_date, end_date, time_zone, as_of, partial_day, totals, days]
+      properties:
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        time_zone: { type: string }
+        as_of: { type: string, format: date-time }
+        partial_day: { type: [string, 'null'], format: date }
+        totals:
+          $ref: '#/components/schemas/AnalyticsActivityCounts'
+        days:
+          type: array
+          minItems: 1
+          maxItems: 31
+          items:
+            allOf:
+              - $ref: '#/components/schemas/AnalyticsActivityCounts'
+              - type: object
+                required: [day]
+                properties:
+                  day: { type: string, format: date }
 
     # ── Agents ─────────────────────────────────────────────────────────────────
 

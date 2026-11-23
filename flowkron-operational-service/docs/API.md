@@ -116,14 +116,19 @@ Todas las rutas siguientes exigen `Authorization: Bearer <JWT humano>`. Se valid
 | Método y ruta | Detalle |
 | --- | --- |
 | `GET /api/v1/leads` | Paginación por fecha de actualización e ID descendentes; filtros `q`, `contact_id`, `status_group`, `temperature`, `lifecycle_status`, `direction` |
-| `GET /api/v1/leads/{lead_id}` | Detalle adaptado al contrato frontend |
+| `GET /api/v1/leads/{lead_id}` | Detalle y `contact_id` de la empresa. Requiere `users.read`. |
 | `PATCH /api/v1/leads/{lead_id}` | Actualiza nombre/email/clasificación/estado/ejecutivo/score. `expected_updated_at` protege la edición contra cambios posteriores (`409`). |
+| `GET /api/v1/leads/{lead_id}/activity` | Requiere `audit.read`. Devuelve el alta manual y los cambios comerciales de etapa o temperatura. `limit` admite entre 1 y 50 filas. |
 
 `direction` en el filtro: cualquier valor distinto de `inbound` fuerza una consulta vacía. En `LeadUpdate`, los campos `direction`, `tags` y `metadata` están aceptados por Pydantic pero el service no los persiste actualmente.
 
-`q` busca una subcadena literal por nombre, correo o teléfono. `status_group=closed` incluye `ganado` y `perdido`; `open` incluye las demás etapas. `contact_id` filtra por la referencia tenant del lead. Los cambios válidos de etapa quedan auditados en la misma transacción con el ID y la transición, sin copiar datos de contacto. Una etapa, clasificación, puntuación o asignación inválida devuelve `422`.
+`q` busca una subcadena literal por nombre, correo o teléfono. `status_group=closed` incluye `ganado` y `perdido`, y `open` incluye las demás etapas. `contact_id` filtra por la referencia tenant del lead. Los cambios de etapa y temperatura desde CRM quedan auditados en la misma transacción, con el ID y los valores previos y nuevos. El historial expone solo estos eventos y el alta manual, ordenados del más reciente al más antiguo. Una etapa, clasificación, puntuación o asignación inválida devuelve `422`.
 
 ### Conversaciones y mensajes
+
+`GET /api/v1/conversations/handoff-history` requiere `users.read`. Devuelve derivaciones persistidas a partir de `whatsapp.turn.handoff` e `ingest.handoff.created`, en orden descendente por ID. `limit` admite de 1 a 50 y `before_id` continúa desde `next_before_id`. La cola vigente se consulta con `GET /api/v1/conversations?requires_human=true`.
+
+Las derivaciones de WhatsApp resuelven la conversación visible en la Bandeja y su lead. Las derivaciones de entrada anteriores resuelven el lead registrado por el evento. Si el destino ya no existe, el historial conserva el evento con sus referencias nulas. La API entrega la fecha, el tipo, el nombre si hay un destino y los IDs para navegar. Los textos de mensajes y los payloads de auditoría quedan en sus fuentes.
 
 | Método y ruta | Detalle |
 | --- | --- |
@@ -146,13 +151,37 @@ El modelo activo de conversación es un JSON por `session_id`, no la tabla relac
 
 `GET /api/v1/contacts` consulta el directorio de la empresa autenticada con `users.read`. Admite `limit`, `offset`, `source` para filtrar por origen exacto y `q` para buscar por nombre, correo, teléfono e identificador WhatsApp sin distinguir mayúsculas. Las consultas con formato telefónico y al menos cuatro dígitos comparan también los números sin puntuación. El orden es fecha de creación e ID descendentes. `data` incluye `items`, `total`, `limit` y `offset`.
 
-`GET /api/v1/contacts/sources` devuelve hasta cien orígenes únicos ordenados de la empresa activa. `GET /api/v1/contacts/{contact_id}` devuelve el mismo tipo de contacto que el listado o `404` cuando no existe en la empresa. Ambos requieren `users.read`. Los contactos devuelven ID, nombre, correo y teléfono opcionales, origen y fecha de creación.
+`GET /api/v1/contacts/sources` devuelve hasta cien orígenes únicos ordenados de la empresa activa. `GET /api/v1/contacts/{contact_id}` conserva los campos del listado y añade `normalized_email` y `normalized_phone`. Devuelve `404` cuando el contacto no existe en la empresa. Ambos requieren `users.read`.
+
+`GET /api/v1/contacts/{contact_id}/whatsapp-consent` requiere `audit.read` y devuelve el estado de WhatsApp, la última decisión conocida y el historial de la empresa del JWT. Admite `limit` de 1 a 50 (15 por defecto) y `before_id` con el cursor `next_before_id` de la respuesta. Ordena el historial por ID de registro descendente y calcula el estado vigente independientemente de la página. Una baja recibida tarde que corresponde a un periodo anterior aparece como `prior_withdrawal`. Se incluyen fechas y versiones de política reconocibles. La consulta utiliza el consentimiento guardado cuando la proyección de orden v8 todavía no está disponible.
+
+La ficha calcula los valores al leer. Para un buzón ASCII compatible, conserva mayúsculas, puntos y alias de la parte local y pasa el dominio a minúsculas. Para un teléfono con `+` explícito, quita los separadores del formato internacional admitido. Devuelve `null` ante un valor ausente o un formato ambiguo. Los resultados representan formato, sin evidencia de titularidad, disponibilidad ni consentimiento. [Regla de mayúsculas de SMTP](https://www.rfc-editor.org/rfc/rfc5321.html#section-2.4) · [Formato internacional E.164](https://www.itu.int/rec/T-REC-E.164/en)
+
+`POST /api/v1/contacts` requiere `crm.manage`. Recibe `request_id` en UUID v4, `full_name` y, opcionalmente, `email` y `phone`. Persiste el contacto con origen `crm_manual`, `whatsapp_id` vacío y consentimiento desactivado. Devuelve `contact` y `created`. El UUID identifica un alta dentro de la empresa. Al repetir ese UUID, incluso después de editar la ficha, se devuelve el registro vigente con `created: false` y se ignoran los nuevos valores de la solicitud. Para otra alta se usa un UUID distinto. Esta protección cubre el reintento de la solicitud. La detección de contactos equivalentes sigue siendo parte de la identidad multicanal de FK-28.
+
+`PATCH /api/v1/contacts/{contact_id}/points` requiere `crm.manage` y un contacto de origen `crm_manual`. Recibe el correo y teléfono (`null` para borrar) y los valores anteriores `expected_email` y `expected_phone`. El servidor compara ambos datos bajo bloqueo y devuelve `409` si cambiaron. En un cambio efectivo se auditan el ID y los campos modificados. Los contactos de integración conservan su flujo de actualización de origen.
 
 `PATCH /api/v1/contacts/{contact_id}` requiere `crm.manage` y guarda `full_name` si `expected_full_name` coincide con el registro bajo bloqueo. Devuelve `409` si el contacto cambió y registra una auditoría con el ID al guardar un nombre distinto. La operación conserva los datos de contacto y las decisiones de consentimiento existentes.
+
+`POST /api/v1/contacts/{contact_id}/lead` requiere `crm.manage`. Devuelve `lead` y `created`. Si el contacto ya tiene un lead, devuelve el primero por ID, incluso si está cerrado. Si carece de lead, crea uno con etapa `nuevo` y temperatura `cold`, y registra el alta en la misma transacción. Las altas simultáneas reutilizan el mismo lead. La operación usa el contacto existente y deja la atención y el consentimiento en sus flujos actuales.
 
 ### Analytics
 
 `GET /api/v1/analytics/summary` devuelve conteos de leads por clasificación, hilos abiertos del inbox, hilos en espera de atención y mensajes. Las ventanas de mensajes son desde medianoche UTC y los últimos siete días hasta el instante de evaluación. El resumen usa los mismos hilos y estados que la Bandeja y calcula todos los conteos sobre una misma instantánea de PostgreSQL.
+
+`GET /api/v1/analytics/activity` requiere `users.read` y consulta la empresa del JWT. Recibe `start_date` y `end_date` como fechas inclusivas, hasta 31 días, y `time_zone` con una zona IANA de región o `UTC`. Ambas fechas se interpretan en esa zona. Devuelve `422` si la zona, el orden o la extensión son inválidos, o si el fin excede el día de hoy en la zona elegida.
+
+La respuesta incluye `as_of` en UTC, `partial_day` cuando el último día sigue en curso, una fila por día y totales que suman las filas. Contactos y leads se cuentan por `creado_en`. Los mensajes se cuentan por `creado_en` y dirección persistida. Los salientes registrados pueden estar en cualquier estado de entrega. Los días sin actividad tienen cero. Todas las métricas de actividad salen de una consulta tenantizada sobre las tablas operacionales.
+
+### Eventos de auditoría
+
+`GET /api/v1/operational/audit-events` requiere `audit.read`. Filtra por la empresa autenticada, `event_type` opcional y un `correlation_id` UUID opcional. `limit` admite de 1 a 50. Para continuar hacia atrás por ID, envía `next_before_id` como `before_id` con los mismos filtros.
+
+El endpoint proyecta altas y cambios de contactos y leads, derivaciones y transiciones de privacidad. Devuelve ID estable del evento en esta instalación, un tipo de catálogo, versión `v1`, hora de registro y empresa. `data` contiene referencias internas y, cuando corresponde, etapas o estados de un catálogo cerrado. Para auditorías con una correlación UUID válida se conserva ese identificador. En registros históricos o sin UUID se usa el ID del propio evento como referencia, sin atribuirlo a una solicitud. Esta paginación consulta historia registrada. Los cursores de consumo, las garantías de replay hacia delante y las suscripciones siguen pendientes.
+
+### Seguimiento de privacidad
+
+`GET /api/v1/operational/privacy-cases` requiere `audit.read`. Pagina por fecha límite e ID y acepta `state`. Devuelve ID, tipo, estado y fechas de seguimiento. `PATCH /api/v1/operational/privacy-cases/{case_id}` requiere también `crm.manage`. Admite `pendiente → en_proceso` y `en_proceso → completada`. El cierre exige `confirmed: true`, registra la fecha y audita el actor junto con la transición. Un reintento de la transición ya aplicada conserva la fecha y el evento originales. El cierre registra una gestión confirmada. La ejecución de la solicitud y el tratamiento de copias quedan en su proceso específico.
 
 ### Agents (stub)
 

@@ -14,6 +14,34 @@ export interface Contact {
   created_at: string;
 }
 
+export interface ContactDetail extends Contact {
+  normalized_email?: string | null;
+  normalized_phone?: string | null;
+}
+
+export interface ContactPoints { email: string | null; phone: string | null; }
+export interface ContactDraft extends ContactPoints { full_name: string; request_id: string; }
+
+export interface ConsentEvidenceItem {
+  id: number;
+  kind: 'decision' | 'prior_withdrawal';
+  accepted: boolean | null;
+  effective_at: string | null;
+  recorded_at: string;
+  policy_version: string | null;
+  source: 'whatsapp_message' | 'operational' | null;
+}
+
+export interface ContactConsent {
+  channel: 'whatsapp';
+  state: 'unlinked' | 'unrecorded' | 'granted' | 'not_granted';
+  decision_at: string | null;
+  authorized_from: string | null;
+  policy_version: string | null;
+  items: ConsentEvidenceItem[];
+  next_before_id: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ContactsApiService {
   private readonly http = inject(HttpClient);
@@ -29,8 +57,25 @@ export class ContactsApiService {
   }
 
   get(id: string) {
-    return this.http.get<ApiResponse<Contact>>(`${OPERATIONAL_API_BASE_URL}/contacts/${encodeURIComponent(id)}`)
+    return this.http.get<ApiResponse<ContactDetail>>(`${OPERATIONAL_API_BASE_URL}/contacts/${encodeURIComponent(id)}`)
       .pipe(map(({ data }) => data));
+  }
+
+  whatsappConsent(id: number, beforeId?: number) {
+    return this.http.get<ApiResponse<ContactConsent>>(`${OPERATIONAL_API_BASE_URL}/contacts/${id}/whatsapp-consent`, {
+      params: toParams({ before_id: beforeId })
+    }).pipe(map(({ data }) => data));
+  }
+
+  create(draft: ContactDraft) {
+    return this.http.post<ApiResponse<{ contact: ContactDetail; created: boolean }>>(`${OPERATIONAL_API_BASE_URL}/contacts`, draft)
+      .pipe(map(({ data }) => data));
+  }
+
+  updatePoints(contact: Contact, points: ContactPoints) {
+    return this.http.patch<ApiResponse<ContactDetail>>(`${OPERATIONAL_API_BASE_URL}/contacts/${contact.id}/points`, {
+      ...points, expected_email: contact.email, expected_phone: contact.phone
+    }).pipe(map(({ data }) => data));
   }
 
   rename(id: number, fullName: string, expectedName: string) {

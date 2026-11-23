@@ -22,6 +22,7 @@ from app.api.v1.domain_events import router as domain_events_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.opportunities import router as opportunities_router
 from app.api.v1.operational import router as operational_router
+from app.api.v1.post_v1 import router as post_v1_router
 from app.core.config import get_settings
 from app.core.admission import IngestAdmissionMiddleware
 from app.core.contracts import api_contract_middleware, http_exception_handler, validation_exception_handler
@@ -65,6 +66,7 @@ app.include_router(domain_events_router)
 app.include_router(agents_router)
 app.include_router(ai_extensions_router)
 app.include_router(ai_proposals_router)
+app.include_router(post_v1_router)
 app.include_router(operational_router)
 
 

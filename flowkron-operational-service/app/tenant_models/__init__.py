@@ -21,6 +21,12 @@ from app.tenant_models.contact_capture import ContactPoint, LeadCapture
 from app.tenant_models.conversation_control import ConversationControl, ConversationControlEvent, TenantAIPolicy
 from app.tenant_models.domain_events import DomainEvent, DomainEventSubscription
 from app.tenant_models.opportunity import Opportunity, OpportunityActivity, PipelineStage
+from app.tenant_models.post_v1 import (
+    CalendarAppointment,
+    PrivateAttachment,
+    WebhookDelivery,
+    WebhookSubscription,
+)
 from app.tenant_models.whatsapp_consent import WhatsAppConsentState
 from app.tenant_models.whatsapp_turn import WhatsAppSendEvidence, WhatsAppTurn, WhatsAppTurnJob
 from app.tenant_models.operations import (
@@ -55,11 +61,15 @@ __all__ = [
     "Campaign",
     "CampaignApproval",
     "CampaignRecipient",
+    "CalendarAppointment",
     "ChannelEvent",
     "ContactEnrichmentCandidate",
     "ConversationMemoryItem",
     "DeliveryAttempt",
     "ExternalNotificationDelivery",
+    "PrivateAttachment",
+    "WebhookDelivery",
+    "WebhookSubscription",
     "MessageTemplate",
     "TemplateVersion",
     "TenantChannelConnection",

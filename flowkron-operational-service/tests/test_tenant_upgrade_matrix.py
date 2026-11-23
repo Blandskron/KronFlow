@@ -51,6 +51,10 @@ TABLE_INTRODUCED = {
     "contact_enrichment_candidates": 15,
     "external_notification_deliveries": 15,
     "ai_usage_records": 15,
+    "webhook_subscriptions": 16,
+    "webhook_deliveries": 16,
+    "private_attachments": 16,
+    "calendar_appointments": 16,
 }
 DECISION_AT = datetime(2026, 1, 1, tzinfo=UTC)
 EXISTING_BOUNDARY = datetime(2025, 12, 31, tzinfo=UTC)
@@ -100,12 +104,12 @@ class TenantUpgradeMatrixTests(PostgresCase):
         return name
 
     def test_active_matrix_is_repeatable_and_suspended_upgrade_is_transactional(self):
-        matrix = {version: self.seed_version(version, version) for version in range(3, 16)}
+        matrix = {version: self.seed_version(version, version) for version in range(3, 17)}
         suspended = self.seed_version(3, 99, status="suspended")
         for _ in range(2):
             with Session(self.engine) as db:
                 result = migrate_all_tenants(db)
-                self.assertEqual((result["total"], result["success"], result["failed"]), (13, 13, 0), result)
+                self.assertEqual((result["total"], result["success"], result["failed"]), (14, 14, 0), result)
         self.assertFalse(inspect(self.engine).has_table("whatsapp_turns", schema=suspended))
 
         for version, schema in matrix.items():

@@ -22,4 +22,4 @@ El inventario y las guías de source preview se reconciliaron en FK-16. El [back
 | Ticket | Evidencia actual | Falta para cerrar |
 | --- | --- | --- |
 | FK-14 | Conexión de laboratorio y recibos ejercitados con stubs | Validación de vinculación y reconexión con cuentas reales autorizadas y aislamiento por conexión |
-| FK-15 | Upgrade sintético v3–v15, rollback transaccional y restore cifrado de Operational | Validate y Compose sobre el SHA candidato, restauración de toda la instalación y medición de recuperación |
+| FK-15 | Upgrade sintético v3–v16, rollback transaccional y restore cifrado de Operational | Validate y Compose sobre el SHA candidato, restauración de toda la instalación y medición de recuperación |

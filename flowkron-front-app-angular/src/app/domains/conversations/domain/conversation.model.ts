@@ -51,3 +51,28 @@ export interface HandoffHistoryPage {
   items: HandoffHistoryItem[];
   next_before_id: number | null;
 }
+
+export type ConversationControlMode = 'ai_active' | 'waiting_human' | 'human_active' | 'resolved';
+
+export interface ConversationControl {
+  conversation_id: number;
+  mode: ConversationControlMode;
+  owner_user_id: string | null;
+  ai_enabled: boolean;
+  tenant_ai_enabled: boolean;
+  control_version: number;
+  handoff_reason: string | null;
+  resolution_reason: string | null;
+  updated_by: string | null;
+  updated_at: string;
+  cancelled_ai_turns?: number;
+}
+
+export interface HumanReplyResult {
+  status: 'queued';
+  duplicate: boolean;
+  outbox_job_id: number;
+  message_id: number | null;
+  conversation_id: number;
+  control_version: number;
+}

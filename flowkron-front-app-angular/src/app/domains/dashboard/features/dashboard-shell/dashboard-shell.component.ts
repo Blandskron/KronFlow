@@ -52,7 +52,8 @@ export class DashboardShellComponent implements OnInit {
     { path: '/app/contacts', label: 'Contactos', icon: 'users' },
     { path: '/app/whatsapp', label: 'WhatsApp', icon: 'link' },
     { path: '/app/business-context', label: 'Contexto', icon: 'book-open' },
-    { path: '/app/workflows', label: 'Oportunidades', icon: 'workflow' },
+    { path: '/app/opportunities', label: 'Pipeline', icon: 'workflow' },
+    { path: '/app/ai-proposals', label: 'Propuestas IA', icon: 'bell' },
     { path: '/app/analytics', label: 'Métricas', icon: 'bar-chart-3' }
   ];
 

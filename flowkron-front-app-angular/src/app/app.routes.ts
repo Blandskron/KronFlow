@@ -112,6 +112,22 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'opportunities',
+        title: 'Pipeline de oportunidades · Flowkron',
+        loadComponent: () =>
+          import('@domains/leads/features/opportunities-page/opportunities-page.component').then(
+            (m) => m.OpportunitiesPageComponent
+          )
+      },
+      {
+        path: 'ai-proposals',
+        title: 'Revisión de propuestas IA · Flowkron',
+        loadComponent: () =>
+          import('@domains/agents/features/ai-proposals-page/ai-proposals-page.component').then(
+            (m) => m.AIProposalsPageComponent
+          )
+      },
+      {
         path: 'whatsapp',
         title: 'Conectar WhatsApp · Flowkron',
         loadComponent: () =>

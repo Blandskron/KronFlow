@@ -11,7 +11,7 @@ import {
   LucideRefreshCw,
   LucideSearch
 } from '@lucide/angular';
-import { Conversation, ConversationCursor, ConversationMessage, PendingReply } from '@domains/conversations/domain/conversation.model';
+import { Conversation, ConversationControl, ConversationCursor, ConversationMessage, PendingReply } from '@domains/conversations/domain/conversation.model';
 import { ConversationsApiService } from '@domains/conversations/data-access/conversations-api.service';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 
@@ -95,6 +95,17 @@ export class ChatsPageComponent implements OnInit {
   readonly loadError = signal('');
   readonly chats = signal<ChatContact[]>([]);
   readonly threads = signal<Partial<Record<number, Thread>>>({});
+  readonly controlState = signal<ConversationControl | null>(null);
+  readonly controlBusy = signal(false);
+  readonly controlNotice = signal<{ error: boolean; text: string } | null>(null);
+  readonly replyDraft = signal('');
+  readonly canManageCrm = computed(() => this.auth.hasPermission('crm.manage'));
+  readonly controlModeLabels: Record<ConversationControl['mode'], string> = {
+    ai_active: 'IA activa',
+    waiting_human: 'Esperando humano',
+    human_active: 'En atención humana',
+    resolved: 'Resuelta'
+  };
   readonly pendingReplyLabels = {
     queued: 'Respuesta en cola',
     sending: 'Enviando respuesta',
@@ -177,6 +188,111 @@ export class ChatsPageComponent implements OnInit {
       }, { injector: this.injector });
     }
     this.loadThread(chatId);
+    this.loadControl(chatId);
+  }
+
+  loadControl(chatId: number): void {
+    this.controlState.set(null);
+    this.controlNotice.set(null);
+    this.operational.getControl(chatId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (ctrl) => {
+        if (this.selectedChatId() === chatId) this.controlState.set(ctrl);
+      },
+      error: () => undefined
+    });
+  }
+
+  claimActiveConversation(): void {
+    const ctrl = this.controlState();
+    if (!ctrl || this.controlBusy()) return;
+    this.controlBusy.set(true);
+    this.controlNotice.set(null);
+    this.operational.claimConversation(ctrl.conversation_id, ctrl.control_version).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (updated) => {
+        this.controlState.set(updated);
+        this.controlBusy.set(false);
+        this.controlNotice.set({ error: false, text: 'Conversación reclamada. La IA quedó pausada para este hilo.' });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.controlBusy.set(false);
+        this.controlNotice.set({
+          error: true,
+          text: err.status === 409 ? 'El estado cambió en otra sesión. Recargando control…' : 'No pudimos reclamar la conversación.'
+        });
+        if (err.status === 409) this.loadControl(ctrl.conversation_id);
+      }
+    });
+  }
+
+  sendReply(): void {
+    const ctrl = this.controlState();
+    const body = this.replyDraft().trim();
+    if (!ctrl || !body || this.controlBusy()) return;
+    this.controlBusy.set(true);
+    this.controlNotice.set(null);
+    const key = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `msg-${Date.now()}`;
+    this.operational.sendHumanReply(ctrl.conversation_id, body, key).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => {
+        this.replyDraft.set('');
+        this.controlBusy.set(false);
+        this.controlNotice.set({ error: false, text: 'Respuesta encolada en el outbox.' });
+        this.loadThread(ctrl.conversation_id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.controlBusy.set(false);
+        this.controlNotice.set({
+          error: true,
+          text: err.status === 403 ? 'Solo el responsable asignado o un supervisor puede responder.' : 'No pudimos encolar la respuesta.'
+        });
+      }
+    });
+  }
+
+  returnActiveToAi(): void {
+    const ctrl = this.controlState();
+    if (!ctrl || this.controlBusy()) return;
+    this.controlBusy.set(true);
+    this.controlNotice.set(null);
+    this.operational.returnToAi(ctrl.conversation_id, ctrl.control_version).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (updated) => {
+        this.controlState.set(updated);
+        this.controlBusy.set(false);
+        this.controlNotice.set({ error: false, text: 'Control devuelto a la IA.' });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.controlBusy.set(false);
+        this.controlNotice.set({
+          error: true,
+          text: err.status === 409 ? 'Verifica que la IA y el consentimiento estén activos.' : 'No pudimos devolver el control.'
+        });
+      }
+    });
+  }
+
+  resolveActiveConversation(): void {
+    const ctrl = this.controlState();
+    if (!ctrl || this.controlBusy()) return;
+    this.controlBusy.set(true);
+    this.controlNotice.set(null);
+    this.operational.resolveConversation(ctrl.conversation_id, ctrl.control_version, 'Atención completada').pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (updated) => {
+        this.controlState.set(updated);
+        this.controlBusy.set(false);
+        this.controlNotice.set({ error: false, text: 'Conversación resuelta.' });
+      },
+      error: () => {
+        this.controlBusy.set(false);
+        this.controlNotice.set({ error: true, text: 'No pudimos resolver la conversación.' });
+      }
+    });
   }
 
   loadThread(chatId: number, older = false): void {

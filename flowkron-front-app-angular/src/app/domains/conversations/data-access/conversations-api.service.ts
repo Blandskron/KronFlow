@@ -3,7 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { OPERATIONAL_API_BASE_URL } from '@core/config/api.config';
 import { ApiResponse, PaginatedResponse } from '@shared/types/api.types';
-import { Conversation, ConversationCursor, ConversationMessage, HandoffHistoryPage, PendingReply } from '../domain/conversation.model';
+import {
+  Conversation,
+  ConversationControl,
+  ConversationCursor,
+  ConversationMessage,
+  HandoffHistoryPage,
+  HumanReplyResult,
+  PendingReply
+} from '../domain/conversation.model';
 import { toParams } from '@shared/utils/http.utils';
 
 @Injectable({ providedIn: 'root' })
@@ -52,6 +60,48 @@ export class ConversationsApiService {
         `${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/messages`,
         { params: toParams({ limit: 50, order: 'recent', before_id: beforeId }) }
       )
+      .pipe(map((response) => response.data));
+  }
+
+  getControl(conversationId: number): Observable<ConversationControl> {
+    return this.http
+      .get<ApiResponse<ConversationControl>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/control`)
+      .pipe(map((response) => response.data));
+  }
+
+  claimConversation(conversationId: number, expectedVersion: number, reason?: string): Observable<ConversationControl> {
+    return this.http
+      .post<ApiResponse<ConversationControl>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/claim`, {
+        expected_version: expectedVersion,
+        reason
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  sendHumanReply(conversationId: number, body: string, idempotencyKey: string): Observable<HumanReplyResult> {
+    return this.http
+      .post<ApiResponse<HumanReplyResult>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/messages`, {
+        body,
+        idempotency_key: idempotencyKey
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  returnToAi(conversationId: number, expectedVersion: number, reason?: string): Observable<ConversationControl> {
+    return this.http
+      .post<ApiResponse<ConversationControl>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/return-to-ai`, {
+        expected_version: expectedVersion,
+        reason
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  resolveConversation(conversationId: number, expectedVersion: number, reason: string): Observable<ConversationControl> {
+    return this.http
+      .post<ApiResponse<ConversationControl>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/resolve`, {
+        expected_version: expectedVersion,
+        reason
+      })
       .pipe(map((response) => response.data));
   }
 }

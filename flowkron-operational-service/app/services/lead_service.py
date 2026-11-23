@@ -5,12 +5,18 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.tenant_resolver import TenantContext
+from app.public_models.system_event import SystemEvent
 from app.schemas.lead import LeadUpdate
-from app.services.tenant_data import bind_tenant_session, count_for_tenant, execute_for_tenant, lead_to_dict, scalar_for_tenant
+from app.services.tenant_data import TEMPERATURE_TO_API, bind_tenant_session, count_for_tenant, execute_for_tenant, lead_to_dict, scalar_for_tenant
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente, Ejecutivo, Lead
 
 TERMINAL_STAGES = ("ganado", "perdido")
+ACTIVITY_KINDS = {
+    "crm.lead.created": "created",
+    "crm.lead.stage.changed": "stage",
+    "crm.lead.temperature.changed": "temperature",
+}
 
 
 def _filtered_leads_statement(
@@ -65,10 +71,53 @@ def get_lead(db: Session, tenant: TenantContext, lead_id: int) -> dict[str, Any]
     return lead_to_dict(lead) if lead else None
 
 
+def get_or_create_initial_lead(db: Session, contact_id: int) -> tuple[Lead, bool]:
+    # Callers use a tenant-bound session. The existing contact serializes competing writers, including ingest.
+    contact = db.scalar(select(Cliente).where(Cliente.id == contact_id).with_for_update())
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    lead = db.scalar(select(Lead).where(Lead.cliente_id == contact_id).order_by(Lead.id).limit(1))
+    if lead is not None:
+        return lead, False
+    lead = Lead(cliente=contact)
+    db.add(lead)
+    db.flush()
+    return lead, True
+
+
+def ensure_contact_lead(db: Session, tenant: TenantContext, contact_id: int) -> dict[str, Any]:
+    bind_tenant_session(db, tenant.schema_name)
+    lead, created = get_or_create_initial_lead(db, contact_id)
+    if created:
+        create_system_event(db, "crm.lead.created", tenant.auth_tenant_id, tenant.schema_name, {"lead_id": lead.id})
+    result = {"lead": lead_to_dict(lead), "created": created}
+    db.commit()
+    return result
+
+
+def list_lead_activity(db: Session, tenant: TenantContext, lead_id: int, limit: int) -> list[dict[str, Any]]:
+    if scalar_for_tenant(db, tenant.schema_name, select(Lead.id).where(Lead.id == lead_id)) is None:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    statement = select(SystemEvent).where(
+        SystemEvent.auth_tenant_id == tenant.auth_tenant_id,
+        SystemEvent.schema_name == tenant.schema_name,
+        SystemEvent.event_type.in_(ACTIVITY_KINDS),
+        SystemEvent.payload["lead_id"].astext == str(lead_id),
+    ).order_by(SystemEvent.created_at.desc(), SystemEvent.id.desc()).limit(limit)
+    activity = []
+    for event in db.scalars(statement):
+        kind = ACTIVITY_KINDS[event.event_type]
+        activity.append({
+            "id": event.id, "kind": kind, "created_at": event.created_at,
+            "previous": event.payload.get(f"previous_{kind}"), "value": event.payload.get(kind),
+        })
+    return activity
+
+
 def update_lead(db: Session, tenant: TenantContext, lead_id: int, payload: LeadUpdate) -> dict[str, Any] | None:
     bind_tenant_session(db, tenant.schema_name)
     statement = select(Lead).options(selectinload(Lead.cliente)).where(Lead.id == lead_id)
-    if payload.expected_updated_at is not None or payload.lifecycle_status is not None:
+    if payload.expected_updated_at is not None or payload.lifecycle_status is not None or payload.temperature is not None:
         statement = statement.with_for_update()
     lead = scalar_for_tenant(db, tenant.schema_name, statement)
     if not lead:
@@ -82,7 +131,13 @@ def update_lead(db: Session, tenant: TenantContext, lead_id: int, payload: LeadU
     if "email" in data and lead.cliente:
         lead.cliente.email = data["email"]
     if "temperature" in data:
-        lead.clasificacion = {"cold": "frio", "warm": "tibio", "hot": "caliente"}.get(data["temperature"], data["temperature"])
+        classification = {"cold": "frio", "warm": "tibio", "hot": "caliente"}.get(data["temperature"], data["temperature"])
+        if lead.clasificacion != classification:
+            create_system_event(db, "crm.lead.temperature.changed", tenant.auth_tenant_id, tenant.schema_name, {
+                "lead_id": lead.id, "previous_temperature": TEMPERATURE_TO_API[lead.clasificacion],
+                "temperature": TEMPERATURE_TO_API[classification],
+            })
+        lead.clasificacion = classification
     if "lifecycle_status" in data:
         if lead.estado != data["lifecycle_status"]:
             create_system_event(db, "crm.lead.stage.changed", tenant.auth_tenant_id, tenant.schema_name, {

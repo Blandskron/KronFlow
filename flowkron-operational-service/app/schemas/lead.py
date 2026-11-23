@@ -2,13 +2,14 @@ from datetime import datetime
 
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, Field, field_validator
+from pydantic import AliasChoices, AwareDatetime, BaseModel, Field, field_validator
 
 LeadStage = Literal["nuevo", "contactado", "en_proceso", "ganado", "perdido"]
 
 
 class LeadOut(BaseModel):
     id: int
+    contact_id: int | None = Field(default=None, validation_alias=AliasChoices("contact_id", "cliente_id"))
     full_name: str
     phone: str
     email: str
@@ -56,4 +57,17 @@ class LeadListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class InitialLeadOut(BaseModel):
+    lead: LeadOut
+    created: bool
+
+
+class LeadActivityItem(BaseModel):
+    id: int
+    kind: Literal["created", "stage", "temperature"]
+    created_at: datetime
+    previous: str | None = None
+    value: str | None = None
 

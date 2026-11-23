@@ -53,6 +53,20 @@ class ConversationListResponse(BaseModel):
     next_cursor: ConversationCursor | None = None
 
 
+class HandoffHistoryItem(BaseModel):
+    id: int
+    kind: Literal["whatsapp_turn", "inbound_handoff"]
+    occurred_at: datetime
+    conversation_id: int | None
+    lead_id: int | None
+    contact_name: str | None
+
+
+class HandoffHistoryPage(BaseModel):
+    items: list[HandoffHistoryItem]
+    next_before_id: int | None
+
+
 class ConversationReadIn(BaseModel):
     through_message_id: int = Field(gt=0)
 

@@ -45,6 +45,17 @@ El script escribe en todos los runtimes activos y registra resultados; no ejecut
 
 La migracion tambien crea tablas de contexto documental del agente en tenants existentes: `business_context_documents`, `document_chunks`, `document_embeddings`, `tenant_agent_profiles` y tablas asociadas de formularios. Debe ejecutarse despues de desplegar cambios que agreguen modelos tenant activos.
 
+## Ensayo de restauración multiempresa
+
+El ensayo FK-15 levanta un PostgreSQL temporal y genera con `pg_dump` una copia lógica sintética. La prueba guarda la copia cifrada con una clave efímera en memoria, comprueba que una clave distinta y un archivo alterado sean rechazados y pasa el contenido autenticado por entrada estándar a `pg_restore`. El destino es una base vacía distinta del mismo clúster. Requiere que `FLOWKRON_TEST_POSTGRES_BIN` apunte a los binarios de PostgreSQL, incluidos `pg_dump` y `pg_restore`.
+
+```powershell
+python -m unittest discover -s tests -p test_operational_restore.py -v
+python -m unittest discover -s tests -p test_tenant_upgrade_matrix.py -v
+```
+
+Antes de recuperar un entorno real, registrar origen, build, versión de PostgreSQL y hora de corte. Restaurar el respaldo autorizado en una instancia aislada, con IAM, Operational y los conectores externos separados del tráfico activo. Contrastar el registro de empresas con sus schemas, relaciones de contacto/lead/mensaje, consentimiento y mensajes repetidos. Verificar propietarios y permisos para la instalación destino y medir tiempo de recuperación y pérdida respecto del corte. Mantener el envío detenido hasta reconciliar operaciones pendientes e inciertas. Si falla la verificación, conservar el origen y la evidencia, descartar el destino aislado y repetir desde un respaldo verificado. Quedan para el gate de release la gestión de claves, los backups de IAM y Operational de la instalación candidata, los roles y los objetivos de recuperación.
+
 ## Rotación de ingest key
 
 ```powershell

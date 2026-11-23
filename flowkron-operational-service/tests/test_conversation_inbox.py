@@ -244,7 +244,7 @@ class ConversationInboxTests(PostgresCase):
             events = db.scalars(select(SystemEvent).where(
                 SystemEvent.schema_name == tenant.schema_name, SystemEvent.event_type == "crm.lead.stage.changed",
             )).all()
-            self.assertEqual([event.payload for event in events], [
+            self.assertEqual([{key: value for key, value in event.payload.items() if key != "_correlation_id"} for event in events], [
                 {"lead_id": lead["id"], "previous_stage": "nuevo", "stage": "contactado"},
             ])
 

@@ -25,7 +25,7 @@ class ContactDirectoryTests(PostgresCase):
                 db.add_all([
                     Cliente(id=index, rut=f"synthetic-{index}", nombre=name, creado_en=created_at,
                             canal_origen=source, telefono=phone,
-                            email="contact@example.test" if index == 1 else None)
+                            email=" Contact+web@EXAMPLE.TEST " if index == 1 else None)
                     for index, (name, source, phone) in enumerate(contacts, start=1 if workspace == tenant else 31)
                 ])
                 db.commit()
@@ -85,7 +85,12 @@ class ContactDirectoryTests(PostgresCase):
 
         status, detail, _ = http(self, "GET", path + "/1", headers={"X-Tenant-ID": "813"})
         self.assertEqual(status, 200)
-        self.assertEqual(detail["data"], filtered["data"]["items"][0])
+        self.assertEqual(detail["data"], filtered["data"]["items"][0] | {
+            "normalized_email": "Contact+web@example.test", "normalized_phone": "+56912345678",
+        })
+        _, empty_detail, _ = http(self, "GET", path + "/2")
+        self.assertIsNone(empty_detail["data"]["normalized_email"])
+        self.assertIsNone(empty_detail["data"]["normalized_phone"])
         self.assertEqual(http(self, "GET", path + "/31", headers={"X-Tenant-ID": "813"})[0], 404)
         self.assertEqual(http(self, "GET", path + "/0")[0], 422)
 
@@ -96,6 +101,6 @@ class ContactDirectoryTests(PostgresCase):
         self.assertEqual(http(self, "PATCH", path + "/1", payload | {"full_name": "  "})[0], 422)
         status, saved, _ = http(self, "PATCH", path + "/1", payload)
         self.assertEqual(status, 200)
-        self.assertEqual(saved["data"], detail["data"] | {"full_name": "Nombre actualizado"})
+        self.assertEqual(saved["data"], filtered["data"]["items"][0] | {"full_name": "Nombre actualizado"})
         self.assertEqual(http(self, "PATCH", path + "/1", payload)[0], 409)
-        self.assertEqual(http(self, "GET", path + "/1")[1]["data"]["full_name"], "Nombre actualizado")
+        self.assertEqual(http(self, "GET", path + "/1")[1]["data"], detail["data"] | {"full_name": "Nombre actualizado"})

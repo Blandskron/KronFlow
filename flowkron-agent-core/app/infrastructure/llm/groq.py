@@ -1,7 +1,32 @@
+import logging
+from time import perf_counter
+
 import httpx
 
 from app.core.config import Settings
-from app.domain.ports.llm import ChatMessage
+from app.domain.ports.llm import ChatInputBudgetExceeded, ChatMessage
+
+
+logger = logging.getLogger(__name__)
+
+
+def _observed_usage(data: dict) -> tuple[int, int, int] | None:
+    usage = data.get("usage")
+    if not isinstance(usage, dict):
+        return None
+    counts = tuple(usage.get(key) for key in ("prompt_tokens", "completion_tokens", "total_tokens"))
+    if any(type(count) is not int or count < 0 for count in counts):
+        return None
+    input_tokens, output_tokens, total_tokens = counts
+    return (input_tokens, output_tokens, total_tokens) if input_tokens + output_tokens == total_tokens else None
+
+
+def _observe(outcome: str, started: float, input_chars: int, usage: tuple[int, int, int] | None = None) -> None:
+    input_tokens, output_tokens, total_tokens = usage if usage is not None else (None, None, None)
+    logger.info(
+        "chat_completion outcome=%s elapsed_ms=%.1f input_chars=%d input_tokens=%s output_tokens=%s total_tokens=%s",
+        outcome, (perf_counter() - started) * 1000, input_chars, input_tokens, output_tokens, total_tokens,
+    )
 
 
 class GroqClient:
@@ -18,22 +43,35 @@ class GroqClient:
         if not self.enabled_for_chat:
             raise RuntimeError("Groq chat is not configured")
 
-        with httpx.Client(timeout=self.settings.chat_completion_timeout_seconds) as client:
-            response = client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {self.settings.groq_api_key.get_secret_value()}"},
-                json={
-                    "model": self.settings.groq_model,
-                    "messages": [{"role": message.role, "content": message.content} for message in messages],
-                    "temperature": self.settings.chat_completion_temperature,
-                    "max_completion_tokens": self.settings.chat_completion_max_tokens,
-                },
-            )
-            response.raise_for_status()
-            try:
-                content = response.json()["choices"][0]["message"]["content"]
-            except (IndexError, KeyError, TypeError, ValueError):
-                raise RuntimeError("Groq returned an invalid completion") from None
-        if not isinstance(content, str) or not content.strip():
-            raise RuntimeError("Groq returned an empty completion")
+        started = perf_counter()
+        input_chars = sum(len(message.content) for message in messages)
+        if input_chars > self.settings.chat_input_max_chars:
+            _observe("input_budget_exceeded", started, input_chars)
+            raise ChatInputBudgetExceeded("Groq input budget exceeded")
+
+        try:
+            with httpx.Client(timeout=self.settings.chat_completion_timeout_seconds) as client:
+                response = client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {self.settings.groq_api_key.get_secret_value()}"},
+                    json={
+                        "model": self.settings.groq_model,
+                        "messages": [{"role": message.role, "content": message.content} for message in messages],
+                        "temperature": self.settings.chat_completion_temperature,
+                        "max_completion_tokens": self.settings.chat_completion_max_tokens,
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+                content = data["choices"][0]["message"]["content"]
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("Empty completion")
+        except httpx.HTTPError:
+            _observe("provider_error", started, input_chars)
+            raise
+        except (IndexError, KeyError, TypeError, ValueError):
+            _observe("invalid_completion", started, input_chars)
+            raise RuntimeError("Groq returned an invalid completion") from None
+
+        _observe("completed", started, input_chars, _observed_usage(data))
         return content.strip()

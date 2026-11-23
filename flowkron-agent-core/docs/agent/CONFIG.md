@@ -17,7 +17,7 @@ Variables:
 - `ALLOW_INSECURE_TENANT_HEADER`: solo local.
 - `MAX_UPLOAD_BYTES`.
 - `ALLOWED_UPLOAD_EXTENSIONS`.
-- `LOW_CONFIDENCE_THRESHOLD`.
+- `LOW_CONFIDENCE_THRESHOLD`: entre 0 y 1, por defecto 0,35. Se aplica a la puntuación léxica tanto en modo local como integrado. Una coincidencia por debajo del umbral prepara una derivación y omite el proveedor.
 
 No usar:
 
@@ -26,7 +26,9 @@ No usar:
 LLM y vector store:
 - `CHAT_PROVIDER=auto`: selecciona Groq con clave disponible y permite usar `local` para trabajar sin llamadas externas.
 - `GROQ_API_KEY` y `GROQ_MODEL`: clave del proveedor y modelo de chat. El modelo predeterminado es `openai/gpt-oss-20b`.
-- `CHAT_COMPLETION_MAX_TOKENS`, `CHAT_COMPLETION_TEMPERATURE`, `CHAT_COMPLETION_TIMEOUT_SECONDS`.
+- `CHAT_INPUT_MAX_CHARS`: máximo de caracteres Unicode de la instrucción, la pregunta, los delimitadores y los extractos enviados al proveedor. Predeterminado 12000. La pregunta se conserva íntegra. Si el primer extracto no cabe, se prepara una derivación.
+- `CHAT_COMPLETION_MAX_TOKENS`: máximo de tokens de salida solicitado al proveedor. Predeterminado 2000. Ambos límites deben ser positivos.
+- `CHAT_COMPLETION_TEMPERATURE`, `CHAT_COMPLETION_TIMEOUT_SECONDS`.
 - La recuperación de contexto es lexical y la persistencia integrada vive en Operational.
 
 Dependencias:

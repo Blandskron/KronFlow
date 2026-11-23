@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
-from app.schemas.conversation import ConversationCursor, ConversationListResponse, ConversationOut, ConversationReadIn, ConversationReadOut, MessageListResponse
+from app.schemas.conversation import ConversationCursor, ConversationListResponse, ConversationOut, ConversationReadIn, ConversationReadOut, HandoffHistoryPage, MessageListResponse
 from app.services.conversation_service import get_conversation, list_conversations, list_messages, list_pending_replies, mark_conversation_read
+from app.services.handoff_history import list_handoff_history
 
 router = APIRouter(prefix="/api/v1/conversations", tags=["Conversations"])
 
@@ -40,6 +41,15 @@ def list_endpoint(
         tail = items[limit - 1]
         cursor = ConversationCursor(before_at=tail["last_message_at"], before_id=tail["id"])
     return ConversationListResponse(items=items[:limit], total=total, limit=limit, offset=offset, next_cursor=cursor)
+
+
+@router.get("/handoff-history", response_model=HandoffHistoryPage)
+def handoff_history(
+    limit: int = Query(default=25, ge=1, le=50),
+    before_id: int | None = Query(default=None, ge=1, le=2147483647),
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt), db: Session = Depends(get_db),
+):
+    return list_handoff_history(db, tenant, limit, before_id)
 
 
 @router.get("/{conversation_id}", response_model=ConversationOut)

@@ -1,14 +1,23 @@
 <section class="leads">
   <h1>Seguimiento de leads</h1>
   <a routerLink="/app/workflows">Ver tablero de conversaciones</a>
-  @if (contactFilter) {
-    <p>Mostrando los leads de un contacto. <a [routerLink]="['/app/contacts', contactFilter]">Volver a la ficha</a></p>
+  @if (filters().contactId; as contactId) {
+    <p>Mostrando los leads de un contacto. <a [routerLink]="['/app/contacts', contactId]">Volver a la ficha</a></p>
+    <button class="btn btn-secondary" type="button" (click)="clearContact()">Quitar filtro de contacto</button>
   }
-  <form class="filters" role="search" (submit)="$event.preventDefault(); search(query.value, group.value)">
-    <label>Buscar lead <input #query class="field" type="search" maxlength="120" /></label>
+  <form class="filters" role="search" (submit)="$event.preventDefault(); search(query.value, group.value, temperature.value)">
+    <label>Buscar lead <input #query class="field" type="search" maxlength="120" [value]="filters().query" /></label>
     <label>Estado
-      <select #group class="field">
+      <select #group class="field" [value]="filters().group ?? ''">
         <option value="">Todos</option><option value="open">Abiertos</option><option value="closed">Cerrados</option>
+      </select>
+    </label>
+    <label>Temperatura
+      <select #temperature class="field">
+        <option value="" [selected]="!filters().temperature">Todas</option>
+        @for (option of temperatures; track option.id) {
+          <option [value]="option.id" [selected]="option.id === filters().temperature">{{ option.label }}</option>
+        }
       </select>
     </label>
     <button class="btn btn-primary" type="submit">Buscar</button>
@@ -18,12 +27,20 @@
 
   @if (queue(); as state) {
     @if (state.status === 'loading') { <p role="status">Consultando leads…</p> }
-    @if (state.status === 'error') { <p role="alert">No pudimos consultar los leads.</p> }
+    @if (state.status === 'error') {
+      @if (state.forbidden) {
+        <p role="alert">No tienes permiso para consultar los leads de esta empresa.</p>
+      } @else {
+        <p role="alert">No pudimos consultar los leads.</p>
+        <button class="btn btn-secondary" type="button" (click)="refresh()">Reintentar</button>
+      }
+    }
     @if (state.status === 'ready') {
       @for (lead of state.page.items; track lead.id) {
         <article class="card item">
           <div>
-            <h2>{{ lead.full_name || 'Lead sin nombre' }}</h2>
+            <h2><a [routerLink]="['/app/leads', lead.id]" queryParamsHandling="preserve"
+              [state]="{ leadSearch: filters().query }">{{ lead.full_name || 'Lead sin nombre' }}</a></h2>
             <p class="muted">{{ stageLabel(lead.lifecycle_status) }} · {{ lead.updated_at | date:'dd/MM/yyyy HH:mm' }}</p>
           </div>
           @if (auth.hasPermission('crm.manage')) {

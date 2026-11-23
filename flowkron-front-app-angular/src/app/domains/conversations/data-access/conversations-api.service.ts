@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { OPERATIONAL_API_BASE_URL } from '@core/config/api.config';
 import { ApiResponse, PaginatedResponse } from '@shared/types/api.types';
-import { Conversation, ConversationCursor, ConversationMessage, PendingReply } from '../domain/conversation.model';
+import { Conversation, ConversationCursor, ConversationMessage, HandoffHistoryPage, PendingReply } from '../domain/conversation.model';
 import { toParams } from '@shared/utils/http.utils';
 
 @Injectable({ providedIn: 'root' })
@@ -31,6 +31,12 @@ export class ConversationsApiService {
   getConversation(conversationId: number): Observable<Conversation> {
     return this.http.get<ApiResponse<Conversation>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}`)
       .pipe(map((response) => response.data));
+  }
+
+  handoffHistory(beforeId?: number): Observable<HandoffHistoryPage> {
+    return this.http.get<ApiResponse<HandoffHistoryPage>>(`${OPERATIONAL_API_BASE_URL}/conversations/handoff-history`, {
+      params: toParams({ before_id: beforeId })
+    }).pipe(map(({ data }) => data));
   }
 
   markRead(conversationId: number, throughMessageId: number): Observable<{ no_leidos: number }> {

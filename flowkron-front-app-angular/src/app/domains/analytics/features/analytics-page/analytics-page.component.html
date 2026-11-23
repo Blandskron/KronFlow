@@ -2,7 +2,7 @@
     <section class="page-section">
       <div class="heading">
         <h1>Métricas comerciales</h1>
-        <p class="muted">Consulta la actividad de tu bandeja y la distribución de oportunidades.</p>
+        <p class="muted">Consulta la actividad de la bandeja y la distribución de leads.</p>
       </div>
 
       @if (isLoading()) {
@@ -42,17 +42,63 @@
       </div>
 
       <article class="card panel lower">
-        <h2>Oportunidades por temperatura</h2>
+        <h2>Leads por temperatura</h2>
         @for (group of leadStats; track group.label) {
           <div class="bar-row">
             <div>
               <strong>{{ group.label }}</strong>
-              <small class="muted">{{ group.count }} oportunidades</small>
+              <small class="muted">{{ group.count }} leads</small>
             </div>
             <div class="bar" aria-hidden="true"><span [style.width]="group.share"></span></div>
-            <b>{{ group.share }}</b>
+            <b>{{ group.share ?? 'Sin base' }}</b>
           </div>
         }
       </article>
       }
+
+      <section class="card panel lower" aria-labelledby="activity-title">
+        <h2 id="activity-title">Actividad por día</h2>
+        <form class="activity-filters" (submit)="$event.preventDefault(); loadActivity({ start_date: start.value, end_date: end.value, time_zone: zone.value })">
+          <label>Desde <input #start class="field" type="date" [value]="initialFilters.start_date" required /></label>
+          <label>Hasta <input #end class="field" type="date" [value]="initialFilters.end_date" required /></label>
+          <label>Zona horaria
+            <input #zone class="field" type="text" [value]="initialFilters.time_zone" maxlength="64" required />
+          </label>
+          <button class="btn btn-primary" type="submit" [disabled]="activityLoading()">Consultar actividad</button>
+        </form>
+        @if (activityLoading()) {
+          <p role="status">Consultando actividad…</p>
+        } @else if (activityError()) {
+          <p role="alert">{{ activityError() }}</p>
+        } @else if (activity(); as report) {
+          <p class="muted">
+            {{ report.time_zone }} · Corte {{ report.as_of | date:'dd/MM/yyyy HH:mm:ss':'UTC' }} UTC
+            @if (report.partial_day) { · Día parcial {{ report.partial_day }} }
+          </p>
+          <div class="activity-table" role="region" aria-label="Actividad diaria por fecha" tabindex="0">
+            <table>
+              <thead>
+                <tr><th scope="col">Fecha</th><th scope="col">Contactos nuevos</th><th scope="col">Leads nuevos</th>
+                  <th scope="col">Mensajes entrantes</th><th scope="col">Mensajes salientes registrados</th></tr>
+              </thead>
+              <tbody>
+                @for (day of report.days; track day.day) {
+                  <tr>
+                    <th scope="row"><time [attr.datetime]="day.day">{{ day.day }}</time></th>
+                    <td>{{ day.contacts_created }}</td><td>{{ day.leads_created }}</td>
+                    <td>{{ day.inbound_messages }}</td><td>{{ day.outbound_messages }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total del intervalo</th>
+                  <td>{{ report.totals.contacts_created }}</td><td>{{ report.totals.leads_created }}</td>
+                  <td>{{ report.totals.inbound_messages }}</td><td>{{ report.totals.outbound_messages }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </section>
     </section>

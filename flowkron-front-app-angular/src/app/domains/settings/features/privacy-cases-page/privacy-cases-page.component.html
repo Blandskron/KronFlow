@@ -1,0 +1,55 @@
+<section class="page-section">
+  <a class="btn btn-secondary" routerLink="/app/settings">Volver a Configuración</a>
+  <h1>Solicitudes de privacidad</h1>
+  @let result = list();
+  @if (auth.hasPermission('audit.read')) {
+    <form class="filters" (submit)="$event.preventDefault(); filter(state.value)">
+      <label>Estado
+        <select #state class="field">
+          <option value="pendiente">Pendientes</option><option value="en_proceso">En revisión</option>
+          <option value="completada">Completadas</option><option value="">Todas</option>
+        </select>
+      </label>
+      <button class="btn btn-secondary" type="submit">Aplicar filtro</button>
+    </form>
+  }
+  @if (notice(); as message) { <p [attr.role]="message.error ? 'alert' : 'status'">{{ message.text }}</p> }
+  @switch (result.status) {
+    @case ('loading') { <p role="status">Consultando solicitudes…</p> }
+    @case ('error') {
+      @if (result.forbidden) {
+        <p role="alert">No tienes permiso para consultar las solicitudes de esta empresa.</p>
+      } @else {
+        <p role="alert">No pudimos consultar las solicitudes.</p>
+        <button class="btn btn-secondary" type="button" (click)="retry()">Reintentar</button>
+      }
+    }
+    @case ('ready') {
+      @for (entry of result.page.items; track entry.id) {
+        <article class="card">
+          <h2>Solicitud #{{ entry.id }} · {{ kinds[entry.kind] || entry.kind }}</h2>
+          <p>{{ labels[entry.state] }}</p>
+          <p class="muted">Recibida {{ entry.requested_at | date:'dd/MM/yyyy' }} · Límite registrado {{ entry.due_at | date:'dd/MM/yyyy' }}</p>
+          @if (entry.completed_at) { <p class="muted">Cierre registrado {{ entry.completed_at | date:'dd/MM/yyyy HH:mm' }}</p> }
+          @if (auth.hasPermission('crm.manage')) {
+            @if (entry.state === 'pendiente') {
+              <button class="btn btn-primary case-action" type="button" [disabled]="saving()" (click)="advance(entry)">Iniciar revisión</button>
+            } @else if (entry.state === 'en_proceso') {
+              <form class="case-action" (submit)="$event.preventDefault(); advance(entry, confirmed.checked)">
+                <label><input #confirmed type="checkbox" required /> Confirmo que la solicitud fue atendida</label>
+                <button class="btn btn-primary" type="submit" [disabled]="saving()">Registrar cierre</button>
+              </form>
+            }
+          }
+        </article>
+      } @empty { <p>No hay solicitudes para este filtro.</p> }
+      @if (result.page.offset || result.page.offset + result.page.limit < result.page.total) {
+        <nav class="pagination" aria-label="Páginas de solicitudes">
+          <button class="btn btn-secondary" [disabled]="!result.page.offset" (click)="page(result.page.offset - result.page.limit)">Anterior</button>
+          <button class="btn btn-secondary" [disabled]="result.page.offset + result.page.limit >= result.page.total"
+            (click)="page(result.page.offset + result.page.limit)">Siguiente</button>
+        </nav>
+      }
+    }
+  }
+</section>

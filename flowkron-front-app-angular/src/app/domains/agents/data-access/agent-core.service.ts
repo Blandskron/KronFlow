@@ -9,6 +9,7 @@ import {
   BusinessContextStatus,
   ContextDocumentPayload,
   DocumentRead,
+  RawTemplateRecord,
   TemplateRead,
   SetupSessionRead,
   GeneratedContextRead,
@@ -85,7 +86,7 @@ export class AgentCoreService {
   // 2. Plantillas
   listTemplates(): Observable<TemplateRead[]> {
     return this.http
-      .get<ApiResponse<any[]>>(`${AGENT_CORE_API_BASE_URL}/context/templates`)
+      .get<ApiResponse<RawTemplateRecord[]>>(`${AGENT_CORE_API_BASE_URL}/context/templates`)
       .pipe(map((response) => this.normalizeTemplates(response.data)));
   }
 
@@ -164,9 +165,9 @@ export class AgentCoreService {
       .pipe(map((response) => response.data));
   }
 
-  getTraceDetails(traceId: number): Observable<any> {
+  getTraceDetails(traceId: number): Observable<RetrievalTrace> {
     return this.http
-      .get<ApiResponse<any>>(`${AGENT_CORE_API_BASE_URL}/agent/traces/${traceId}`)
+      .get<ApiResponse<RetrievalTrace>>(`${AGENT_CORE_API_BASE_URL}/agent/traces/${traceId}`)
       .pipe(map((response) => response.data));
   }
 
@@ -182,7 +183,7 @@ export class AgentCoreService {
     return plain?.[1] ?? null;
   }
 
-  private normalizeTemplates(rawTemplates: any[]): TemplateRead[] {
+  private normalizeTemplates(rawTemplates: RawTemplateRecord[]): TemplateRead[] {
     if (!Array.isArray(rawTemplates)) {
       return [];
     }
@@ -207,7 +208,7 @@ export class AgentCoreService {
       };
 
       current.download_options.push({
-        format: template.format as 'docx' | 'pdf',
+        format: template.format,
         template_id: template.id,
         filename: `${template.code}.${template.format}`,
         media_type:

@@ -1,0 +1,175 @@
+<div class="upload-grid">
+  <aside class="card glass-surface upload-methods-list">
+    <h3>Elige un método de carga</h3>
+    <div class="method-buttons">
+      <button type="button" [class.selected]="uploadMethod() === 'file'" (click)="uploadMethod.set('file')">
+        <span class="icon"><svg lucideUpload size="18" aria-hidden="true"></svg></span>
+        <span>
+          <strong>Subir archivo</strong>
+          <small>Carga documentos .txt, .md, .docx o .pdf</small>
+        </span>
+      </button>
+      <button type="button" [class.selected]="uploadMethod() === 'template'" (click)="uploadMethod.set('template')">
+        <span class="icon"><svg lucideDownload size="18" aria-hidden="true"></svg></span>
+        <span>
+          <strong>Descargar plantilla</strong>
+          <small>Usa plantillas base en Word o PDF</small>
+        </span>
+      </button>
+      <button type="button" [class.selected]="uploadMethod() === 'ai'" (click)="uploadMethod.set('ai')">
+        <span class="icon"><svg lucideBot size="18" aria-hidden="true"></svg></span>
+        <span>
+          <strong>Asistente Onboarding IA</strong>
+          <small>Conversa con la IA para armar el perfil</small>
+        </span>
+      </button>
+    </div>
+  </aside>
+
+  <section class="card glass-surface method-action-panel">
+    @if (uploadMethod() === 'file') {
+      <h3>Subir documento de contexto</h3>
+      <form class="stack" [formGroup]="fileForm" (ngSubmit)="submitFile()">
+        <div class="form-group">
+          <label for="doc-title">Título del documento</label>
+          <input id="doc-title" class="field" type="text" formControlName="title" placeholder="Ej: Catálogo de Servicios 2026">
+        </div>
+
+        <label for="file-input" class="file-drop-area" [class.has-file]="selectedFile()">
+          <svg lucideUpload size="28" aria-hidden="true"></svg>
+          @if (selectedFile(); as file) {
+            <strong>{{ file.name }}</strong>
+            <small class="muted">{{ file.size }} bytes</small>
+          } @else {
+            <strong>Arrastra tu archivo aquí o haz clic</strong>
+            <small class="muted">Formatos admitidos: .txt, .md, .docx, .pdf</small>
+          }
+          <input id="file-input" type="file" (change)="onFileSelected($event)" accept=".txt,.md,.docx,.pdf" class="sr-only">
+        </label>
+
+        <div class="upload-status" [class.error]="uploadState() === 'error'" [class.success]="uploadState() === 'success'">
+          <div class="upload-status-header">
+            <strong>{{ uploadStatusLabel() }}</strong>
+            @if (shouldShowUploadProgress()) {
+              <span>{{ uploadProgress() }}%</span>
+            }
+          </div>
+          <p>{{ uploadState() === 'error' ? uploadError() : uploadMessage() }}</p>
+          @if (shouldShowUploadProgress()) {
+            <div class="progress-bar">
+              <span [style.width.%]="uploadProgress()"></span>
+            </div>
+          }
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" type="button" [disabled]="uploadState() === 'uploading'" (click)="clearSelectedFile()">
+            Cambiar archivo
+          </button>
+          <button class="btn btn-primary" type="submit" [disabled]="fileForm.invalid || !selectedFile() || uploadState() === 'uploading'">
+            {{ uploadState() === 'error' ? 'Reintentar carga' : 'Subir Documento' }}
+          </button>
+        </div>
+      </form>
+    }
+
+    @if (uploadMethod() === 'template') {
+      <h3>Plantillas de contexto</h3>
+      <p class="muted desc">
+        Descarga las plantillas oficiales en Word o PDF, complétalas y usa su contenido como base para cargar contexto validado al agente.
+      </p>
+
+      @if (templatesLoading()) {
+        <p class="muted" role="status">Cargando plantillas disponibles…</p>
+      } @else if (templatesError()) {
+        <flowkron-alert tone="danger">{{ templatesError() }}</flowkron-alert>
+      } @else if (templates().length === 0) {
+        <flowkron-empty-state title="Sin plantillas" description="No hay plantillas disponibles para descargar." />
+      } @else {
+        <div class="templates-list">
+          @for (template of templates(); track template.id) {
+            <article class="template-item card">
+              <div>
+                <h4>{{ template.name }}</h4>
+                <p class="muted">{{ template.description }}</p>
+              </div>
+              <div class="template-actions">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  [disabled]="!getDownloadOption(template, 'docx')"
+                  (click)="downloadTpl(getDownloadOption(template, 'docx')?.template_id)"
+                >
+                  <svg lucideDownload size="16" aria-hidden="true"></svg> Word
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  [disabled]="!getDownloadOption(template, 'pdf')"
+                  (click)="downloadTpl(getDownloadOption(template, 'pdf')?.template_id)"
+                >
+                  <svg lucideDownload size="16" aria-hidden="true"></svg> PDF
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    }
+
+    @if (uploadMethod() === 'ai') {
+      <h3>Asistente de configuración IA</h3>
+      <p class="muted desc">
+        Responde a las preguntas de nuestro asistente interactivo para estructurar el perfil empresarial.
+      </p>
+
+      @if (!aiSessionId()) {
+        <form class="ai-start-card card" [formGroup]="aiStartForm" (ngSubmit)="startAiSession()">
+          <div class="form-group">
+            <label for="context-company">Nombre de la empresa</label>
+            <input id="context-company" class="field" type="text" formControlName="companyName" placeholder="Ej: BLANDSKRON">
+          </div>
+          <div class="form-group">
+            <label for="context-industry">Industria o sector</label>
+            <input id="context-industry" class="field" type="text" formControlName="industry" placeholder="Ej: Tecnología y Desarrollo">
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="aiStartForm.invalid || aiLoading()">
+            Iniciar conversación
+          </button>
+        </form>
+      } @else {
+        <div class="ai-chat-box card">
+          <div class="chat-messages">
+            @for (msg of aiMessages(); track msg.id) {
+              <div class="chat-bubble" [class.user]="msg.sender === 'user'" [class.bot]="msg.sender === 'bot'">
+                <div class="bubble-content">{{ msg.text }}</div>
+              </div>
+            }
+            @if (aiLoading()) {
+              <p class="muted" role="status">Escribiendo respuesta…</p>
+            }
+          </div>
+
+          <form class="chat-input-area" [formGroup]="aiMessageForm" (ngSubmit)="sendAiMessage()">
+            <input
+              class="field"
+              type="text"
+              formControlName="message"
+              aria-label="Respuesta al asistente"
+              placeholder="Escribe tu respuesta aquí…"
+            >
+            <button class="btn btn-primary" type="submit" aria-label="Enviar respuesta" [disabled]="aiMessageForm.invalid || aiLoading()">
+              <svg lucideSend size="18" aria-hidden="true"></svg>
+            </button>
+          </form>
+
+          <div class="ai-actions">
+            <button class="btn btn-secondary btn-sm" type="button" (click)="generateAiContext()" [disabled]="aiLoading()">
+              Finalizar y generar contexto
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </section>
+</div>

@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideMessageSquare } from '@lucide/angular';
@@ -21,7 +21,7 @@ function positiveInteger(value: string | null, max = Number.MAX_SAFE_INTEGER): n
 
 @Component({
   selector: 'flowkron-notifications-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink, LucideMessageSquare],
   templateUrl: './notifications-page.component.html',
   styleUrl: './notifications-page.component.css'

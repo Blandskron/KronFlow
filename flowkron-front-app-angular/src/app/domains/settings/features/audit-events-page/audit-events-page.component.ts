@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
@@ -11,7 +11,7 @@ type AuditState = { status: 'loading' } | { status: 'error'; statusCode: number 
 
 @Component({
   selector: 'flowkron-audit-events-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './audit-events-page.component.html',
   styles: `

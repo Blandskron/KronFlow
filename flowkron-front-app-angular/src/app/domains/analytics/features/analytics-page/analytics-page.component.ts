@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideCheckCircle2,
@@ -26,7 +26,7 @@ function defaultDates(): ActivityFilters {
 
 @Component({
   selector: 'flowkron-analytics-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
     LucideCheckCircle2,
@@ -49,9 +49,8 @@ export class AnalyticsPageComponent implements OnInit {
   readonly activityError = signal('');
   readonly kpis = signal<AnalyticsKpis | null>(null);
 
-  metrics: { label: string; value: string; icon: string }[] = [];
-
-  leadStats: { label: string; count: number; share: string | null }[] = [];
+  readonly metrics = signal<{ label: string; value: string; icon: string }[]>([]);
+  readonly leadStats = signal<{ label: string; count: number; share: string | null }[]>([]);
 
   ngOnInit(): void {
     this.loadAnalytics();
@@ -73,19 +72,19 @@ export class AnalyticsPageComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoading.set(false))
     ).subscribe({
       next: (summary) => {
-        this.metrics = [
+        this.metrics.set([
           { label: 'Total de leads', value: String(summary.total_leads), icon: 'users' },
           { label: 'Leads calientes', value: String(summary.hot_leads), icon: 'check-circle-2' },
           { label: 'Requieren atención', value: String(summary.requires_human), icon: 'x-circle' },
           { label: 'Conversaciones abiertas', value: String(summary.open_conversations), icon: 'message-square' },
           { label: 'Mensajes de hoy (UTC)', value: String(summary.messages_today), icon: 'clock' },
           { label: 'Mensajes en los últimos 7 días', value: String(summary.messages_last_7_days), icon: 'message-square' }
-        ];
-        this.leadStats = [
+        ]);
+        this.leadStats.set([
           { label: 'Frías', count: summary.cold_leads, share: this.percent(summary.cold_leads, summary.total_leads) },
           { label: 'Tibias', count: summary.warm_leads, share: this.percent(summary.warm_leads, summary.total_leads) },
           { label: 'Calientes', count: summary.hot_leads, share: this.percent(summary.hot_leads, summary.total_leads) }
-        ];
+        ]);
       },
       error: (error) => this.loadError.set(this.operationalErrorMessage(error))
     });

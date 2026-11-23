@@ -1,6 +1,6 @@
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Contact, ContactDetail, ContactsApiService } from '@domains/contacts/data-access/contacts-api.service';
@@ -18,7 +18,7 @@ type DetailState =
 
 @Component({
   selector: 'flowkron-contact-detail-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, DatePipe, ContactConsentComponent],
   template: `
     <section class="page-section">

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthError } from '@domains/auth/domain/auth.model';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
@@ -8,7 +8,7 @@ type ConfirmationState = 'idle' | 'submitting' | 'success' | 'error';
 
 @Component({
   selector: 'flowkron-confirm-email',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, AuthLayoutComponent],
   templateUrl: './confirm-email-page.component.html',
   styleUrl: './confirm-email-page.component.css'

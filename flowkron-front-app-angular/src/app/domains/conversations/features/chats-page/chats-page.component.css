@@ -124,3 +124,23 @@
   .inbox { grid-template-columns: minmax(0, 1fr); }
   .inbox:not(.thread-open) .conversation, .inbox.thread-open .list { display: none; }
 }
+
+.hitl-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 10px var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.reply-composer {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.reply-input {
+  flex: 1;
+}

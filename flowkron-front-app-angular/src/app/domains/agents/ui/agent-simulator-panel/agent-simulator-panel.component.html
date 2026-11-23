@@ -1,0 +1,126 @@
+<div class="simulator-layout">
+  <section class="card glass-surface chat-panel">
+    <div class="card-header">
+      <h3>Simulador de respuestas</h3>
+      @if (hasDraftDocuments()) {
+        <button class="btn btn-secondary btn-sm" type="button" (click)="publishDrafts.emit()">
+          Publicar borradores
+        </button>
+      }
+    </div>
+
+    <div class="chat-messages">
+      @if (simMessages().length === 0) {
+        <flowkron-empty-state
+          title="Sin mensajes aún"
+          description="Inicia una simulación enviando un mensaje para comprobar el comportamiento del agente."
+        >
+          <svg lucideMessageSquare size="24" aria-hidden="true"></svg>
+        </flowkron-empty-state>
+      }
+      @for (msg of simMessages(); track msg.id) {
+        @if (msg.sender === 'bot') {
+          <button
+            type="button"
+            class="chat-bubble bot interactive-bubble"
+            [class.selected]="selectedMessage()?.id === msg.id"
+            (click)="selectMessage(msg)"
+          >
+            <span class="bubble-text">{{ msg.text }}</span>
+            <span class="bubble-meta">
+              <span>Confianza: {{ (msg.confidence ?? 0) * 100 | number:'1.0-0' }}%</span>
+              @if (msg.requiresHuman) {
+                <flowkron-badge tone="warning">Requiere humano</flowkron-badge>
+              }
+            </span>
+          </button>
+        } @else {
+          <div class="chat-bubble user">
+            <span class="bubble-text">{{ msg.text }}</span>
+          </div>
+        }
+      }
+      @if (simLoading()) {
+        <p class="muted" role="status">Simulando respuesta…</p>
+      }
+    </div>
+
+    <form class="chat-input-area" [formGroup]="simForm" (ngSubmit)="sendSimMessage()">
+      <input
+        class="field"
+        type="text"
+        formControlName="prompt"
+        aria-label="Pregunta para el simulador"
+        placeholder="Hazle una pregunta al agente sobre la empresa…"
+      >
+      <button class="btn btn-primary" type="submit" aria-label="Enviar pregunta" [disabled]="simForm.invalid || simLoading()">
+        <svg lucideSend size="18" aria-hidden="true"></svg>
+      </button>
+    </form>
+  </section>
+
+  <aside class="card glass-surface inspect-panel">
+    <h3>Detalles del contexto RAG</h3>
+    @if (selectedMessage(); as selected) {
+      <div class="trace-header">
+        <div class="metric">
+          <span class="muted">Score confianza</span>
+          <strong [class.metric-ok]="(selected.confidence ?? 0) >= 0.35" [class.metric-low]="(selected.confidence ?? 0) < 0.35">
+            {{ (selected.confidence ?? 0) * 100 | number:'1.0-0' }}%
+          </strong>
+        </div>
+        <div class="metric">
+          <span class="muted">Acción</span>
+          <strong>{{ selected.actions?.[0]?.type || 'none' }}</strong>
+        </div>
+      </div>
+
+      <div class="sources-list">
+        <h4>Fuentes consultadas ({{ selected.sources?.length || 0 }})</h4>
+        @if (!selected.sources || selected.sources.length === 0) {
+          <p class="muted">No se recuperaron fuentes. Respuesta armada con fallback/handoff.</p>
+        }
+        @for (source of selected.sources; track source.source_id) {
+          <article class="source-item card">
+            <div class="source-item-header">
+              <strong>{{ source.title }}</strong>
+              <flowkron-badge tone="info">{{ source.score * 100 | number:'1.0-0' }}% match</flowkron-badge>
+            </div>
+            <small class="muted"><code>ID: {{ source.source_id }}</code></small>
+          </article>
+        }
+      </div>
+
+      <button class="btn btn-secondary full-width" type="button" (click)="openCorrectionModal()">
+        Corregir respuesta (crear regla)
+      </button>
+    } @else {
+      <flowkron-empty-state
+        title="Inspecciona una respuesta"
+        description="Selecciona un mensaje del agente en el chat para ver sus fuentes y score de coincidencia."
+      >
+        <svg lucideInfo size="24" aria-hidden="true"></svg>
+      </flowkron-empty-state>
+    }
+  </aside>
+</div>
+
+<flowkron-dialog #correctionDialog title="Corregir respuesta del agente" titleId="correction-dialog-title">
+  <p class="muted">
+    Añade una regla específica de atención conversacional para que el agente responda correctamente en el futuro.
+  </p>
+  <form class="rule-form" [formGroup]="ruleForm" (ngSubmit)="saveCorrection()">
+    <div class="form-group">
+      <label for="context-rule-name">Pregunta o frase clave</label>
+      <input id="context-rule-name" class="field" type="text" formControlName="name" placeholder="Ej: Preguntas sobre horarios extendidos">
+    </div>
+    <div class="form-group">
+      <label for="context-rule-body">Regla o respuesta esperada</label>
+      <textarea id="context-rule-body" class="field" rows="5" formControlName="content" placeholder="Ej: La empresa atiende emergencias 24/7…"></textarea>
+    </div>
+    <div class="dialog-actions">
+      <button class="btn btn-secondary" type="button" (click)="correctionDialog.close()">Cancelar</button>
+      <button class="btn btn-primary" type="submit" [disabled]="ruleForm.invalid">Guardar regla</button>
+    </div>
+  </form>
+</flowkron-dialog>

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AgentsApiService } from '@domains/agents/data-access/agents-api.service';
@@ -6,7 +6,7 @@ import { AuthService } from '@domains/auth/data-access/auth-api.service';
 
 @Component({
   selector: 'flowkron-create-agent',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule],
   templateUrl: './create-agent-page.component.html',
   styleUrl: './create-agent-page.component.css'

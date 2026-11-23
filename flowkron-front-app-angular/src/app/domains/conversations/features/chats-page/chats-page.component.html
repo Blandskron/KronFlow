@@ -101,7 +101,7 @@
           </header>
 
           @if (controlState(); as ctrl) {
-            <div class="hitl-bar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-subtle, rgba(148,163,184,.2))">
+            <div class="hitl-bar">
               <span class="badge badge-info">{{ controlModeLabels[ctrl.mode] }}</span>
               <small class="muted">v{{ ctrl.control_version }}</small>
               @if (canManageCrm()) {
@@ -162,12 +162,12 @@
           </div>
           @if (controlState(); as ctrl) {
             @if (ctrl.mode === 'human_active' && canManageCrm()) {
-              <form style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border-subtle, rgba(148,163,184,.2))" (submit)="$event.preventDefault(); sendReply()">
+              <form class="reply-composer" (submit)="$event.preventDefault(); sendReply()">
                 <input
                   #replyInput
+                  class="field reply-input"
                   type="text"
                   maxlength="4000"
-                  style="flex:1"
                   aria-label="Escribir respuesta humana"
                   placeholder="Escribe una respuesta para el contacto…"
                   [value]="replyDraft()"

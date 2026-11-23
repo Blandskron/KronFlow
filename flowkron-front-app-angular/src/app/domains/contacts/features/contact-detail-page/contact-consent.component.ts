@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ContactConsent, ConsentEvidenceItem, ContactsApiService } from '@domains/contacts/data-access/contacts-api.service';
 import { Subject, catchError, map, of, startWith, switchMap } from 'rxjs';
@@ -12,6 +12,7 @@ type ConsentPage =
 
 @Component({
   selector: 'flowkron-contact-consent',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe],
   template: `
     <section aria-labelledby="contact-consent-title" class="card consent">

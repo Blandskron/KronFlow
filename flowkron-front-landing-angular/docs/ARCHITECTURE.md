@@ -2,7 +2,7 @@
 
 ## Aplicación
 
-SPA Angular 21 con standalone components, bootstrap mediante `bootstrapApplication`, routing lazy y `HttpClient` para el formulario de contacto. No usa NgModules, SSR, hydration, state manager ni backend propio.
+SPA Angular 21 **Zoneless** (`provideZonelessChangeDetection()`, sin `zone.js`) con 100% standalone components + `ChangeDetectionStrategy.OnPush`, bootstrap mediante `bootstrapApplication`, routing lazy, Signals y `HttpClient` para el formulario de contacto. No usa NgModules, SSR, hydration, `@angular/animations`, state manager ni backend propio.
 
 ```text
 index.html -> main.ts -> AppComponent -> RouterOutlet
@@ -49,4 +49,4 @@ La validación cliente limita largos, formato telefónico, HTML, caracteres de c
 
 ## Estilos y assets
 
-CSS global define tokens de ambos temas, layout y responsive; CSS extenso del componente define la landing. Lucide Angular renderiza iconos SVG. No se configuran assets locales. Manrope se carga desde Google Fonts con `@import`, por lo que el render depende de un tercero.
+Capas de Design System (`src/styles/tokens.css`, `reset.css`, `primitives.css`) sincronizadas byte a byte con `flowkron-front-app-angular` (temas claro/oscuro, `prefers-reduced-motion`, `prefers-reduced-transparency` y `:focus-visible`). Lucide Angular renderiza iconos SVG. `Manrope` se carga de forma no bloqueante vía `<link rel="preconnect">` + `<link rel="stylesheet">` en `src/index.html`.

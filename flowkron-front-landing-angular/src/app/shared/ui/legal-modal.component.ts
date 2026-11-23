@@ -1,8 +1,8 @@
-import { Component, ElementRef, input, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
 
 @Component({
   selector: 'flowkron-legal-modal',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog #modal class="modal card" aria-labelledby="legal-title">
       <header>

@@ -2,9 +2,10 @@
 
 ## Estado actual
 
-No hay specs unitarios Angular, runner ni target `test` en `angular.json`. Aunque `package.json` contiene `"test":"ng test"`, el comando falla con `Cannot determine project or target for command`.
+- **Pruebas unitarias (Angular 21 + Vitest):** Configuradas mediante `@angular/build:unit-test` (`runner: "vitest"` y `tsconfig.spec.json`). Cobertura base activa en `src/app/core/` (`token-storage`, `theme.service`, `auth.interceptor`, `auth.guard`, `no-auth.guard`).
+- **Linting:** Configurado con `eslint` + `angular-eslint` (TypeScript + templates + accesibilidad) vía `npm run lint`.
 
-El único spec Playwright, `tests/visual/flowkron-front.visual.spec.ts`, valida:
+El spec Playwright, `tests/visual/flowkron-front.visual.spec.ts`, valida:
 
 - `/` redirige a `/login`;
 - headings/texto de login;
@@ -23,10 +24,12 @@ Las vistas de Notificaciones (Pendientes e Historial), Privacidad (lectura, revi
 
 ```powershell
 npm run build
+npm test
+npm run lint
 docker compose --profile visual up --build --abort-on-container-exit
 ```
 
-Los screenshots se revisan manualmente. `npm test` no es válido hasta configurar runner/target/specs.
+Los screenshots visuales de Playwright se revisan manualmente. `npm test` ejecuta Vitest en modo CI (`--watch=false`); usa `npm run test:watch` para desarrollo interactivo.
 
 ## Cobertura prioritaria pendiente
 

@@ -1,68 +1,58 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
 
 @Component({
   selector: 'flowkron-legal-modal',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (open) {
-      <div class="modal-backdrop" (click)="close.emit()">
-        <section class="modal card" (click)="$event.stopPropagation()">
-          <header>
-            <h2>{{ title }}</h2>
-            <button class="icon-btn" type="button" aria-label="Cerrar" (click)="close.emit()">×</button>
-          </header>
-          <div class="content">
-            <p>{{ body }}</p>
-            <p>
-              Flowkron opera con principios de trazabilidad, control de acceso y proteccion de
-              datos para entornos empresariales. Esta version mantiene textos base para reemplazo
-              legal formal.
-            </p>
-          </div>
-        </section>
-      </div>
-    }
+    <dialog #modal class="modal card" aria-labelledby="legal-title">
+      <header>
+        <h2 id="legal-title">{{ title() }}</h2>
+        <form method="dialog">
+          <button class="btn btn-secondary btn-sm" type="submit" autofocus>Cerrar</button>
+        </form>
+      </header>
+      <p>{{ body() }}</p>
+      <p>
+        Flowkron opera con principios de trazabilidad, control de acceso y protección de
+        datos para entornos empresariales. Esta versión mantiene textos base para reemplazo
+        legal formal.
+      </p>
+    </dialog>
   `,
-  styles: [
-    `
-      .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 100;
-        background: rgba(2, 6, 23, 0.54);
-        display: grid;
-        place-items: center;
-        padding: 24px;
-      }
+  styles: `
+    .modal {
+      width: min(620px, calc(100% - 32px));
+      padding: clamp(16px, 4vw, 32px);
+      color: var(--foreground);
+      line-height: 1.65;
+    }
 
-      .modal {
-        width: min(620px, 100%);
-        padding: 24px;
-      }
+    .modal::backdrop {
+      background: rgba(15, 7, 23, 0.68);
+    }
 
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 12px;
-      }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
 
-      h2 {
-        margin: 0;
-        font-size: 24px;
-      }
+    h2 {
+      margin: 0;
+    }
 
-      .content {
-        color: var(--muted-foreground);
-        line-height: 1.7;
-      }
-    `
-  ]
+    p {
+      color: var(--muted-foreground);
+    }
+  `
 })
 export class LegalModalComponent {
-  @Input({ required: true }) title = '';
-  @Input({ required: true }) body = '';
-  @Input() open = false;
-  @Output() readonly close = new EventEmitter<void>();
+  readonly title = input.required<string>();
+  readonly body = input.required<string>();
+  private readonly modal = viewChild.required<ElementRef<HTMLDialogElement>>('modal');
+
+  show(): void {
+    this.modal().nativeElement.showModal();
+  }
 }

@@ -1,0 +1,119 @@
+<div class="summary-grid">
+  @if (loading()) {
+    <div class="col-span-2">
+      <flowkron-alert tone="info">
+        <span class="inline-icon"><svg lucideInfo size="16" aria-hidden="true"></svg> Cargando el contexto empresarial…</span>
+      </flowkron-alert>
+    </div>
+  } @else if (error()) {
+    <div class="col-span-2">
+      <flowkron-alert tone="danger">
+        <span class="inline-icon"><svg lucideAlertTriangle size="16" aria-hidden="true"></svg> {{ error() }}</span>
+      </flowkron-alert>
+    </div>
+  }
+
+  <article class="card glass-surface progress-card">
+    <h3>Progreso de configuración</h3>
+    <div class="circle-container">
+      <svg viewBox="0 0 100 100" class="progress-ring" aria-hidden="true">
+        <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
+        <circle cx="50" cy="50" r="40" class="ring-fg" [style.strokeDashoffset]="progressOffset()"></circle>
+      </svg>
+      <div class="progress-text">
+        <span class="percentage">{{ configPercentage() }}%</span>
+        <span class="lbl">Completado</span>
+      </div>
+    </div>
+    <p class="muted card-desc">
+      Carga documentos de contexto o usa el asistente IA para que tu agente tenga conocimiento validado de tu empresa.
+    </p>
+  </article>
+
+  <article class="card glass-surface state-card">
+    <h3>Estado del agente</h3>
+    <div class="state-indicator" [class.active]="isAgentReady()">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <h4>{{ agentStatusLabel() }}</h4>
+        <p class="muted">{{ agentStatusDescription() }}</p>
+      </div>
+    </div>
+    <div class="meta-info">
+      <div class="info-row">
+        <span class="muted">Última actualización:</span>
+        <strong>{{ lastUpdateText() }}</strong>
+      </div>
+      <div class="info-row">
+        <span class="muted">Documentos activos:</span>
+        <strong>{{ activeDocumentsCount() }}</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="card glass-surface docs-card col-span-2">
+    <div class="card-header">
+      <h3>Documentos de contexto</h3>
+      <button class="btn btn-secondary btn-sm" type="button" (click)="goToUpload.emit()">
+        <svg lucidePlus size="16" aria-hidden="true"></svg> Subir
+      </button>
+    </div>
+
+    @if (documents().length === 0) {
+      <flowkron-empty-state
+        title="Sin documentos cargados"
+        description="No hay documentos cargados en este inquilino."
+      >
+        <button class="btn btn-primary btn-sm" type="button" (click)="goToUpload.emit()">
+          <svg lucideFileText size="16" aria-hidden="true"></svg> Cargar documento
+        </button>
+      </flowkron-empty-state>
+    } @else {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>Nombre de archivo</th>
+              <th>Tipo</th>
+              <th>Versión</th>
+              <th>Estado</th>
+              <th>Última actualización</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of documents(); track doc.id) {
+              <tr>
+                <td><strong>{{ doc.title }}</strong></td>
+                <td><code>{{ doc.filename }}</code></td>
+                <td>{{ documentType(doc) }}</td>
+                <td>v{{ doc.version }}</td>
+                <td>
+                  <flowkron-badge [tone]="documentTone(doc)">
+                    {{ documentStatusLabel(doc.status) }}
+                  </flowkron-badge>
+                </td>
+                <td>{{ formatDateTime(doc.updated_at || doc.created_at) }}</td>
+                <td>
+                  @if (canDeleteDocuments()) {
+                    <button
+                      class="btn btn-ghost btn-sm"
+                      type="button"
+                      (click)="deleteDocument.emit(doc.id)"
+                      aria-label="Eliminar documento"
+                    >
+                      <svg lucideTrash2 size="16" aria-hidden="true"></svg>
+                    </button>
+                  } @else {
+                    <span class="muted">No disponible</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </article>
+</div>

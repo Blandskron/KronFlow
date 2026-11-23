@@ -139,15 +139,15 @@
           }
         </div>
 
-        @if (contactStatus === 'success') {
+        @if (contactStatus() === 'success') {
           <p class="form-status success full" role="status">Mensaje enviado. Te responderemos pronto.</p>
         }
-        @if (contactStatus === 'error') {
+        @if (contactStatus() === 'error') {
           <p class="form-status error full" role="alert">No pudimos enviar el mensaje. Revisa los datos e intenta nuevamente.</p>
         }
 
-        <button class="btn btn-primary full" type="submit" [disabled]="submitting">
-          {{ submitting ? 'Enviando…' : 'Enviar mensaje' }}
+        <button class="btn btn-primary full" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Enviando…' : 'Enviar mensaje' }}
         </button>
       </form>
     </div>

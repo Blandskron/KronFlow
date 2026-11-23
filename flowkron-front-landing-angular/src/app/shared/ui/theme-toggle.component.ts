@@ -1,10 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { LucideMoon, LucideSun } from '@lucide/angular';
 import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'flowkron-theme-toggle',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideMoon, LucideSun],
   template: `
     <button class="icon-btn" type="button" [attr.aria-label]="label()" (click)="theme.toggle()">

@@ -4,35 +4,59 @@ const ACCESS_TOKEN_KEY = 'flowkron.access_token';
 const REFRESH_TOKEN_KEY = 'flowkron.refresh_token';
 const TENANT_ID_KEY = 'flowkron.tenant_id';
 
+function safeGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage no disponible o cuota excedida
+  }
+}
+
+function safeRemove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Storage no disponible
+  }
+}
+
 export function readAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return safeGet(ACCESS_TOKEN_KEY);
 }
 
 export function readRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  return safeGet(REFRESH_TOKEN_KEY);
 }
 
 export function readTenantId(): number | null {
-  const raw = localStorage.getItem(TENANT_ID_KEY);
+  const raw = safeGet(TENANT_ID_KEY);
   return raw ? Number(raw) : null;
 }
 
 export function writeTokens(tokens: AuthTokenResponse, tenantId?: number | null): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access);
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh);
+  safeSet(ACCESS_TOKEN_KEY, tokens.access);
+  safeSet(REFRESH_TOKEN_KEY, tokens.refresh);
   writeTenantId(tenantId ?? null);
 }
 
 export function writeTenantId(tenantId: number | null): void {
   if (tenantId) {
-    localStorage.setItem(TENANT_ID_KEY, String(tenantId));
+    safeSet(TENANT_ID_KEY, String(tenantId));
     return;
   }
-  localStorage.removeItem(TENANT_ID_KEY);
+  safeRemove(TENANT_ID_KEY);
 }
 
 export function clearTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(TENANT_ID_KEY);
+  safeRemove(ACCESS_TOKEN_KEY);
+  safeRemove(REFRESH_TOKEN_KEY);
+  safeRemove(TENANT_ID_KEY);
 }

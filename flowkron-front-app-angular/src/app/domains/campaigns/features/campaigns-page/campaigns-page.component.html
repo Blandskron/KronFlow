@@ -1,0 +1,111 @@
+<section class="page-section">
+  <flowkron-page-header
+    title="Campañas y canales"
+    subtitle="Administra conexiones de correo delegadas, plantillas aprobadas y campañas con envío stub/sandbox."
+  >
+    <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="loadConnections()">
+      Actualizar
+    </button>
+  </flowkron-page-header>
+
+  @if (notice(); as msg) {
+    <div class="section-spacer">
+      <flowkron-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
+        {{ msg.text }}
+      </flowkron-alert>
+    </div>
+  }
+
+  <section class="card glass-surface panel-card">
+    <h2>Conexiones de correo delegadas</h2>
+    @if (canManage()) {
+      <form class="inline-form" [formGroup]="connectionForm" (ngSubmit)="createEmailConnection()">
+        <div class="field-group">
+          <label for="conn-sender">Remitente</label>
+          <input id="conn-sender" class="field" type="email" placeholder="noticias@empresa.test" formControlName="senderAddress">
+        </div>
+        <div class="field-group">
+          <label for="conn-display">Nombre visible</label>
+          <input id="conn-display" class="field" type="text" placeholder="Equipo Comercial" formControlName="displayName">
+        </div>
+        <div class="field-group field-provider">
+          <label for="conn-provider">Proveedor</label>
+          <select id="conn-provider" class="field" formControlName="provider">
+            <option value="stub">Stub (demo/prueba)</option>
+            <option value="resend">Resend (sandbox)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit" [disabled]="busy() || connectionForm.invalid">
+          Crear conexión
+        </button>
+      </form>
+    }
+
+    @for (conn of connections(); track conn.id) {
+      <div class="connection-row">
+        <div class="connection-meta">
+          <strong>#{{ conn.id }} · {{ conn.display_name }}</strong>
+          <small class="muted"> · {{ conn.sender_address }} · {{ conn.provider }} (v{{ conn.credential_version }})</small>
+          <flowkron-badge [tone]="conn.status === 'active' ? 'success' : 'neutral'">
+            {{ conn.status }}
+          </flowkron-badge>
+        </div>
+        @if (canManage() && conn.status !== 'revoked') {
+          <button class="btn btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="revoke(conn.id)">
+            Revocar
+          </button>
+        }
+      </div>
+    } @empty {
+      <flowkron-empty-state
+        title="Sin conexiones configuradas"
+        description="Crea una conexión de correo delegada para habilitar envíos."
+      />
+    }
+  </section>
+
+  @if (canManage()) {
+    <section class="card glass-surface panel-card">
+      <h2>Lanzar campaña rápida de correo (modo stub)</h2>
+      <form class="campaign-form" [formGroup]="campaignForm" (ngSubmit)="launchQuickCampaign()">
+        <div class="campaign-row">
+          <div class="field-group">
+            <label for="camp-name">Nombre de campaña</label>
+            <input id="camp-name" class="field" type="text" placeholder="Novedades de temporada" formControlName="name">
+          </div>
+          <div class="field-group">
+            <label for="camp-subject">Asunto del correo</label>
+            <input id="camp-subject" class="field" type="text" placeholder="Tenemos novedades para ti" formControlName="subject">
+          </div>
+          <div class="field-group">
+            <label for="camp-conn">Conexión</label>
+            <select id="camp-conn" class="field" formControlName="connectionId">
+              <option value="">Selecciona una conexión…</option>
+              @for (conn of activeEmailConnections(); track conn.id) {
+                <option [value]="conn.id">#{{ conn.id }} · {{ conn.sender_address }} ({{ conn.provider }})</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="camp-body">Contenido de texto</label>
+          <textarea id="camp-body" class="field" rows="3" placeholder="Hola, te compartimos nuestras novedades…" formControlName="bodyText"></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="busy() || campaignForm.invalid">
+            Crear y aprobar campaña
+          </button>
+          <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="dispatchStubBatch()">
+            Ejecutar worker stub
+          </button>
+        </div>
+      </form>
+
+      @if (lastCampaign(); as camp) {
+        <flowkron-alert tone="info">
+          Última campaña #{{ camp.id }} ({{ camp.name }}): estado <strong>{{ camp.status }}</strong> · v{{ camp.version }}
+        </flowkron-alert>
+      }
+    </section>
+  }
+</section>

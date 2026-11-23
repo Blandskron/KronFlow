@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EMPTY, catchError, exhaustMap, finalize, map, timer } from 'rxjs';
@@ -50,6 +50,7 @@ const statusLabels: Record<ConnectionStatus, string> = {
 
 @Component({
   selector: 'flowkron-whatsapp-page',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './whatsapp-page.component.html',
   styleUrl: './whatsapp-page.component.css'

@@ -2,7 +2,7 @@
 
 ## Aplicacion
 
-SPA CSR Angular 21 con `bootstrapApplication`, componentes standalone, routing lazy, signals y Reactive Forms. `app.config.ts` registra router, animaciones y `HttpClient` con `authInterceptor`. No hay SSR, hydration ni state manager externo.
+SPA CSR Angular 21 **Zoneless** (`provideZonelessChangeDetection()`, sin `zone.js`) con `bootstrapApplication`, 100% componentes standalone + `ChangeDetectionStrategy.OnPush`, routing lazy, Signals y Reactive Forms tipados. `app.config.ts` registra Zoneless, router (`withComponentInputBinding()`) y `HttpClient` con `authInterceptor`. No hay SSR, hydration, `@angular/animations` ni state manager externo.
 
 ```text
 Browser -> Angular Router -> auth/onboarding/dashboard
@@ -64,4 +64,4 @@ El front no llama `/internal/*`, no conoce `tenant_blandskron` y no debe enviar 
 
 ## Diseno y accesibilidad
 
-La UI usa CSS propio, responsive y tema por clase en `<html>`. La accesibilidad debe validarse por flujo: hay controles semanticos y labels en varias pantallas, pero no existe auditoria automatizada ni cobertura de teclado/lector. El tema inicial no consulta `prefers-color-scheme`.
+La UI usa un Design System en capas (`src/styles/tokens.css`, `reset.css`, `primitives.css`) sincronizado con `flowkron-front-landing-angular`, tipografía `Manrope` cargada vía `<link rel="preconnect">`, primitivos atómicos `OnPush` en `src/app/shared/ui/` (`flowkron-page-header`, `flowkron-stat-card`, `flowkron-badge`, `flowkron-alert`, `flowkron-empty-state`, `flowkron-dialog`, `flowkron-tabs`, `flowkron-skeleton`, `flowkron-toast-container`) y tema claro/oscuro gestionado por `ThemeService` (con sincronización de `meta[name="theme-color"]`). Las plantillas están cubiertas por `@angular-eslint/template/accessibility` (`0 errors, 0 warnings`).

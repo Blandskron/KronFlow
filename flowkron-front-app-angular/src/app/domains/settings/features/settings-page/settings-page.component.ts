@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload } from '@lucide/angular';
@@ -17,7 +17,7 @@ interface AlertState {
 
 @Component({
   selector: 'flowkron-settings-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload],
   templateUrl: './settings-page.component.html',
   styleUrl: './settings-page.component.css'

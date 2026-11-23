@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { WorkspaceStateService } from '@core/services/workspace-state.service';
@@ -8,7 +8,7 @@ import { AuthLayoutComponent } from '@domains/auth/features/auth-layout/auth-lay
 
 @Component({
   selector: 'flowkron-create-company-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, AuthLayoutComponent],
   templateUrl: './create-company-page.component.html',
   styleUrl: './create-company-page.component.css'

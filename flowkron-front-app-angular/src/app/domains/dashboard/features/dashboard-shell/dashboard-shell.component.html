@@ -32,6 +32,9 @@
             @case ('book-open') {
               <span class="nav-icon"><svg lucideBookOpen size="20" aria-hidden="true"></svg></span>
             }
+            @case ('bell') {
+              <span class="nav-icon"><svg lucideBell size="20" aria-hidden="true"></svg></span>
+            }
             @case ('bar-chart-3') {
               <span class="nav-icon"><svg lucideBarChart3 size="20" aria-hidden="true"></svg></span>
             }
@@ -78,4 +81,5 @@
       <router-outlet />
     </main>
   </section>
+  <flowkron-toast-container />
 </div>

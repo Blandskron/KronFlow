@@ -1,0 +1,115 @@
+<section class="page-section">
+  <flowkron-page-header
+    title="Pipeline de oportunidades"
+    subtitle="Gestiona etapas comerciales, importes y cierres ganados o perdidos."
+  >
+    <button class="btn btn-secondary" type="button" [disabled]="loading()" (click)="reload()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </flowkron-page-header>
+
+  @if (notice(); as msg) {
+    <div class="section-spacer">
+      <flowkron-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
+        {{ msg.text }}
+      </flowkron-alert>
+    </div>
+  }
+
+  @if (canManage()) {
+    <form class="card glass-surface create-form" [formGroup]="createForm" (ngSubmit)="createOpportunity()">
+      <div class="field-group">
+        <label for="opp-title">Título</label>
+        <input id="opp-title" class="field" type="text" maxlength="160" placeholder="Ej. Flota anual" formControlName="title">
+      </div>
+      <div class="field-group field-sm">
+        <label for="opp-contact">ID Contacto</label>
+        <input id="opp-contact" class="field" type="number" min="1" placeholder="1" formControlName="contactId">
+      </div>
+      <div class="field-group field-sm">
+        <label for="opp-amount">Importe</label>
+        <input id="opp-amount" class="field" type="number" min="0" step="0.01" placeholder="1500.00" formControlName="amount">
+      </div>
+      <div class="field-group field-xs">
+        <label for="opp-currency">Moneda</label>
+        <input id="opp-currency" class="field" type="text" maxlength="3" formControlName="currency">
+      </div>
+      <button class="btn btn-primary" type="submit" [disabled]="saving() || createForm.invalid">
+        Crear oportunidad
+      </button>
+    </form>
+  }
+
+  <div class="filter-bar" role="group" aria-label="Filtrar por resultado">
+    @for (opt of outcomeFilters; track opt.id) {
+      <button
+        class="btn btn-secondary btn-sm"
+        [class.filter-active]="outcomeFilter() === opt.id"
+        type="button"
+        [attr.aria-pressed]="outcomeFilter() === opt.id"
+        (click)="setOutcomeFilter(opt.id)"
+      >
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading() && !items().length) {
+    <div class="cards-stack" role="status" aria-label="Cargando oportunidades">
+      <span class="sr-only">Cargando oportunidades…</span>
+      <flowkron-skeleton height="88px" />
+      <flowkron-skeleton height="88px" />
+      <flowkron-skeleton height="88px" />
+    </div>
+  } @else if (!items().length) {
+    <flowkron-empty-state
+      title="Sin oportunidades"
+      description="No hay oportunidades registradas para este filtro."
+    />
+  } @else {
+    <div class="cards-stack">
+      @for (opp of items(); track opp.id) {
+        <article class="card glass-surface item-card">
+          <div class="item-header">
+            <strong>#{{ opp.id }} · {{ opp.title }}</strong>
+            <flowkron-badge [tone]="outcomeTones[opp.outcome]">
+              {{ opp.stage_name }} ({{ outcomeLabels[opp.outcome] }})
+            </flowkron-badge>
+          </div>
+          <small class="muted">
+            Contacto #{{ opp.contact_id }}
+            @if (opp.lead_id) { · Lead #{{ opp.lead_id }} }
+            @if (opp.amount) { · {{ opp.amount }} {{ opp.currency }} }
+            · v{{ opp.version }} · Actualizada {{ opp.updated_at | date:'short' }}
+          </small>
+          @if (opp.close_reason) {
+            <small class="muted">Motivo de cierre: {{ opp.close_reason }}</small>
+          }
+          @if (canManage() && opp.outcome === 'open') {
+            <div class="item-actions">
+              <select
+                #stageSelect
+                class="field stage-select"
+                aria-label="Cambiar etapa"
+                [value]="opp.stage_id"
+                (change)="moveStage(opp, +stageSelect.value)"
+              >
+                @for (stage of stages(); track stage.id) {
+                  @if (stage.stage_kind === 'open') {
+                    <option [value]="stage.id" [selected]="stage.id === opp.stage_id">{{ stage.name }}</option>
+                  }
+                }
+              </select>
+              <button class="btn btn-primary btn-sm" type="button" [disabled]="saving()" (click)="closeWon(opp)">
+                Marcar ganada
+              </button>
+              <button class="btn btn-secondary btn-sm" type="button" [disabled]="saving()" (click)="closeLost(opp)">
+                Marcar perdida
+              </button>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

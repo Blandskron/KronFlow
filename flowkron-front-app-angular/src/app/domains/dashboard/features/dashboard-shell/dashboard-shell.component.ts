@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import {
   LucideBarChart3,
   LucideBell,
@@ -14,16 +14,17 @@ import {
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { WorkspaceStateService } from '@core/services/workspace-state.service';
-import { ThemeToggleComponent } from '@shared/ui/theme-toggle.component';
+import { ThemeToggleComponent, ToastContainerComponent } from '@shared/ui';
 
 @Component({
   selector: 'flowkron-dashboard-shell',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
     ThemeToggleComponent,
+    ToastContainerComponent,
     LucideHome,
   LucideLink,
     LucideMessageSquare,

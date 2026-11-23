@@ -144,7 +144,19 @@ export interface RetrievalTrace {
   tenant_id: string;
   conversation_id: number | null;
   query: string;
-  sources: any[];
+  sources: AgentSource[];
   confidence: number;
   created_at?: string;
 }
+
+export interface RawTemplateRecord {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  fields?: TemplateRead['fields'];
+  format?: 'docx' | 'pdf';
+  download_options?: TemplateRead['download_options'];
+}
+
+export type AgentActionItem = AgentMessageResponse['actions'][number];

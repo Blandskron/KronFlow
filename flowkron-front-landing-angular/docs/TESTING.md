@@ -2,9 +2,10 @@
 
 ## Estado actual
 
-No hay pruebas unitarias Angular. Aunque `package.json` define `"test":"ng test"`, `angular.json` no tiene target `test` y `npm test` falla con `Cannot determine project or target for command`.
+- **Pruebas unitarias (Angular 21 + Vitest):** Configuradas mediante `@angular/build:unit-test` (`runner: "vitest"` y `tsconfig.spec.json`). Cobertura base activa en `ThemeService`, `ContactService`, `LegalModalComponent` y `LandingComponent`.
+- **Linting:** Configurado con `eslint` + `angular-eslint` (TypeScript + templates + accesibilidad) vía `npm run lint`.
 
-Existe un único spec Playwright en `tests/visual/flowkron-landing.visual.spec.ts`. Verifica:
+Existe un spec Playwright en `tests/visual/flowkron-landing.visual.spec.ts`. Verifica:
 
 - heading principal visible;
 - href de login y registro;
@@ -17,10 +18,12 @@ No usa `expect(page).toHaveScreenshot()`, no hay baselines y no compara píxeles
 
 ```powershell
 npm run build
+npm test
+npm run lint
 docker compose --profile visual up --build --abort-on-container-exit
 ```
 
-`npm test` no es válido hasta configurar builder/runner y specs.
+`npm test` ejecuta Vitest en modo CI (`--watch=false`); usa `npm run test:watch` para desarrollo interactivo.
 
 ## Cobertura pendiente
 

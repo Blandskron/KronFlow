@@ -5,17 +5,17 @@
     <h1>Crea tu empresa</h1>
     <p class="muted">Este espacio sera el tenant principal. Tu usuario quedara como owner.</p>
 
-    <label>Nombre de empresa</label>
-    <input class="field" formControlName="name" placeholder="Acme SpA">
+    <label for="company-name">Nombre de empresa</label>
+    <input id="company-name" class="field" formControlName="name" placeholder="Acme SpA">
 
-    <label>Razon social</label>
-    <input class="field" formControlName="legal_name" placeholder="Acme Servicios SpA">
+    <label for="company-legal-name">Razon social</label>
+    <input id="company-legal-name" class="field" formControlName="legal_name" placeholder="Acme Servicios SpA">
 
-    <label>Identificador fiscal</label>
-    <input class="field" formControlName="tax_id" placeholder="76.123.456-7">
+    <label for="company-tax-id">Identificador fiscal</label>
+    <input id="company-tax-id" class="field" formControlName="tax_id" placeholder="76.123.456-7">
 
-    <label>Pais</label>
-    <input class="field country" formControlName="country" maxlength="2" placeholder="CL">
+    <label for="company-country">Pais</label>
+    <input id="company-country" class="field country" formControlName="country" maxlength="2" placeholder="CL">
 
     @if (errorMessage()) {
       <p class="form-error">{{ errorMessage() }}</p>

@@ -1,434 +1,52 @@
+<section class="context-container">
+  <flowkron-page-header
+    title="Contexto empresarial"
+    subtitle="Administra los conocimientos, documentos y reglas del agente conversacional de IA."
+  />
 
-    <div class="context-container">
-      <header class="page-header card">
-        <div class="title-area">
-          <span class="icon-badge">
-            <svg lucideBookOpen size="24"></svg>
-          </span>
-          <div>
-            <h1>Contexto empresarial</h1>
-            <p class="subtitle">Administra los conocimientos, documentos y reglas del agente conversacional de IA.</p>
-          </div>
-        </div>
-        <div class="tabs" role="group" aria-label="Secciones de contexto empresarial">
-          <button [class.active]="activeTab === 'summary'" [attr.aria-pressed]="activeTab === 'summary'" (click)="setTab('summary')">
-            Resumen
-          </button>
-          <button [class.active]="activeTab === 'upload'" [attr.aria-pressed]="activeTab === 'upload'" (click)="setTab('upload')">
-            Documentos
-          </button>
-          <button [class.active]="activeTab === 'simulator'" [attr.aria-pressed]="activeTab === 'simulator'" (click)="setTab('simulator')">
-            Simulador
-          </button>
-        </div>
-      </header>
+  <div class="tabs-bar">
+    <flowkron-tabs
+      [tabs]="tabs"
+      [activeId]="activeTab()"
+      ariaLabel="Secciones de contexto empresarial"
+      (selected)="setTab($event)"
+    />
+  </div>
 
-      @if (errorMsg) {
-        <div class="alert alert-error card" role="alert">
-          <svg lucideAlertTriangle size="20"></svg>
-          <div class="alert-content">
-            <strong>Error de integración:</strong>
-            <p>{{ errorMsg }}</p>
-          </div>
-          <button class="btn btn-xs" (click)="errorMsg = ''">Cerrar</button>
-        </div>
-      }
-
-      @switch (activeTab) {
-        @case ('summary') {
-          <div class="tab-content summary-grid">
-            @if (statusLoading) {
-              <div class="alert card col-span-2" role="status">
-                <svg lucideInfo size="18"></svg>
-                <p>Cargando el contexto empresarial…</p>
-              </div>
-            } @else if (statusError) {
-              <div class="alert alert-error card col-span-2" role="alert">
-                <svg lucideAlertTriangle size="18"></svg>
-                <p>{{ statusError }}</p>
-              </div>
-            }
-            <!-- Circular Progress Card -->
-            <div class="card progress-card glass">
-              <h3>Progreso de Configuración</h3>
-              <div class="circle-container">
-                <svg viewBox="0 0 100 100" class="progress-ring">
-                  <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
-                  <circle cx="50" cy="50" r="40" class="ring-fg" [style.strokeDashoffset]="progressOffset"></circle>
-                </svg>
-                <div class="progress-text">
-                  <span class="percentage">{{ configPercentage }}%</span>
-                  <span class="lbl">Completado</span>
-                </div>
-              </div>
-              <p class="card-desc">Carga documentos de contexto o usa el asistente IA para que tu agente tenga conocimiento validado de tu empresa.</p>
-            </div>
-
-            <!-- Agent Knowledge State -->
-            <div class="card state-card glass">
-              <h3>Estado del Agente</h3>
-              <div class="state-indicator" [class.active]="isAgentReady()">
-                <span class="dot"></span>
-                <div>
-                  <h4>{{ agentStatusLabel }}</h4>
-                  <p>{{ agentStatusDescription }}</p>
-                </div>
-              </div>
-              <div class="meta-info">
-                <div class="info-row">
-                  <span>Última actualización:</span>
-                  <strong>{{ lastUpdateText }}</strong>
-                </div>
-                <div class="info-row">
-                  <span>Documentos activos:</span>
-                  <strong>{{ activeDocumentsCount }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <!-- Loaded Documents Card -->
-            <div class="card docs-card glass col-span-2">
-              <div class="card-header">
-                <h3>Documentos de Contexto</h3>
-                <button class="btn btn-secondary btn-xs" (click)="setTab('upload')">
-                  <svg lucidePlus size="16"></svg> Subir
-                </button>
-              </div>
-              @if (documents.length === 0) {
-                <div class="empty-state">
-                  <svg lucideFileText size="32"></svg>
-                  <p>No hay documentos cargados en este inquilino.</p>
-                </div>
-              } @else {
-                <div class="table-container">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>Título</th>
-                        <th>Nombre de Archivo</th>
-                        <th>Tipo</th>
-                        <th>Versión</th>
-                        <th>Estado</th>
-                        <th>Última actualización</th>
-                        <th>Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (doc of documents; track doc.id) {
-                        <tr>
-                          <td><strong>{{ doc.title }}</strong></td>
-                          <td><code>{{ doc.filename }}</code></td>
-                          <td>{{ documentType(doc) }}</td>
-                          <td>v{{ doc.version }}</td>
-                          <td>
-                            <span class="badge" [class.badge-success]="isDocumentSuccess(doc)" [class.badge-warning]="isDocumentWarning(doc)" [class.badge-error]="isDocumentError(doc)">
-                              {{ documentStatusLabel(doc.status) }}
-                            </span>
-                          </td>
-                          <td>{{ formatDateTime(doc.updated_at || doc.created_at) }}</td>
-                          <td>
-                            @if (canDeleteDocuments) {
-                              <button class="btn btn-ghost btn-icon btn-xs" (click)="deleteDoc(doc.id)" aria-label="Eliminar documento">
-                                <svg lucideTrash2 size="16"></svg>
-                              </button>
-                            } @else {
-                              <span class="muted-action">No disponible</span>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        @case ('upload') {
-          <div class="tab-content upload-grid">
-            <div class="card glass upload-methods-list">
-              <h3>Elige un método de carga</h3>
-              <div class="method-buttons">
-                <button [class.selected]="uploadMethod === 'file'" (click)="uploadMethod = 'file'">
-                  <span class="icon"><svg lucideUpload size="18"></svg></span>
-                  <div>
-                    <strong>Subir archivo</strong>
-                    <small>Carga documentos .txt, .md, .docx o .pdf</small>
-                  </div>
-                </button>
-                <button [class.selected]="uploadMethod === 'template'" (click)="uploadMethod = 'template'">
-                  <span class="icon"><svg lucideDownload size="18"></svg></span>
-                  <div>
-                    <strong>Descargar plantilla</strong>
-                    <small>Usa plantillas base en Word o PDF</small>
-                  </div>
-                </button>
-                <button [class.selected]="uploadMethod === 'ai'" (click)="uploadMethod = 'ai'">
-                  <span class="icon"><svg lucideBot size="18"></svg></span>
-                  <div>
-                    <strong>Asistente Onboarding IA</strong>
-                    <small>Conversa con la IA para armar el perfil</small>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div class="card glass method-action-panel">
-              <!-- FILE UPLOAD METHOD -->
-              @if (uploadMethod === 'file') {
-                <h3>Subir documento de contexto</h3>
-                <div class="form-group">
-                  <label for="doc-title">Título del documento</label>
-                  <input id="doc-title" type="text" [(ngModel)]="fileUploadTitle" placeholder="Ej: Catálogo de Servicios 2026">
-                </div>
-                <div class="form-group">
-                  <label for="file-input" class="file-drop-area" [class.has-file]="selectedFile">
-                    <svg lucideUpload size="32"></svg>
-                    @if (selectedFile) {
-                      <strong>{{ selectedFile.name }}</strong>
-                      <small>{{ selectedFile.size }} bytes</small>
-                    } @else {
-                      <strong>Arrastra tu archivo aquí o haz clic</strong>
-                      <small>Formatos admitidos: .txt, .md, .docx, .pdf</small>
-                    }
-                    <input id="file-input" type="file" (change)="onFileSelected($event)" accept=".txt,.md,.docx,.pdf" class="file-input">
-                  </label>
-                </div>
-                <div class="upload-status" [class.error]="uploadState === 'error'" [class.success]="uploadState === 'success'">
-                  <div class="upload-status-header">
-                    <strong>{{ uploadStatusLabel }}</strong>
-                    @if (shouldShowUploadProgress()) {
-                      <span>{{ uploadProgress }}%</span>
-                    }
-                  </div>
-                  <p>{{ uploadState === 'error' ? uploadError : uploadMessage }}</p>
-                  @if (shouldShowUploadProgress()) {
-                    <div class="progress-bar">
-                      <span [style.width.%]="uploadProgress"></span>
-                    </div>
-                  }
-                </div>
-                <div class="form-actions">
-                  <button class="btn btn-secondary" type="button" [disabled]="uploadState === 'uploading'" (click)="clearSelectedFile()">
-                    Cambiar archivo
-                  </button>
-                  <button class="btn btn-primary" [disabled]="!fileUploadTitle || !selectedFile || uploadState === 'uploading'" (click)="submitFile()">
-                    {{ uploadState === 'error' ? 'Reintentar carga' : 'Subir Documento' }}
-                  </button>
-                </div>
-              }
-
-              <!-- TEMPLATE DOWNLOAD METHOD -->
-              @if (uploadMethod === 'template') {
-                <h3>Plantillas de Contexto</h3>
-                <p class="desc">Descarga las plantillas oficiales en Word o PDF, complétalas y usa su contenido como base para cargar contexto validado al agente.</p>
-                <div class="templates-list">
-                  @if (templatesLoading) {
-                    <div class="empty-state">
-                      <svg lucideDownload size="32"></svg>
-                      <p>Cargando plantillas disponibles desde flowkron-agent-core...</p>
-                    </div>
-                  } @else if (templatesError) {
-                    <div class="alert alert-error">
-                      <svg lucideAlertTriangle size="18"></svg>
-                      <p>{{ templatesError }}</p>
-                    </div>
-                  } @else if (templates.length === 0) {
-                    <div class="empty-state">
-                      <svg lucideFileText size="32"></svg>
-                      <p>No hay plantillas disponibles para descargar.</p>
-                    </div>
-                  }
-                  @for (template of templates; track template.id) {
-                    <div class="template-item card border">
-                      <div>
-                        <h4>{{ template.name }}</h4>
-                        <p class="card-desc">{{ template.description }}</p>
-                      </div>
-                      <div class="template-actions">
-                        <button class="btn btn-secondary btn-sm" [disabled]="!getDownloadOption(template, 'docx')" (click)="downloadTpl(getDownloadOption(template, 'docx')?.template_id)">
-                          <svg lucideDownload size="16"></svg> Word
-                        </button>
-                        <button class="btn btn-secondary btn-sm" [disabled]="!getDownloadOption(template, 'pdf')" (click)="downloadTpl(getDownloadOption(template, 'pdf')?.template_id)">
-                          <svg lucideDownload size="16"></svg> PDF
-                        </button>
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-
-              <!-- AI ONBOARDING METHOD -->
-              @if (uploadMethod === 'ai') {
-                <h3>Asistente de Configuración IA</h3>
-                <p class="desc">Responde a las preguntas de nuestro asistente interactivo para estructurar el perfil empresarial.</p>
-                
-                @if (!aiSessionId) {
-                  <div class="ai-start-card card border">
-                    <div class="form-group">
-                      <label for="context-company">Nombre de la empresa</label>
-                      <input id="context-company" type="text" [(ngModel)]="aiCompanyName" placeholder="Ej: BLANDSKRON">
-                    </div>
-                    <div class="form-group">
-                      <label for="context-industry">Industria o sector</label>
-                      <input id="context-industry" type="text" [(ngModel)]="aiIndustry" placeholder="Ej: Tecnología y Desarrollo">
-                    </div>
-                    <button class="btn btn-primary" [disabled]="!aiCompanyName || !aiIndustry" (click)="startAiSession()">
-                      Iniciar Conversación
-                    </button>
-                  </div>
-                } @else {
-                  <div class="ai-chat-box card border">
-                    <div class="chat-messages" #chatContainer>
-                      @for (msg of aiMessages; track msg.id) {
-                        <div class="chat-bubble" [class.user]="msg.sender === 'user'" [class.bot]="msg.sender === 'bot'">
-                          <div class="bubble-content">{{ msg.text }}</div>
-                        </div>
-                      }
-                      @if (aiLoading) {
-                        <div class="chat-bubble bot">
-                          <div class="bubble-content loading-dots">
-                            <span></span><span></span><span></span>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                    <div class="chat-input-area">
-                      <input type="text" [(ngModel)]="aiInput" aria-label="Respuesta al asistente" (keyup.enter)="sendAiMessage()" placeholder="Escribe tu respuesta aquí...">
-                      <button class="btn btn-primary btn-icon" aria-label="Enviar respuesta" (click)="sendAiMessage()" [disabled]="!aiInput || aiLoading">
-                        <svg lucideSend size="18"></svg>
-                      </button>
-                    </div>
-                    <div class="ai-actions">
-                      <button class="btn btn-success btn-xs" (click)="generateAiContext()" [disabled]="aiLoading">
-                        Finalizar y Generar Contexto
-                      </button>
-                    </div>
-                  </div>
-                }
-              }
-            </div>
-          </div>
-        }
-        @case ('simulator') {
-          <div class="tab-content simulator-layout">
-            <!-- Simulated Chat Panel -->
-            <div class="card glass chat-panel">
-              <div class="card-header">
-                <h3>Simulador de Respuestas</h3>
-                @if (hasDraftDocuments) {
-                  <button class="btn btn-secondary btn-xs" (click)="publishChanges()">
-                    Publicar borradores
-                  </button>
-                }
-              </div>
-              <div class="chat-messages" #simulatorContainer>
-                @if (simMessages.length === 0) {
-                  <div class="empty-state">
-                    <svg lucideMessageSquare size="32"></svg>
-                    <p>Inicia una simulación enviando un mensaje para comprobar el comportamiento del agente.</p>
-                  </div>
-                }
-                @for (msg of simMessages; track msg.id) {
-                  <div class="chat-bubble" [class.user]="msg.sender === 'user'" [class.bot]="msg.sender === 'bot'" (click)="selectMessage(msg)">
-                    <div class="bubble-content" [class.interactive]="msg.sender === 'bot'">
-                      {{ msg.text }}
-                    </div>
-                    @if (msg.sender === 'bot') {
-                      <div class="bubble-meta">
-                        <span>Confianza: {{ (msg.confidence || 0) * 100 | number:'1.0-0' }}%</span>
-                        @if (msg.requiresHuman) {
-                          <span class="warning-badge">Requiere Humano</span>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-                @if (simLoading) {
-                  <div class="chat-bubble bot">
-                    <div class="bubble-content loading-dots">
-                      <span></span><span></span><span></span>
-                    </div>
-                  </div>
-                }
-              </div>
-              <div class="chat-input-area">
-                <input type="text" [(ngModel)]="simInput" aria-label="Pregunta para el simulador" (keyup.enter)="sendSimMessage()" placeholder="Hazle una pregunta al agente sobre la empresa...">
-                <button class="btn btn-primary btn-icon" aria-label="Enviar pregunta" (click)="sendSimMessage()" [disabled]="!simInput || simLoading">
-                  <svg lucideSend size="18"></svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Inspect used context panel -->
-            <div class="card glass inspect-panel">
-              <h3>Detalles del Contexto RAG</h3>
-              @if (!selectedMessage) {
-                <div class="empty-state">
-                  <svg lucideInfo size="32"></svg>
-                  <p>Selecciona un mensaje del agente en el chat para inspeccionar las fuentes utilizadas y el score de coincidencia.</p>
-                </div>
-              } @else {
-                <div class="trace-header">
-                  <div class="metric">
-                    <span class="lbl">Score Confianza:</span>
-                    <strong [class.success]="selectedMessage.confidence >= 0.35" [class.error]="selectedMessage.confidence < 0.35">
-                      {{ (selectedMessage.confidence || 0) * 100 | number:'1.0-0' }}%
-                    </strong>
-                  </div>
-                  <div class="metric">
-                    <span class="lbl">Acción:</span>
-                    <strong>{{ selectedMessage.actions?.[0]?.type || 'none' }}</strong>
-                  </div>
-                </div>
-
-                <div class="sources-list">
-                  <h4>Fuentes Consultadas ({{ selectedMessage.sources?.length || 0 }})</h4>
-                  @if (!selectedMessage.sources || selectedMessage.sources.length === 0) {
-                    <p class="empty-text">No se recuperaron fuentes. Respuesta armada con fallback/handoff.</p>
-                  }
-                  @for (source of selectedMessage.sources; track source.source_id) {
-                    <div class="source-item card border">
-                      <div class="source-item-header">
-                        <strong>{{ source.title }}</strong>
-                        <span class="score">{{ source.score * 100 | number:'1.0-0' }}% match</span>
-                      </div>
-                      <p class="source-text"><code>ID: {{ source.source_id }}</code></p>
-                    </div>
-                  }
-                </div>
-
-                <div class="inspect-actions">
-                  <button class="btn btn-secondary w-full" (click)="openCorrectionModal()">
-                    Corregir Respuesta (Crear Regla)
-                  </button>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      }
-
-      <!-- Correction Modal -->
-      @if (correctionOpen) {
-        <div class="modal-backdrop">
-          <div class="modal card glass">
-            <h3>Corregir Respuesta del Agente</h3>
-            <p class="desc">Añade una regla específica de atención conversacional para que el agente responda correctamente en el futuro.</p>
-            <div class="form-group">
-              <label for="context-rule-name">Pregunta o frase clave</label>
-              <input id="context-rule-name" type="text" [(ngModel)]="newRuleName" placeholder="Ej: Preguntas sobre horarios extendidos">
-            </div>
-            <div class="form-group">
-              <label for="context-rule-body">Regla o respuesta esperada</label>
-              <textarea id="context-rule-body" [(ngModel)]="newRuleContent" rows="5" placeholder="Ej: La empresa atiende emergencias de forma remota 24/7 mediante el canal oficial..."></textarea>
-            </div>
-            <div class="modal-actions">
-              <button class="btn btn-secondary" (click)="correctionOpen = false">Cancelar</button>
-              <button class="btn btn-primary" [disabled]="!newRuleName || !newRuleContent" (click)="saveCorrection()">Guardar Regla</button>
-            </div>
-          </div>
-        </div>
-      }
+  @if (errorMsg()) {
+    <div class="section-spacer">
+      <flowkron-alert tone="danger" title="Error de integración" [dismissible]="true" (dismissed)="errorMsg.set('')">
+        {{ errorMsg() }}
+      </flowkron-alert>
     </div>
+  }
+
+  @switch (activeTab()) {
+    @case ('summary') {
+      <flowkron-context-summary-panel
+        [contextStatus]="contextStatus()"
+        [documents]="documents()"
+        [loading]="statusLoading()"
+        [error]="statusError()"
+        (goToUpload)="setTab('upload')"
+        (deleteDocument)="deleteDoc($event)"
+      />
+    }
+    @case ('upload') {
+      <flowkron-context-upload-panel
+        [templates]="templates()"
+        [templatesLoading]="templatesLoading()"
+        [templatesError]="templatesError()"
+        (uploaded)="handleUploaded()"
+        (errorOccurred)="errorMsg.set($event)"
+      />
+    }
+    @case ('simulator') {
+      <flowkron-agent-simulator-panel
+        [hasDraftDocuments]="hasDraftDocuments()"
+        (publishDrafts)="publishChanges()"
+        (errorOccurred)="errorMsg.set($event)"
+      />
+    }
+  }
+</section>

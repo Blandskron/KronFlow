@@ -1,0 +1,72 @@
+.section-spacer {
+  margin-bottom: var(--space-4);
+}
+
+.panel-card {
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.panel-card h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.campaign-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.campaign-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-3);
+}
+
+.field-group {
+  display: grid;
+  gap: var(--space-1);
+  flex: 1 1 200px;
+}
+
+.field-group > label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.field-provider {
+  flex: 0 1 190px;
+}
+
+.connection-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.connection-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

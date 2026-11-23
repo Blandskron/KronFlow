@@ -10,14 +10,14 @@
         </header>
 
         <form [formGroup]="form" (ngSubmit)="save()">
-          <label>Nombre del agente</label>
-          <input class="field" formControlName="name" placeholder="Nombre del agente">
+          <label for="agent-name">Nombre del agente</label>
+          <input id="agent-name" class="field" formControlName="name" placeholder="Nombre del agente">
 
-          <label>Cargo</label>
-          <input class="field" formControlName="role" placeholder="Rol del agente">
+          <label for="agent-role">Cargo</label>
+          <input id="agent-role" class="field" formControlName="role" placeholder="Rol del agente">
 
-          <label>Codigo tenant</label>
-          <input class="field" formControlName="tenantCode" [placeholder]="runtimeCode() || 'xt_xxxxx'">
+          <label for="agent-tenant-code">Codigo tenant</label>
+          <input id="agent-tenant-code" class="field" formControlName="tenantCode" [placeholder]="runtimeCode() || 'xt_xxxxx'">
 
           @if (runtimeCode()) {
             <small class="muted">Codigo esperado para este tenant: {{ runtimeCode() }}</small>

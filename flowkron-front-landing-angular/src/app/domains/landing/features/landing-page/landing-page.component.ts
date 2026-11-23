@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { RouterLink } from '@angular/router';
@@ -15,6 +15,7 @@ type ContactStatus = 'idle' | 'success' | 'error';
 type ContactControlName = 'name' | 'email' | 'company' | 'phone' | 'message' | 'acceptTerms';
 
 const htmlTagPattern = /<[^>]*>/;
+// eslint-disable-next-line no-control-regex -- rechaza caracteres de control en entradas de texto
 const controlCharsPattern = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/;
 const sqlControlPattern = /(--|\/\*|\*\/|;|\bunion\b|\bselect\b|\binsert\b|\bupdate\b|\bdelete\b|\bdrop\b|\balter\b)/i;
 const phonePattern = /^[0-9+()\-\s]{0,32}$/;
@@ -32,7 +33,7 @@ function safeTextValidator(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'flowkron-landing',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -52,8 +53,8 @@ export class LandingComponent {
   readonly loginUrl = `${environment.appUrl}/login`;
 
   private readonly contactFields = viewChild.required<ElementRef<HTMLFormElement>>('contactFields');
-  submitting = false;
-  contactStatus: ContactStatus = 'idle';
+  readonly submitting = signal(false);
+  readonly contactStatus = signal<ContactStatus>('idle');
 
   readonly contactForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(120), safeTextValidator]],
@@ -72,7 +73,7 @@ export class LandingComponent {
   }
 
   submitContact(): void {
-    if (this.submitting) {
+    if (this.submitting()) {
       return;
     }
 
@@ -91,15 +92,15 @@ export class LandingComponent {
       accept_terms: this.contactForm.controls.acceptTerms.value
     };
 
-    this.submitting = true;
-    this.contactStatus = 'idle';
+    this.submitting.set(true);
+    this.contactStatus.set('idle');
 
     this.contactService
       .send(payload)
-      .pipe(finalize(() => (this.submitting = false)))
+      .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: () => {
-          this.contactStatus = 'success';
+          this.contactStatus.set('success');
           this.contactForm.reset({
             name: '',
             email: '',
@@ -110,7 +111,7 @@ export class LandingComponent {
           });
         },
         error: () => {
-          this.contactStatus = 'error';
+          this.contactStatus.set('error');
         }
       });
   }

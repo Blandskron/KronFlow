@@ -1,0 +1,78 @@
+.section-spacer {
+  margin-bottom: var(--space-4);
+}
+
+.create-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.field-group {
+  display: grid;
+  gap: var(--space-1);
+  flex: 1 1 180px;
+}
+
+.field-group > label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.field-sm {
+  flex: 0 1 130px;
+}
+
+.field-xs {
+  flex: 0 0 88px;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.filter-active {
+  background: var(--selected);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.cards-stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.item-card {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+
+.stage-select {
+  width: auto;
+  min-width: 180px;
+  padding: 8px 12px;
+}

@@ -1,0 +1,80 @@
+<section class="page-section">
+  <flowkron-page-header
+    title="Revisión de propuestas IA"
+    subtitle="Aprueba, rechaza o ejecuta acciones tipadas propuestas por el agente."
+  >
+    <button class="btn btn-secondary" type="button" [disabled]="loading()" (click)="reload()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </flowkron-page-header>
+
+  <div class="filter-bar" role="group" aria-label="Filtrar por estado">
+    @for (st of statuses; track st.id) {
+      <button
+        class="btn btn-secondary btn-sm"
+        [class.filter-active]="statusFilter() === st.id"
+        type="button"
+        [attr.aria-pressed]="statusFilter() === st.id"
+        (click)="setStatus(st.id)"
+      >
+        {{ st.label }}
+      </button>
+    }
+  </div>
+
+  @if (notice(); as msg) {
+    <div class="section-spacer">
+      <flowkron-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
+        {{ msg.text }}
+      </flowkron-alert>
+    </div>
+  }
+
+  @if (loading() && !items().length) {
+    <div class="cards-stack" role="status" aria-label="Cargando propuestas">
+      <span class="sr-only">Cargando propuestas…</span>
+      <flowkron-skeleton height="112px" />
+      <flowkron-skeleton height="112px" />
+    </div>
+  } @else if (!items().length) {
+    <flowkron-empty-state
+      title="Sin propuestas"
+      description="No hay propuestas en este estado."
+    />
+  } @else {
+    <div class="cards-stack">
+      @for (item of items(); track item.id) {
+        <article class="card glass-surface proposal-card">
+          <div class="proposal-header">
+            <strong>#{{ item.id }} · {{ item.action_type }}</strong>
+            <flowkron-badge [tone]="statusTones[item.status] || 'info'">
+              {{ item.status }} · v{{ item.proposal_version }}
+            </flowkron-badge>
+          </div>
+          <small class="muted">
+            Recurso: {{ item.resource_type }} #{{ item.resource_id }} · Propuesto por {{ item.proposed_by }}
+            · Expira {{ item.expires_at | date:'short' }}
+          </small>
+          <pre class="payload-preview">{{ item.arguments | json }}</pre>
+          @if (canManage()) {
+            <div class="proposal-actions">
+              @if (item.status === 'pending') {
+                <button class="btn btn-primary btn-sm" type="button" [disabled]="busy()" (click)="approve(item)">
+                  Aprobar
+                </button>
+                <button class="btn btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="reject(item)">
+                  Rechazar
+                </button>
+              }
+              @if (item.status === 'approved') {
+                <button class="btn btn-primary btn-sm" type="button" [disabled]="busy()" (click)="execute(item)">
+                  Ejecutar efecto
+                </button>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

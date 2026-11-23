@@ -1,5 +1,3 @@
-import { ApiResponse } from '@shared/types/api.types';
-
 export interface SubscriptionInfo {
   plan: string;
   status: string;
@@ -87,7 +85,7 @@ export interface Tenant {
   operational_runtime?: OperationalRuntimeInfo | null;
 }
 
-export interface RefreshResponse extends AuthTokenResponse {}
+export type RefreshResponse = AuthTokenResponse;
 
 export interface TenantOnboardingRequest {
   name: string;

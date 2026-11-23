@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
@@ -13,7 +13,7 @@ type CaseList = { status: 'loading' } | { status: 'error'; forbidden: boolean }
 
 @Component({
   selector: 'flowkron-privacy-cases-page',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './privacy-cases-page.component.html',
   styles: `

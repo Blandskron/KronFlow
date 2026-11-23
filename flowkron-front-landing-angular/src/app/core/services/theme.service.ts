@@ -1,13 +1,16 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 
+const DARK_THEME_COLOR = '#100d16';
+const LIGHT_THEME_COLOR = '#f8f6fb';
+
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly document = inject(DOCUMENT);
   readonly isDark = signal(true);
 
   initialize(): void {
-    const savedTheme = localStorage.getItem('theme');
+    const savedTheme = this.readStoredTheme();
     this.setDark(savedTheme !== 'light');
   }
 
@@ -18,6 +21,30 @@ export class ThemeService {
   private setDark(isDark: boolean): void {
     this.isDark.set(isDark);
     this.document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    this.updateThemeColorMeta(isDark);
+    this.writeStoredTheme(isDark ? 'dark' : 'light');
+  }
+
+  private updateThemeColorMeta(isDark: boolean): void {
+    const meta = this.document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
+    }
+  }
+
+  private readStoredTheme(): string | null {
+    try {
+      return localStorage.getItem('theme');
+    } catch {
+      return null;
+    }
+  }
+
+  private writeStoredTheme(theme: 'dark' | 'light'): void {
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      // Ignora restricciones de storage (modo privado / cuota)
+    }
   }
 }

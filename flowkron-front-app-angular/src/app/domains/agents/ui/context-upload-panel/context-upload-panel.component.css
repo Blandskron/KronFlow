@@ -1,0 +1,188 @@
+.upload-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.upload-methods-list,
+.method-action-panel {
+  padding: var(--space-5);
+}
+
+h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.desc {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.method-buttons {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.method-buttons button {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  text-align: left;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.method-buttons button.selected {
+  background: var(--selected);
+  border-color: var(--primary);
+}
+
+.method-buttons strong,
+.method-buttons small {
+  display: block;
+}
+
+.method-buttons small {
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+}
+
+.stack,
+.templates-list,
+.ai-start-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.form-group {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.form-group > label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.file-drop-area {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-6);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: center;
+}
+
+.file-drop-area.has-file {
+  border-color: var(--primary);
+  background: var(--selected);
+}
+
+.upload-status {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.upload-status.error {
+  background: var(--error-100);
+  color: var(--error-text);
+}
+
+.upload-status.success {
+  background: var(--success-100);
+  color: var(--success-text);
+}
+
+.upload-status-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.upload-status p {
+  margin: 0;
+}
+
+.progress-bar {
+  margin-top: var(--space-2);
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.form-actions,
+.template-actions,
+.ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.template-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.template-item h4,
+.template-item p {
+  margin: 0;
+}
+
+.ai-start-card,
+.ai-chat-box {
+  padding: var(--space-4);
+}
+
+.chat-messages {
+  display: grid;
+  gap: var(--space-3);
+  max-height: 340px;
+  overflow-y: auto;
+  margin-bottom: var(--space-3);
+}
+
+.chat-bubble {
+  max-width: 85%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  white-space: pre-wrap;
+}
+
+.chat-bubble.user {
+  justify-self: end;
+  background: var(--primary-button);
+  color: #ffffff;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .upload-grid {
+    grid-template-columns: 1fr;
+  }
+}

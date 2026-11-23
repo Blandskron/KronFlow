@@ -76,6 +76,23 @@ export const routes: Routes = [
           import('@domains/conversations/features/chats-page/chats-page.component').then((m) => m.ChatsPageComponent)
       },
       {
+        path: 'contacts',
+        title: 'Contactos · Flowkron',
+        loadComponent: () =>
+          import('@domains/contacts/features/contacts-page/contacts-page.component').then((m) => m.ContactsPageComponent)
+      },
+      {
+        path: 'contacts/:id',
+        title: 'Ficha de contacto · Flowkron',
+        loadComponent: () =>
+          import('@domains/contacts/features/contact-detail-page/contact-detail-page.component').then((m) => m.ContactDetailPageComponent)
+      },
+      {
+        path: 'leads',
+        title: 'Seguimiento de leads · Flowkron',
+        loadComponent: () => import('@domains/leads/features/leads-page/leads-page.component').then((m) => m.LeadsPageComponent)
+      },
+      {
         path: 'workflows',
         title: 'Oportunidades · Flowkron',
         loadComponent: () =>

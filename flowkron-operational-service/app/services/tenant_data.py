@@ -161,7 +161,7 @@ def agent_to_dict(agent) -> dict[str, Any]:
 
 
 def _conversation_status(payload: dict[str, Any], lead: Lead | None = None) -> str:
-    raw_status = str(payload.get("status") or "").lower()
+    raw_status = str(payload.get("status") or "").strip(" ").lower()
     if raw_status in {"new", "active", "waiting", "closed"}:
         return raw_status
     if raw_status in {"requires_human", "requiere_humano"}:

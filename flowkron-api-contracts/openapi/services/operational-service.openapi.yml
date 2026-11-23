@@ -24,6 +24,8 @@ tags:
     description: Ingesta de eventos desde un adaptador de WhatsApp (auth por X-Tenant-Code + X-Ingest-Key)
   - name: Leads
     description: CRUD de leads del tenant (auth JWT Bearer)
+  - name: Contacts
+    description: Directorio de contactos del tenant (auth JWT Bearer)
   - name: Conversations
     description: Lecttura de conversaciones y mensajes del tenant (auth JWT Bearer)
   - name: Analytics
@@ -415,6 +417,7 @@ paths:
   /api/v1/leads:
     get:
       summary: Listar leads del tenant autenticado
+      description: Requiere users.read. Orden por última actualización e ID descendentes.
       operationId: leads_list
       tags: [Leads]
       security:
@@ -439,6 +442,23 @@ paths:
           in: query
           schema:
             type: string
+        - name: status_group
+          in: query
+          schema:
+            type: string
+            enum: [open, closed]
+        - name: q
+          in: query
+          description: Búsqueda literal por nombre, correo o teléfono del contacto.
+          schema:
+            type: string
+            maxLength: 120
+        - name: contact_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
         - name: direction
           in: query
           schema:
@@ -453,12 +473,8 @@ paths:
                 $ref: '#/components/schemas/LeadListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '402':
-          description: Plan Free — upgrade requerido
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/leads/{lead_id}:
     get:
@@ -486,6 +502,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       summary: Actualizar un lead
+      description: Requiere crm.manage. Enviar expected_updated_at para evitar sobreescribir cambios posteriores.
       operationId: leads_patch
       tags: [Leads]
       security:
@@ -511,8 +528,22 @@ paths:
                 $ref: '#/components/schemas/LeadOut'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: El lead cambió después de la fecha enviada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Datos de actualización inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   # ─── Conversations (Dashboard JWT) ──────────────────────────────────────────
 
@@ -554,6 +585,13 @@ paths:
           schema:
             type: string
             maxLength: 120
+        - name: contact_id
+          in: query
+          description: Identificador del contacto vinculado al lead que identifica el hilo del inbox.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
         - name: before_at
           in: query
           description: Fecha del cursor devuelto. Usar con before_id y sin offset.
@@ -694,6 +732,160 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/v1/contacts:
+    get:
+      summary: Consultar el directorio de contactos
+      description: Requiere users.read. Orden descendente por fecha de creación e ID.
+      operationId: contacts_list
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda literal sin distinción de mayúsculas por nombre, correo, teléfono o identificador WhatsApp. Las consultas con formato telefónico y al menos cuatro dígitos también comparan los dígitos sin puntuación.
+          schema:
+            type: string
+            maxLength: 120
+        - name: source
+          in: query
+          description: Origen exacto del contacto, según el catálogo de la empresa.
+          schema:
+            type: string
+            maxLength: 120
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Página de contactos de la empresa autenticada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/contacts/sources:
+    get:
+      summary: Listar orígenes de contactos de la empresa activa
+      description: Requiere users.read. Devuelve hasta cien orígenes únicos ordenados.
+      operationId: contacts_sources
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Orígenes disponibles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    maxItems: 100
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/contacts/{contact_id}:
+    get:
+      summary: Consultar la ficha de un contacto
+      description: Requiere users.read. Solo devuelve contactos de la empresa autenticada.
+      operationId: contacts_get
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contact_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 9223372036854775807
+      responses:
+        '200':
+          description: Ficha del contacto
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ContactOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Actualizar nombre de contacto
+      description: Requiere crm.manage. Comprueba el nombre esperado antes de guardar.
+      operationId: contacts_rename
+      tags: [Contacts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contact_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 9223372036854775807
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [full_name, expected_full_name]
+              properties:
+                full_name:
+                  type: string
+                  maxLength: 180
+                expected_full_name:
+                  type: string
+      responses:
+        '200':
+          description: Ficha actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ContactOut'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El nombre cambió desde la última lectura.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   # ─── Analytics (Dashboard JWT) ──────────────────────────────────────────────
 
@@ -2585,20 +2777,22 @@ components:
           nullable: true
         temperature:
           type: string
-          maxLength: 24
-          nullable: true
+          enum: [cold, warm, hot, frio, tibio, caliente]
         lifecycle_status:
           type: string
-          maxLength: 32
-          nullable: true
+          enum: [nuevo, contactado, en_proceso, ganado, perdido]
+        expected_updated_at:
+          type: [string, 'null']
+          format: date-time
         assigned_to_user_id:
           type: integer
           nullable: true
+          minimum: 1
+          maximum: 2147483647
         score:
           type: integer
           minimum: 0
           maximum: 100
-          nullable: true
         tags:
           type: array
           items:
@@ -2766,6 +2960,49 @@ components:
                 type: string
                 enum: [queued, sending, unknown, not_sent]
 
+    ContactOut:
+      type: object
+      required: [id, full_name, email, phone, source, created_at]
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        email:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        source:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ContactListResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ContactOut'
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+        meta:
+          type: object
+        status:
+          type: object
+
     # ── Analytics ──────────────────────────────────────────────────────────────
 
     AnalyticsSummary:
@@ -2781,8 +3018,10 @@ components:
           type: integer
         open_conversations:
           type: integer
+          description: Hilos visibles en el inbox que no están cerrados.
         requires_human:
           type: integer
+          description: Hilos visibles en espera de atención humana según el filtro del inbox.
         messages_today:
           type: integer
         messages_last_7_days:

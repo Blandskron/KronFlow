@@ -18,12 +18,15 @@ Rutas hijas reales bajo `/app`:
 | `/app` | Redirige a `/app/home` |
 | `/app/home` | Resumen de sesion, tenant y plan |
 | `/app/business-context` | Contexto Empresarial integrado con Agent Core |
-| `/app/conversations` | Conversaciones/mensajes solo lectura |
+| `/app/conversations` | Bandeja con búsqueda, historial y marca de lectura; `?status=waiting` abre las pendientes |
+| `/app/contacts` | Directorio de lectura con búsqueda, origen y paginación del servidor. La URL conserva origen y página; el término de búsqueda queda en el historial de navegación de esa pestaña. |
+| `/app/contacts/:id` | Ficha con leads y conversaciones vinculadas. `crm.manage` permite editar el nombre. |
+| `/app/leads` | Seguimiento de leads de la empresa con búsqueda, filtros y paginación. `?contact_id=` acota a la ficha de origen. `crm.manage` permite guardar etapas. |
 | `/app/workflows` | Tablero derivado de conversaciones y leads |
-| `/app/integrations` | Placeholder |
+| `/app/whatsapp`, `/app/integrations` | Vinculación y diagnóstico de WhatsApp; `integrations` redirige a `whatsapp` |
 | `/app/analytics` | Resumen operacional |
-| `/app/notifications` | Lista local vacia, sin API |
-| `/app/pricing` | Catalogo estatico y WhatsApp |
+| `/app/notifications` | Lista de handoffs de la API con enlace a la Bandeja filtrada |
+| `/app/pricing` | Redirige a `/app/home` |
 | `/app/settings` | Perfil, empresa, miembros e invitaciones |
 
 No existe ruta `/app/agents` en el router actual.
@@ -49,10 +52,15 @@ Base: `environment.operationalApiUrl`, sin slash final.
 | --- | --- | --- |
 | GET | `/conversations` | Chats y workflow |
 | GET | `/conversations/{id}/messages` | Detalle de chat |
-| GET | `/leads` | Workflow |
+| GET | `/contacts` | Directorio de contactos (`users.read`) |
+| GET | `/contacts/sources` | Sugerencias de origen en Contactos (`users.read`) |
+| GET | `/contacts/{id}` | Ficha de contacto (`users.read`) |
+| PATCH | `/contacts/{id}` | Editar nombre con comprobación de valor esperado (`crm.manage`) |
+| GET | `/leads` | Workflow, actividad del contacto y seguimiento paginado |
+| PATCH | `/leads/{id}` | Guardar etapa con comprobación de `updated_at` (`crm.manage`) |
 | GET | `/analytics/summary` | Analytics |
 | GET | `/agents` | Servicio disponible, sin pantalla actual |
-| POST | `/agents/configure` | Crear agente |
+| POST | `/agents/configure` | Stub de configuración; devuelve 501 |
 
 Operational usa `ApiResponse<T>` para todas las respuestas JSON. El frontend privado no consume endpoints `/internal/*`.
 

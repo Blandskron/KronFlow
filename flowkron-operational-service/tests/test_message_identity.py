@@ -56,8 +56,9 @@ class PostgresCase(unittest.TestCase):
             port = probe.getsockname()[1]
         cls.pg("initdb", "-D", str(cls.data), "-U", "fk01", "-A", "trust", "--encoding=UTF8", "--no-locale")
         cls.addClassCleanup(lambda: cls.pg("pg_ctl", "-D", str(cls.data), "-m", "fast", "-w", "stop"))
+        # The runner owns the temporary cluster, but not the system socket directory.
         cls.pg("pg_ctl", "-D", str(cls.data), "-l", str(cls.root / "postgres.log"),
-               "-o", f"-h 127.0.0.1 -p {port}", "-w", "start")
+               "-o", f"-h 127.0.0.1 -p {port} -c unix_socket_directories=", "-w", "start")
         cls.engine = create_engine(f"postgresql+psycopg://fk01@127.0.0.1:{port}/postgres",
                                    connect_args={"options": "-c statement_timeout=10000"})
         cls.addClassCleanup(cls.engine.dispose)

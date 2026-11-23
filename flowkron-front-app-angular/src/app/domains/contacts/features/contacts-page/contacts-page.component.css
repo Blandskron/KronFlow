@@ -1,0 +1,26 @@
+.page-section { padding: clamp(18px, 3vw, 32px); }
+h1 { margin: 0 0 16px; }
+
+.search, .pagination { display: flex; flex-wrap: wrap; gap: 8px; }
+.search { align-items: end; margin-block-end: 18px; }
+.search label { display: grid; gap: 6px; max-width: 100%; }
+.search input { width: 100%; }
+
+.contacts { list-style: none; padding: 0 16px; margin: 0; }
+.contacts li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding-block: 13px;
+  overflow-wrap: anywhere;
+}
+.contacts li + li { border-block-start: 1px solid var(--border); }
+.contacts a, .contacts li div span { display: block; }
+.contacts a { font-weight: 700; text-decoration: underline; }
+.pagination { align-items: center; margin-block-start: 14px; }
+
+@media (max-width: 560px) {
+  .contacts li { grid-template-columns: minmax(0, 1fr) auto; }
+  .contacts li div { grid-column: 1 / -1; }
+}

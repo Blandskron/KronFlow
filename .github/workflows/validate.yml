@@ -70,6 +70,10 @@ jobs:
           - service: flowkron-operational-service
             requirements: requirements-dev.txt
             checks: |
+              export FLOWKRON_TEST_POSTGRES_BIN="$(pg_config --bindir)"
+              test -x "$FLOWKRON_TEST_POSTGRES_BIN/initdb"
+              test -x "$FLOWKRON_TEST_POSTGRES_BIN/pg_ctl"
+              "$FLOWKRON_TEST_POSTGRES_BIN/postgres" --version
               python -m unittest discover -s tests -v
               python -c 'from app.main import app; assert app.openapi()["paths"]'
           - service: flowkron-agent-core

@@ -8,6 +8,7 @@ import {
   LucideLogOut,
   LucideMessageSquare,
   LucideUser,
+  LucideUsers,
   LucideWorkflow
 } from '@lucide/angular';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -30,6 +31,7 @@ import { ThemeToggleComponent } from '@shared/ui/theme-toggle.component';
     LucideBarChart3,
     LucideBell,
     LucideUser,
+    LucideUsers,
     LucideLogOut,
     LucideBookOpen
   ],
@@ -47,6 +49,7 @@ export class DashboardShellComponent implements OnInit {
   readonly navItems = [
     { path: '/app/home', label: 'Inicio', icon: 'home' },
     { path: '/app/conversations', label: 'Bandeja', icon: 'message-square' },
+    { path: '/app/contacts', label: 'Contactos', icon: 'users' },
     { path: '/app/whatsapp', label: 'WhatsApp', icon: 'link' },
     { path: '/app/business-context', label: 'Contexto', icon: 'book-open' },
     { path: '/app/workflows', label: 'Oportunidades', icon: 'workflow' },

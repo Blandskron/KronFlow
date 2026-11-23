@@ -8,9 +8,9 @@ Servicio FastAPI de datos operacionales multi-tenant. Gestiona runtime público,
 
 No asumas capacidades inexistentes:
 
-- `app/tenant_models/operations.py`, `app/tenant_models/context.py` y `app/tenant_models/whatsapp_turn.py`, importados desde `app/tenant_models/__init__.py`, definen el esquema tenant activo. Los módulos `agent_profile.py`, `analytics_snapshot.py`, `conversation.py`, `handoff_request.py`, `lead.py`, `lead_event.py` y `message.py` son un modelo anterior no importado por el provisioning actual.
+- `app/tenant_models/__init__.py` enumera el esquema activo registrado para provisioning, incluidos `operations.py`, `context.py`, `whatsapp_turn.py` y `whatsapp_consent.py`. Los módulos `agent_profile.py`, `analytics_snapshot.py`, `conversation.py`, `handoff_request.py`, `lead.py`, `lead_event.py` y `message.py` corresponden al modelo anterior.
 - Los endpoints `/api/v1/agents` no persisten agentes todavía.
-- `require_permission()` existe, pero ningún router de negocio lo usa; hoy se valida JWT, tenant activo y plan pagado, no permisos RBAC por endpoint.
+- Los routers JWT usan los resolvers de `app/core/tenant_resolver.py`: `users.read` para lectura CRM, `crm.manage` para edición y marca de lectura, `agents.create` para el router de agentes y `audit.read` para consultas de auditoría.
 - El aislamiento usa `schema_translate_map`, no `SET search_path` en cada request.
 - Alembic se reserva para tablas públicas, pero no hay archivos en `alembic/versions/`; startup usa `create_all` para el esquema público.
 - Hay pruebas `unittest` de límites de seguridad, identidad de mensajes y recuperación de turnos. Las integraciones FK-01/FK-02 usan un cluster PostgreSQL temporal propio al configurar `FLOWKRON_TEST_POSTGRES_BIN`; FK-02 ejercita ASGI sin TestClient. Ver `docs/TESTING.md` para ejecución y limitaciones de dependencias.
@@ -23,7 +23,7 @@ No asumas capacidades inexistentes:
 | `app/core/` | Settings, DB, JWT/internal auth, tenant resolver y rate limit |
 | `app/api/internal/` | Provisioning, estados, ingest key y migración masiva |
 | `app/api/ingest/` | Ingesta WhatsApp autenticada por headers |
-| `app/api/v1/` | Dashboard JWT: leads, conversaciones, analytics y datos operacionales |
+| `app/api/v1/` | Dashboard JWT: contactos, leads, conversaciones, analytics y datos operacionales |
 | `app/public_models/` | `tenant_runtime`, `migration_registry`, `system_events`, `billing_reference` |
 | `app/tenant_models/operations.py` | Tablas tenant activas |
 | `app/services/` | Queries tenantizadas, ingesta y provisioning |
@@ -33,8 +33,8 @@ No asumas capacidades inexistentes:
 
 - Nunca construir un identificador SQL desde input sin `sanitize_schema_name` y validación/quoting apropiados.
 - Toda query tenant activa debe usar `schema_translate_map` mediante helpers de `tenant_data.py` o bind equivalente.
-- El `tenant_id` proviene del JWT validado; el runtime debe existir, estar `active` y tener plan distinto de `free`.
-- Ingest exige tenant code/key válidos, runtime activo y plan pagado; la key se almacena PBKDF2-SHA256 con salt.
+- El `tenant_id` proviene del JWT validado y el runtime debe existir y estar `active`. Se comprueba el permiso del resolver que usa cada ruta.
+- Ingest exige tenant code/key válidos o credenciales del puente Baileys y runtime activo. La ingest key se almacena PBKDF2-SHA256 con salt.
 - `INTERNAL_TOKEN` protege todos los endpoints `/internal/*` y debe coincidir con auth service.
 - La ingest key solo se devuelve al crear por primera vez o rotar. Reprovisionar un runtime existente no entrega una nueva.
 - El cambio de modelos tenant debe considerar todos los schemas existentes y actualizar `TENANT_MIGRATION_VERSION` cuando corresponda.
@@ -43,7 +43,7 @@ No asumas capacidades inexistentes:
 
 - Defaults locales de DB/internal token no son seguros para ambientes compartidos.
 - Rate limiting de ingest vive en un diccionario por proceso: múltiples workers multiplican el límite y un reinicio lo resetea.
-- No hay autorización RBAC específica en routers JWT.
+- Operational valida los claims del JWT localmente; una revocación en IAM puede tardar hasta la expiración del token de acceso en esos consumidores.
 - `readyz` puede devolver 500 si DB falla.
 - CORS permite credenciales, todos los métodos y headers para los orígenes configurados.
 - `system_events.payload` puede contener identificadores/error DB; no registrar payloads WhatsApp completos ni PII innecesaria.

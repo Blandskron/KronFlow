@@ -21,6 +21,7 @@ def list_endpoint(
     channel: str | None = None,
     requires_human: bool | None = None,
     q: str | None = Query(default=None, max_length=120),
+    contact_id: int | None = Query(default=None, ge=1, le=9223372036854775807),
     before_at: AwareDatetime | None = None,
     before_id: int | None = Query(default=None, gt=0),
     tenant: TenantContext = Depends(resolve_tenant_from_jwt),
@@ -32,7 +33,7 @@ def list_endpoint(
         raise HTTPException(status_code=422, detail="Provide both cursor fields without offset")
     before = (before_at, before_id) if before_at is not None and before_id is not None else None
     items, total = list_conversations(
-        db, tenant, limit + 1, offset, status_filter, channel, requires_human, search=q, before=before,
+        db, tenant, limit + 1, offset, status_filter, channel, requires_human, search=q, before=before, contact_id=contact_id,
     )
     cursor = None
     if len(items) > limit:

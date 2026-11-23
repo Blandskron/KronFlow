@@ -6,7 +6,7 @@ Start, inspect and stop the local stack from the repository root.
 docker compose config --quiet
 docker compose up --build --wait
 docker compose ps
-docker compose logs --tail 100 flowkron-auth-service smtp-http-blandskron
+docker compose logs --tail 100 flowkron-auth-service flowkron-mail-service
 docker compose down
 ```
 

@@ -8,7 +8,7 @@ See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [imp
 | IAM | [Django](flowkron-auth-service/README.md) | Identity, tenant membership, plan state, RBAC data, JWT issuance, account email |
 | Operational | [FastAPI and PostgreSQL](flowkron-operational-service/README.md) | Tenant provisioning (`tenant_schema_v16`, repeatable `v3–v16`), durable action outbox, consent ledger, HITL control, opportunities, AI proposals, contact points/forms/credentials, domain events, campaigns/channels, KPIs, privacy/retention, webhooks, private attachments and scheduling |
 | Agent Core | [FastAPI](flowkron-agent-core/README.md) | Channel-agnostic agent API, business context, simulation and optional LLM calls |
-| Email | [Blandskron gateway](smtp-http-blandskron/README.md) | Bearer authentication, scoped sender keys, idempotency using Redis and delivery through Resend |
+| Email | [Mail service](flowkron-mail-service/README.md) | Bearer authentication, scoped sender keys, idempotency using Redis and delivery through Resend |
 | WhatsApp lab | [Baileys connector](flowkron-baileys-services/README.md) | Optional private QR pairing and consent-gated text ingestion for one tenant per instance |
 | Interfaces | [API contracts](flowkron-api-contracts/README.md) | Canonical specifications with partial runtime adoption |
 

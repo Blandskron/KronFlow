@@ -27,7 +27,7 @@ On Windows, clone into a short directory path if Git reports `Filename too long`
 | IAM health | http://localhost:8000/healthz/ |
 | Operational health | http://localhost:8001/healthz |
 | Agent Core health | http://localhost:8002/health |
-| Email gateway | Internal address at `http://smtp-http-blandskron:8000` |
+| Email gateway | Internal address at `http://flowkron-mail-service:8000` |
 
 ### Start from scratch
 
@@ -62,11 +62,11 @@ Apply the configuration and account migration with `docker compose up --build --
 
 ## Enable transactional email
 
-The included [Blandskron gateway](smtp-http-blandskron/README.md) sends email through Resend. Set the following values in your private environment file.
+The included [Flowkron mail service](flowkron-mail-service/README.md) sends email through Resend. Set the following values in your private environment file.
 
 ```dotenv
 EMAIL_BACKEND=apps.shared.email_backend.EmailGatewayBackend
-MAIL_GATEWAY_URL=http://smtp-http-blandskron:8000
+MAIL_GATEWAY_URL=http://flowkron-mail-service:8000
 MAIL_INTERNAL_API_KEY=replace-with-a-generated-client-secret
 MAIL_SENDER_KEY=flowkron
 EMAIL_TIMEOUT=25

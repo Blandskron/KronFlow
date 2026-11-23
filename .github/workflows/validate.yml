@@ -79,7 +79,7 @@ jobs:
           - service: flowkron-agent-core
             requirements: requirements-dev.txt
             checks: python -m pytest -q
-          - service: smtp-http-blandskron
+          - service: flowkron-mail-service
             requirements: requirements.txt
             checks: python -m pytest -q
     defaults:

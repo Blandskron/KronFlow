@@ -38,7 +38,7 @@ services:
       IAM_PLATFORM_TENANT_SLUG: ${IAM_PLATFORM_TENANT_SLUG:-flowkron-platform}
       IAM_AUTO_VERIFY_USER_EMAIL: ${IAM_AUTO_VERIFY_USER_EMAIL:-False}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
-      MAIL_GATEWAY_URL: ${MAIL_GATEWAY_URL:-http://smtp-http-blandskron:8000}
+      MAIL_GATEWAY_URL: ${MAIL_GATEWAY_URL:-http://flowkron-mail-service:8000}
       MAIL_INTERNAL_API_KEY: ${MAIL_INTERNAL_API_KEY:-}
       MAIL_SENDER_KEY: ${MAIL_SENDER_KEY:-flowkron}
       EMAIL_HOST: ${EMAIL_HOST:-mail.blandskron.com}

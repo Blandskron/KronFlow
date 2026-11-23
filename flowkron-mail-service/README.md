@@ -1,4 +1,4 @@
-# smtp-http-blandskron
+# flowkron-mail-service
 
 Blandskron Email Gateway es una API FastAPI centralizada para correo transaccional. Recibe solicitudes autenticadas, valida el remitente autorizado y envía mediante la API HTTPS de Resend. No acepta ni utiliza credenciales SMTP.
 

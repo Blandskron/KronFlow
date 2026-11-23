@@ -1,7 +1,7 @@
 services:
-  smtp-http-blandskron:
+  flowkron-mail-service:
     build:
-      context: ../../smtp-http-blandskron
+      context: ../../flowkron-mail-service
     environment:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}

@@ -32,4 +32,4 @@ IAM issues JWTs consumed by Operational and Agent Core. Operational resolves dat
 
 The stack uses one PostgreSQL cluster for IAM and Operational and a Redis instance for local cache and mail idempotency. IAM issues signing keys at bootstrap and shares the public key with the validation services. Only local development use is documented for the included Compose configuration.
 
-See the [technical documentation index](flowkron-product-docs/README.md) and the [deployment notes](flowkron-deploy/README.md).
+See the [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [deployment notes](flowkron-deploy/README.md).

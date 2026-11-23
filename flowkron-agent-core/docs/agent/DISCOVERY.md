@@ -8,7 +8,7 @@
 - `flowkron-front-app-angular`: dashboard Angular y servicios frontend.
 - `flowkron-front-landing-angular`: landing publica Angular.
 - `flowkron-api-contracts`: OpenAPI, schemas JSON, errores y ADR de contratos.
-- `flowkron-product-docs`: ADRs, arquitectura, seguridad, RAG, agentes, memoria, costos y operacion.
+- `docs/`: estado de implementación, ADRs v1, trazabilidad y release gates en la raíz del monorepo.
 - `flowkron-deploy`: compose e infraestructura local.
 
 ## Arquitectura detectada

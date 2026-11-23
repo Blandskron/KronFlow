@@ -1,6 +1,6 @@
 # Alcance congelado propuesto de Community v1.0
 
-El [roadmap canónico](../../../EVOLUCION_FLOWKRON.md) controla el alcance. El artefacto se mantiene como source preview hasta presentar la evidencia del [gate de release](RELEASE_GATES.md).
+El [registro de trazabilidad](TRACEABILITY.md) y el [changelog](../../../CHANGELOG.md) documentan el alcance implementado (`tenant_schema_v16`). La promoción a release estable exige completar los [gates de release](RELEASE_GATES.md) y [readiness](../../../RELEASE_READINESS.md).
 
 | Prioridad | Capacidad | Evidencia de aceptación y límite |
 | --- | --- | --- |

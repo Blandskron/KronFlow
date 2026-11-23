@@ -2,7 +2,7 @@
 
 **CRM inteligente para WhatsApp · by BLANDSKRON**
 
-Flowkron brings a conversation inbox, lead tracking, operational metrics, team management and an AI context simulator into a multi-tenant workspace. Connect WhatsApp by scanning a QR code in the CRM. Each workspace manages its own connection and agent context.
+Flowkron brings a multi-tenant AI-native CRM workspace with human-in-the-loop (HITL) inbox controls, commercial opportunities pipeline, typed AI action proposals, email campaigns with delegated connections, consolidated analytics KPIs, privacy/retention workflows, reliable webhooks, private attachments, conversational scheduling, and an AI context simulator. Connect WhatsApp by scanning a QR code in the CRM. Each workspace manages its own isolated PostgreSQL schema (`tenant_schema_v16`), connection, and agent context.
 
 Flowkron is independent and has no affiliation with or endorsement from Meta or WhatsApp. Flowkron is open source under [Apache License 2.0](LICENSE). See the [release review](RELEASE_READINESS.md) for verification and deployment scope.
 
@@ -88,7 +88,8 @@ Set a valid provider key and replace the example sender with an address on your 
 - [Architecture and component links](ARCHITECTURE.md)
 - [Local validation and contribution guide](CONTRIBUTING.md)
 - [Migration and change history](CHANGELOG.md)
-- [Roadmap de Flowkron Community v1.0](EVOLUCION_FLOWKRON.md)
+- [Release readiness and gates](RELEASE_READINESS.md)
+- [Implementation traceability](docs/planning/v1/TRACEABILITY.md)
 - [Responsible disclosure](SECURITY.md)
 - [Brand assets](assets/brand/README.md)
 

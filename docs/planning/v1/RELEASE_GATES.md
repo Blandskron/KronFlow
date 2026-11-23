@@ -15,9 +15,9 @@
 
 **Go para RC:** entregar F1–F5 con pruebas sintéticas, instalación, restore y un alcance explícito para proveedores todavía deshabilitados. **Go para estable:** agregar evidencia operativa y de proveedores habilitados, completar privacidad y redistribución y actualizar guías con los límites medidos. Si un canal no pasa su gate, excluirlo de la disponibilidad anunciada o mantener la etapa previa según los mínimos de alcance. [Readiness vigente](../../../RELEASE_READINESS.md)
 
-## Trabajo en curso por verificar
+## Gates externos pendientes para producción
 
-El inventario y las guías de source preview se reconciliaron en FK-16. El [backlog](../../../EVOLUCION_FLOWKRON.md#backlog-canónico) conserva el alcance de los tickets pendientes.
+Todo el alcance funcional v1.0 y POST-v1 (`tenant_schema_v16`) está implementado y verificado en CI ([Validate `45222208571`](https://github.com/Blandskron/flowkron/actions/runs/45222208571)). Restan únicamente dos comprobaciones operativas externas antes de etiquetar una release estable en producción:
 
 | Ticket | Evidencia actual | Falta para cerrar |
 | --- | --- | --- |

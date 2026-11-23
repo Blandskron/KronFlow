@@ -1,6 +1,6 @@
 # Gates de release Community v1
 
-**Estado inicial:** source preview. Registrar por gate SHA, fecha, entorno, responsable, comando o recorrido, resultado y enlace a evidencia. Un fallo P0, una omisión de un gate requerido o un canal anunciado sin evidencia impiden la promoción. [Auditoría de seguridad y calidad](07-security-quality-release.md) · [Alcance](FINAL_SCOPE.md)
+**Estado actual:** código Community v1.0 y POST-v1 implementado (`tenant_schema_v16`), pendiente de corrida final de release en CI. Registrar por gate SHA, fecha, entorno, responsable, comando o recorrido, resultado y enlace a evidencia. Un fallo P0, una omisión de un gate requerido o un canal anunciado sin evidencia impiden la promoción. [Alcance](FINAL_SCOPE.md) · [Readiness](../../../RELEASE_READINESS.md)
 
 | Gate | Comprobación y evidencia Go | Responsable |
 | --- | --- | --- |

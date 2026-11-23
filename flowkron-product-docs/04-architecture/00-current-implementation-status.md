@@ -1,6 +1,6 @@
 # Estado actual de implementación
 
-Versión: 1.4
+Versión: 1.5
 Tipo: Current State
 Estado: `IMPLEMENTED` como inventario documental
 Última verificación técnica: 2026-11-23
@@ -14,8 +14,10 @@ Esta es la vista transversal del sistema ejecutable. El código, la configuraci�
 | Identidad, JWT, tenants y RBAC | `IMPLEMENTED` | Auth + Operational | IAM emite JWT y Operational aplica permisos por ruta y selecciona el schema de la empresa | Operational valida el token de acceso localmente hasta su expiración |
 | Registro, correo, recuperación y MFA | `PARTIAL` | Auth + App | Endpoints/modelos Auth; UI privada | Gestión MFA y cobertura E2E de UI incompletas |
 | Suscripción y provisioning operacional | `PARTIAL` | Auth + Operational | Runtime interno, schemas multiempresa y registro de migración tenant | Quedan checkout y verificación de recuperación sobre un candidato completo |
-| CRM, conversaciones y métricas | `PARTIAL` | Operational + App | Contactos manuales, seguimiento de leads, Bandeja, historial de derivaciones y actividad diaria por zona | Quedan oportunidad independiente, control humano efectivo, captura pública y métricas por eventos |
-| Solicitudes de privacidad | `PARTIAL` | Operational + App | Bandeja restringida y registro auditado de revisión y cierre | Quedan ejecución de solicitudes y verificación de retención en almacenes activos y copias |
+| CRM, conversaciones, pipeline y métricas | `IMPLEMENTED` | Operational + App | Contactos, `contact_points` + backfill, formularios públicos, credenciales `leads:create`, control HITL CAS, bloqueo IA, oportunidades (`FK-29`), eventos de dominio (`FK-10`) y KPIs consolidados (`/api/v1/analytics/kpis`) sobre `tenant_schema_v16` | Integración completa de nuevas pantallas en UI Angular y validación de release |
+| Campañas, conexiones delegadas y correo en hilo | `IMPLEMENTED` | Operational + Gateway | Plantillas sanitizadas, snapshot deduplicado, worker stub integrado a outbox/consentimiento, bajas durables, recibos, conexiones delegadas (`FK-24`) y correo en hilo (`FK-23`) | Validación manual con sandbox Resend real; campañas WhatsApp deshabilitadas fuera de stub |
+| Solicitudes de privacidad y retención | `IMPLEMENTED` | Operational + App | Bandeja restringida, exportación JSON (`/export`), anonimización/supresión durable (`/erase`) y barrido de retención (`/retention/sweep`) con `log_limpiezas` | Verificación de retención sobre backups externos en despliegue productivo |
+| Extensiones IA, webhooks, adjuntos y agenda | `IMPLEMENTED` | Operational | Propuestas tipadas y revisión (`FK-17`/`18`), memoria acotada (`FK-20`), enriquecimiento confirmado (`FK-21`), notificaciones externas (`FK-25`), coste IA (`FK-26`), webhooks HMAC/SSRF (`FK-11`), adjuntos privados (`FK-13`) y agenda sin doble reserva (`FK-22`) | Conectar vistas dedicadas en CRM Angular según prioridad de producto |
 | Agentes de Operational | `STUB` | Operational | Rutas `/api/v1/agents`; configuración no persistida | Debe converger con Agent Core o implementarse |
 | Contexto empresarial y simulación IA | `PARTIAL` | Agent Core + Operational + App | Plantillas, carga documental, recuperación, simulación y evaluación sintética con presupuesto por solicitud | Quedan trazas integradas, evaluación semántica con proveedor autorizado y coste acumulado |
 | Landing y contacto público | `PARTIAL` | Landing + Auth | CSRF y `POST /contact/messages/` | Textos legales y pruebas browser-integradas pendientes |

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Community v1.0 & POST-v1 backend (`tenant_schema_v9`–`v16`, repeatable upgrade `v3–v16`):**
+  - Durable action outbox (`FK-03`) with transactional enqueue, payload-hash conflict detection, `SKIP LOCKED` claims, `unknown` lease recovery and effect verification.
+  - Persistent channel/purpose consent ledger and transactional worker send authorization serialized with concurrent suppressions (`FK-04`).
+  - Human-in-the-loop conversation control (`FK-06`, `FK-19`) with compare-and-swap claims, single active operator, idempotent outbox replies (`202`), resolution, return-to-AI and tenant/conversation AI policy enforcement.
+  - Commercial pipeline (`FK-29`) with editable stages, optimistic versioning, atomic stage/close events and multi-tenant isolation.
+  - Typed AI action proposals and versioned human review (`FK-17`, `FK-18`) with expiration and at-most-once execution.
+  - Multichannel contact points, repeatable collision-quarantining backfill, public capture forms (`FK-28`), scoped `leads:create` credentials (`FK-12`), and versioned domain events with forward replay and monotonic checkpoints (`FK-10`).
+  - Campaigns and templates (`FK-30`), delegated channel connections (`FK-24`) and conversation-linked email (`FK-23`) with HTML sanitization, deduplicated approval snapshots, stub dispatch worker, durable unsubscribes and receipts.
+  - Consolidated event-calibrated KPIs (`FK-09`), scoped conversation memory (`FK-20`), confirmed contact enrichment (`FK-21`), external notification deliveries (`FK-25`), tenant AI usage/cost ledger (`FK-26`), and privacy export/erasure/retention sweeps (`FK-27`).
+  - Reliable HTTPS webhooks with SSRF guard and HMAC-SHA256 signing (`FK-11`), private resource-scoped attachments with retention (`FK-13`), and double-book-safe conversational scheduling (`FK-22`).
+
 - Operational response metadata now uses the resolved IAM tenant ID for successful requests and errors, including private WhatsApp ingestion. Unverified tenant headers never populate identity metadata (FK-09).
 
 - FK-02 persists WhatsApp turn stages, prepared replies and human handoffs in Operational. The connector resumes recoverable stages and retries acknowledgement persistence without retransmitting. Uncertain sends are observable and require evidence-based reconciliation. Existing installations must migrate to `tenant_schema_v4` before enabling the new connector; see [turn recovery and rollout](flowkron-operational-service/docs/TURN_RECOVERY.md).

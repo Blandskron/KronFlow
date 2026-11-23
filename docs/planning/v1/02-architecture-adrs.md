@@ -1,6 +1,6 @@
 # Arquitectura objetivo y decisiones de Community v1
 
-**Estado:** propuesta para Community v1. Se basa en la [auditoría del SHA `3e538686`](01-audit.md), la [arquitectura actual](../../../ARCHITECTURE.md) y el [mapa de contratos](../../../flowkron-api-contracts/docs/architecture/integration-map.md). Los presupuestos de rendimiento son criterios de evaluación propuestos.
+**Estado:** arquitectura activa de Community v1 (`tenant_schema_v16`). Se basa en la [arquitectura actual](../../../ARCHITECTURE.md) y el [mapa de contratos](../../../flowkron-api-contracts/docs/architecture/integration-map.md). Los presupuestos de rendimiento son criterios de evaluación propuestos.
 
 ## ADR · Campañas y analítica como módulos de Operational
 

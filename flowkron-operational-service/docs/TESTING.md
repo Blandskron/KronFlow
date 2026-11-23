@@ -24,7 +24,7 @@ python -m unittest discover -s tests -p test_turn_jobs.py -v
 
 ### Evidencia de consentimiento de WhatsApp (FK-04)
 
-`test_contact_consent.py` verifica el permiso de auditoría, el aislamiento por empresa y schema, la consulta sobre registros anteriores a v8 y la paginación sin alterar el estado vigente. También carga dos veces el fixture de la [prueba manual desde Contactos](../../docs/planning/v1/MANUAL_CONSENT_QA.md) y comprueba que quede un contacto con 16 eventos.
+`test_contact_consent.py` verifica el permiso de auditoría, el aislamiento por empresa y schema, la consulta sobre registros anteriores a v8 y la paginación sin alterar el estado vigente. También carga dos veces el fixture de consentimiento y comprueba que quede un contacto con 16 eventos.
 
 ```powershell
 $env:FLOWKRON_TEST_POSTGRES_BIN = 'C:/Program Files/PostgreSQL/18/bin'
@@ -33,7 +33,7 @@ python -m unittest discover -s tests -p test_contact_consent.py -v
 
 ### Elegibilidad de campañas (FK-04 y FK-30)
 
-`tests/test_campaign_eligibility.py` cubre aislamiento, vigencia y orden de decisiones, supresión por finalidad y reevaluación del snapshot. El [recorrido manual](../../docs/planning/v1/04-campaigns.md#prueba-local-de-elegibilidad-por-destinatario) informa el resultado simulado por caso usando solo datos sintéticos en memoria.
+`tests/test_campaign_eligibility.py` y `tests/test_campaigns_and_channels.py` cubren aislamiento, vigencia y orden de decisiones, supresión por finalidad, reevaluación del snapshot, worker stub y recibos deduplicados.
 
 ### Búsqueda y lectura del inbox
 
@@ -91,7 +91,7 @@ Desde la raíz del servicio, ejecutar el diagnóstico con un CSV UTF-8 de datos 
 python -m scripts.profile_contact_points C:/ruta/aislada/contactos-sinteticos.csv
 ```
 
-El JSON cuenta filas, valores ausentes, formatos sin resolver y valores normalizados por tipo. `duplicate_values` cuenta los valores normalizados que se repiten y `contacts_with_duplicates` cuenta las filas implicadas por tipo. Solo imprime agregados y usa las mismas reglas que la ficha. El diagnóstico sirve para decidir el backfill sobre muestras aisladas. La persistencia de puntos, la resolución de colisiones y la unicidad deben verificarse antes de habilitar escritores. El rollback de esta entrega consiste en revertir la ficha y el contrato aditivo. [Reglas de identidad](../../docs/planning/v1/03-inbound-crm.md#modelo-y-propietarios)
+El JSON cuenta filas, valores ausentes, formatos sin resolver y valores normalizados por tipo. `duplicate_values` cuenta los valores normalizados que se repiten y `contacts_with_duplicates` cuenta las filas implicadas por tipo. Solo imprime agregados y usa las mismas reglas que la ficha y `test_capture_and_events.py`.
 
 Validación local del 23 de noviembre de 2026. Pasaron 65 pruebas de Operational con PostgreSQL 18 descartable y se omitió el benchmark opcional. Se comprobó el JSON del diagnóstico con un CSV sintético y se validó OpenAPI. Pasaron cinco pruebas de Chromium con respuestas de API simuladas, incluidas la visualización de datos normalizados y la compatibilidad con la respuesta anterior. [Pruebas de Chromium](../../flowkron-front-app-angular/tests/visual/flowkron-front.visual.spec.ts)
 
@@ -111,7 +111,7 @@ Por tipo de punto, `eligible` identifica IDs con un valor normalizado inequívoc
 
 ### Seguimiento comercial manual
 
-`test_lead_workflow.py` carga dos veces el mismo contacto sintético y comprueba que conserva su ID, carece de canal y mantiene el consentimiento desactivado. Con PostgreSQL descartable verifica permisos, colisiones de IDs entre empresas, reutilización del lead cuando la ingesta y un operador compiten, versión de cambios e historial filtrado. [Recorrido manual y fixture](../../docs/planning/v1/MANUAL_CRM_QA.md)
+`test_lead_workflow.py` carga dos veces el mismo contacto sintético y comprueba que conserva su ID, carece de canal y mantiene el consentimiento desactivado. Con PostgreSQL descartable verifica permisos, colisiones de IDs entre empresas, reutilización del lead cuando la ingesta y un operador compiten, versión de cambios e historial filtrado.
 
 `test_manual_contacts.py` prueba alta simultánea con el mismo UUID, repetición después de editar, normalización, valores opcionales, conflicto de edición, auditoría sin copiar datos de contacto y aislamiento de empresas. El recorrido desde la interfaz usa el mismo contrato que la API ASGI.
 

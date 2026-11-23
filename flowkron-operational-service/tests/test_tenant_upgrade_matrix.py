@@ -20,7 +20,38 @@ from app.tenant_models.whatsapp_turn import WhatsAppSendEvidence, WhatsAppTurn, 
 from test_message_identity import PostgresCase
 
 
-TABLE_INTRODUCED = {"whatsapp_turns": 4, "whatsapp_turn_jobs": 5, "whatsapp_send_evidence": 7, "whatsapp_consent_state": 8}
+TABLE_INTRODUCED = {
+    "whatsapp_turns": 4,
+    "whatsapp_turn_jobs": 5,
+    "whatsapp_send_evidence": 7,
+    "whatsapp_consent_state": 8,
+    "action_outbox_jobs": 9,
+    "contact_consent_decisions": 9,
+    "contact_suppressions": 9,
+    "conversation_controls": 10,
+    "conversation_control_events": 10,
+    "tenant_ai_policies": 10,
+    "pipeline_stages": 11,
+    "opportunities": 11,
+    "opportunity_activities": 11,
+    "ai_action_proposals": 12,
+    "contact_points": 13,
+    "lead_captures": 13,
+    "domain_events": 13,
+    "domain_event_subscriptions": 13,
+    "tenant_channel_connections": 14,
+    "message_templates": 14,
+    "template_versions": 14,
+    "campaigns": 14,
+    "campaign_approvals": 14,
+    "campaign_recipients": 14,
+    "delivery_attempts": 14,
+    "channel_events": 14,
+    "conversation_memory_items": 15,
+    "contact_enrichment_candidates": 15,
+    "external_notification_deliveries": 15,
+    "ai_usage_records": 15,
+}
 DECISION_AT = datetime(2026, 1, 1, tzinfo=UTC)
 EXISTING_BOUNDARY = datetime(2025, 12, 31, tzinfo=UTC)
 PHONE = "12025550138"
@@ -69,12 +100,12 @@ class TenantUpgradeMatrixTests(PostgresCase):
         return name
 
     def test_active_matrix_is_repeatable_and_suspended_upgrade_is_transactional(self):
-        matrix = {version: self.seed_version(version, version) for version in range(3, 9)}
+        matrix = {version: self.seed_version(version, version) for version in range(3, 16)}
         suspended = self.seed_version(3, 99, status="suspended")
         for _ in range(2):
             with Session(self.engine) as db:
                 result = migrate_all_tenants(db)
-                self.assertEqual((result["total"], result["success"], result["failed"]), (6, 6, 0), result)
+                self.assertEqual((result["total"], result["success"], result["failed"]), (13, 13, 0), result)
         self.assertFalse(inspect(self.engine).has_table("whatsapp_turns", schema=suspended))
 
         for version, schema in matrix.items():
@@ -88,7 +119,7 @@ class TenantUpgradeMatrixTests(PostgresCase):
                 self.assertEqual(db.scalars(select(WhatsAppTurn.id)).all(), [1] if version >= 4 else [])
                 self.assertEqual(db.scalars(select(WhatsAppTurnJob.turn_id)).all(), [1] if version >= 5 else [])
                 self.assertEqual(db.scalars(select(WhatsAppSendEvidence.provider_message_id)).all(), ["evidence-1"] if version >= 7 else [])
-                self.assertEqual(db.get(WhatsAppConsentState, 1).decision_at, EXISTING_BOUNDARY if version == 8 else DECISION_AT)
+                self.assertEqual(db.get(WhatsAppConsentState, 1).decision_at, EXISTING_BOUNDARY if version >= 8 else DECISION_AT)
                 rows = db.scalars(select(MigrationRegistry).where(
                     MigrationRegistry.schema_name == schema,
                     MigrationRegistry.migration_version == get_settings().tenant_migration_version,

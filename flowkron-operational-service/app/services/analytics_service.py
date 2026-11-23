@@ -1,14 +1,27 @@
 from datetime import UTC, date, datetime, time, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import Date, cast, func, literal, select, true, union_all
+from sqlalchemy import Date, cast, func, inspect, literal, select, true, union_all
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
-from app.schemas.analytics import ActivityCounts, ActivityDay, AnalyticsActivity
+from app.schemas.analytics import (
+    ActivityCounts,
+    ActivityDay,
+    AnalyticsActivity,
+    AnalyticsKpisOut,
+    CampaignKpis,
+    EventCoverageKpis,
+    GovernanceKpis,
+    PipelineKpis,
+)
 from app.services.conversation_service import inbox_counts_statement
-from app.services.tenant_data import execute_for_tenant
-from app.tenant_models.operations import Cliente, Lead, Message
+from app.services.tenant_data import bind_tenant_session, execute_for_tenant
+from app.tenant_models.ai_proposal import AIActionProposal
+from app.tenant_models.campaigns import Campaign, CampaignRecipient
+from app.tenant_models.domain_events import DomainEvent
+from app.tenant_models.operations import Cliente, Lead, Message, SolicitudDerecho
+from app.tenant_models.opportunity import Opportunity
 
 
 def analytics_summary(db: Session, tenant: TenantContext) -> dict:
@@ -71,3 +84,99 @@ def analytics_activity(
         partial_day=local_today if end_date == local_today else None, totals=ActivityCounts(**totals),
         days=[ActivityDay(day=day, **counts) for day, counts in by_day.items()],
     )
+
+
+def analytics_kpis(db: Session, tenant: TenantContext) -> AnalyticsKpisOut:
+    """Consolidated event-calibrated KPIs for pipeline, campaigns, events, and governance (FK-09)."""
+    as_of = datetime.now(UTC)
+    bind_tenant_session(db, tenant.schema_name)
+    inspector = inspect(db.connection())
+    existing_tables = set(inspector.get_table_names(schema=tenant.schema_name))
+
+    pipeline = PipelineKpis()
+    if Opportunity.__tablename__ in existing_tables:
+        opp_counts = dict(
+            db.execute(select(Opportunity.outcome, func.count()).group_by(Opportunity.outcome)).all()
+        )
+        open_c = int(opp_counts.get("open", 0))
+        won_c = int(opp_counts.get("won", 0))
+        lost_c = int(opp_counts.get("lost", 0))
+        won_amounts = {
+            currency: str(total)
+            for currency, total in db.execute(
+                select(Opportunity.currency, func.coalesce(func.sum(Opportunity.amount), 0))
+                .where(Opportunity.outcome == "won")
+                .group_by(Opportunity.currency)
+            ).all()
+        }
+        closed_total = won_c + lost_c
+        pipeline = PipelineKpis(
+            open_opportunities=open_c,
+            won_opportunities=won_c,
+            lost_opportunities=lost_c,
+            won_amount_by_currency=won_amounts,
+            win_rate=round(won_c / closed_total, 4) if closed_total > 0 else None,
+        )
+
+    campaigns = CampaignKpis()
+    if Campaign.__tablename__ in existing_tables and CampaignRecipient.__tablename__ in existing_tables:
+        total_camps = int(db.scalar(select(func.count()).select_from(Campaign)) or 0)
+        rec_counts = {
+            status_name: int(cnt)
+            for status_name, cnt in db.execute(
+                select(CampaignRecipient.status, func.count()).group_by(CampaignRecipient.status)
+            ).all()
+        }
+        accepted_base = (
+            rec_counts.get("accepted", 0)
+            + rec_counts.get("delivered", 0)
+            + rec_counts.get("bounced", 0)
+            + rec_counts.get("complained", 0)
+            + rec_counts.get("unsubscribed", 0)
+        )
+        delivered_c = rec_counts.get("delivered", 0)
+        campaigns = CampaignKpis(
+            total_campaigns=total_camps,
+            recipients_queued=rec_counts.get("queued", 0),
+            recipients_accepted=accepted_base,
+            recipients_delivered=delivered_c,
+            recipients_suppressed=rec_counts.get("suppressed", 0),
+            recipients_bounced=rec_counts.get("bounced", 0),
+            recipients_unsubscribed=rec_counts.get("unsubscribed", 0),
+            delivery_rate=round(delivered_c / accepted_base, 4) if accepted_base > 0 else None,
+        )
+
+    events = EventCoverageKpis()
+    if DomainEvent.__tablename__ in existing_tables:
+        by_type = {
+            ev_type: int(cnt)
+            for ev_type, cnt in db.execute(
+                select(DomainEvent.event_type, func.count()).group_by(DomainEvent.event_type)
+            ).all()
+        }
+        last_id = int(db.scalar(select(func.coalesce(func.max(DomainEvent.id), 0))) or 0)
+        events = EventCoverageKpis(
+            total_domain_events=sum(by_type.values()),
+            event_counts_by_type=by_type,
+            last_event_id=last_id,
+        )
+
+    open_cases = int(
+        db.scalar(select(func.count()).select_from(SolicitudDerecho).where(SolicitudDerecho.estado != "completada")) or 0
+    )
+    pending_props = 0
+    executed_props = 0
+    if AIActionProposal.__tablename__ in existing_tables:
+        prop_counts = dict(
+            db.execute(select(AIActionProposal.status, func.count()).group_by(AIActionProposal.status)).all()
+        )
+        pending_props = int(prop_counts.get("pending", 0))
+        executed_props = int(prop_counts.get("executed", 0))
+
+    governance = GovernanceKpis(
+        open_privacy_cases=open_cases,
+        pending_ai_proposals=pending_props,
+        executed_ai_proposals=executed_props,
+    )
+    return AnalyticsKpisOut(as_of=as_of, pipeline=pipeline, campaigns=campaigns, events=events, governance=governance)
+

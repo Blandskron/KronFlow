@@ -11,10 +11,16 @@ from app.api.internal.context import router as internal_context_router
 from app.api.internal.migrations import router as internal_migrations_router
 from app.api.internal.tenants import router as internal_tenants_router
 from app.api.v1.agents import router as agents_router
+from app.api.v1.ai_extensions import router as ai_extensions_router
+from app.api.v1.ai_proposals import router as ai_proposals_router
 from app.api.v1.analytics import router as analytics_router
+from app.api.v1.campaigns import router as campaigns_router
+from app.api.v1.capture import router as capture_router
 from app.api.v1.contacts import router as contacts_router
 from app.api.v1.conversations import router as conversations_router
+from app.api.v1.domain_events import router as domain_events_router
 from app.api.v1.leads import router as leads_router
+from app.api.v1.opportunities import router as opportunities_router
 from app.api.v1.operational import router as operational_router
 from app.core.config import get_settings
 from app.core.admission import IngestAdmissionMiddleware
@@ -49,10 +55,16 @@ app.include_router(internal_migrations_router)
 app.include_router(internal_context_router)
 app.include_router(whatsapp_ingest_router)
 app.include_router(leads_router)
+app.include_router(opportunities_router)
 app.include_router(contacts_router)
 app.include_router(conversations_router)
 app.include_router(analytics_router)
+app.include_router(campaigns_router)
+app.include_router(capture_router)
+app.include_router(domain_events_router)
 app.include_router(agents_router)
+app.include_router(ai_extensions_router)
+app.include_router(ai_proposals_router)
 app.include_router(operational_router)
 
 

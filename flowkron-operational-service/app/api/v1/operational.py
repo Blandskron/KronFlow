@@ -8,7 +8,17 @@ from app.core.database import get_db
 from app.core.security import CurrentPrincipal, require_permission
 from app.core.tenant_resolver import TenantContext, resolve_audit_reader, resolve_tenant_from_jwt
 from app.schemas.audit_event import AuditEventPage
-from app.schemas.privacy_case import CaseState, PrivacyCaseOut, PrivacyCasePage, PrivacyCaseTransition
+from app.schemas.privacy_case import (
+    CaseState,
+    PrivacyCaseExportOut,
+    PrivacyCaseOut,
+    PrivacyCasePage,
+    PrivacyCaseTransition,
+    PrivacyErasureIn,
+    PrivacyErasureOut,
+    RetentionSweepIn,
+    RetentionSweepOut,
+)
 from app.services.operational_read_service import (
     list_clientes,
     list_conversaciones,
@@ -19,7 +29,13 @@ from app.services.operational_read_service import (
     list_mensajes_dashboard,
     list_solicitudes_derechos,
 )
-from app.services.privacy_case_service import list_privacy_cases, transition_privacy_case
+from app.services.privacy_case_service import (
+    execute_privacy_erasure,
+    export_privacy_case_data,
+    list_privacy_cases,
+    run_retention_sweep,
+    transition_privacy_case,
+)
 from app.services.audit_event_service import list_audit_events
 
 router = APIRouter(prefix="/api/v1/operational", tags=["Operational Data"])
@@ -125,6 +141,39 @@ def change_privacy_case(
     principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
 ):
     return transition_privacy_case(db, tenant, case_id, transition, principal.user_id)
+
+
+@router.post("/privacy-cases/{case_id}/export", response_model=PrivacyCaseExportOut)
+def export_privacy_case(
+    case_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return export_privacy_case_data(db, tenant, case_id, actor_id=principal.user_id)
+
+
+@router.post("/privacy-cases/{case_id}/erase", response_model=PrivacyErasureOut)
+def erase_privacy_case(
+    payload: PrivacyErasureIn,
+    case_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return execute_privacy_erasure(db, tenant, case_id, actor_id=principal.user_id, confirmed=payload.confirmed)
+
+
+@router.post("/retention/sweep", response_model=RetentionSweepOut)
+def retention_sweep(
+    payload: RetentionSweepIn,
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return run_retention_sweep(
+        db, tenant, message_retention_days=payload.message_retention_days, actor_id=principal.user_id,
+    )
 
 
 @router.get("/ejecutivos")

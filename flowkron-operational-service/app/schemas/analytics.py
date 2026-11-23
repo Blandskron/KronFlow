@@ -34,3 +34,43 @@ class AnalyticsActivity(BaseModel):
     totals: ActivityCounts
     days: list[ActivityDay]
 
+
+class PipelineKpis(BaseModel):
+    open_opportunities: int = 0
+    won_opportunities: int = 0
+    lost_opportunities: int = 0
+    won_amount_by_currency: dict[str, str] = {}
+    win_rate: float | None = None
+
+
+class CampaignKpis(BaseModel):
+    total_campaigns: int = 0
+    recipients_queued: int = 0
+    recipients_accepted: int = 0
+    recipients_delivered: int = 0
+    recipients_suppressed: int = 0
+    recipients_bounced: int = 0
+    recipients_unsubscribed: int = 0
+    delivery_rate: float | None = None
+
+
+class EventCoverageKpis(BaseModel):
+    total_domain_events: int = 0
+    event_counts_by_type: dict[str, int] = {}
+    last_event_id: int = 0
+
+
+class GovernanceKpis(BaseModel):
+    open_privacy_cases: int = 0
+    pending_ai_proposals: int = 0
+    executed_ai_proposals: int = 0
+
+
+class AnalyticsKpisOut(BaseModel):
+    as_of: datetime
+    pipeline: PipelineKpis
+    campaigns: CampaignKpis
+    events: EventCoverageKpis
+    governance: GovernanceKpis
+
+

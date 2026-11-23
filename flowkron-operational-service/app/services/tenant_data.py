@@ -23,10 +23,13 @@ def tenant_exec_options(schema_name: str) -> dict[str, Any]:
 def bind_tenant_session(db: Session, schema_name: str) -> None:
     options = tenant_exec_options(schema_name)
     if db.bind:
-        db.bind = db.bind.execution_options(**options)
+        current = db.bind.get_execution_options().get("schema_translate_map")
+        if current != options["schema_translate_map"]:
+            db.bind = db.bind.execution_options(**options)
     try:
         conn = db.connection()
-        conn._execution_options = conn._execution_options.union(options)
+        if conn._execution_options.get("schema_translate_map") != options["schema_translate_map"]:
+            conn._execution_options = conn._execution_options.union(options)
     except Exception:
         pass
 

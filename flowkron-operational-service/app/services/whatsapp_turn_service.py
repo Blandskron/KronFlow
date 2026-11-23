@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, aliased
 
 from app.core.tenant_resolver import TenantContext
 from app.schemas.whatsapp_turn import ProviderReceiptIn, TurnClaimIn, TurnCompleteIn, TurnEnqueueIn, TurnPrepareIn, TurnReceiptIn
+from app.services.conversation_control_service import is_ai_permitted_for_conversation_in_tx
 from app.services.ingest_service import (
     RECOVERABLE_TURN_STATES, TURN_JOB_ATTEMPT_LIMIT, _mark_message_processed, ingest_whatsapp_message,
     lock_turn_jobs, require_turn_job_capacity,
@@ -68,6 +69,18 @@ def _check_consent(db, turn):
         turn.lease_until = None
         return False
     return True
+
+
+def _check_ai_control(db: Session, tenant: TenantContext, turn: WhatsAppTurn, *, allow_handoff_send: bool = False) -> bool:
+    permitted, reason = is_ai_permitted_for_conversation_in_tx(db, tenant, turn.conversation_id)
+    if permitted:
+        return True
+    if allow_handoff_send and turn.requires_human and reason == "control_waiting_human":
+        return True
+    turn.state = "cancelled"
+    turn.last_error = (reason or "ai_not_permitted")[:64]
+    turn.lease_until = None
+    return False
 
 
 def turn_jobs_ready(db: Session, tenant: TenantContext) -> bool:
@@ -152,7 +165,7 @@ def claim_next_turn(db: Session, tenant: TenantContext, account_key: str) -> dic
         turn.last_error = "attempt_limit_reached"
         _finish(db, turn)
         return {"job": None}
-    if not _check_consent(db, turn):
+    if not _check_consent(db, turn) or not _check_ai_control(db, tenant, turn, allow_handoff_send=turn.reply_body is not None):
         _finish(db, turn)
         return {"job": None}
     job.attempts += 1
@@ -171,7 +184,7 @@ def retry_turn_job(db: Session, tenant: TenantContext, turn_id: int, account_key
     if (turn.state not in RECOVERABLE_TURN_STATES or job.attempts < TURN_JOB_ATTEMPT_LIMIT
             or (turn.lease_until and turn.lease_until > now)):
         raise HTTPException(status_code=409, detail="Only an exhausted recoverable turn can be retried")
-    if not _check_consent(db, turn):
+    if not _check_consent(db, turn) or not _check_ai_control(db, tenant, turn):
         return _finish(db, turn)
     require_turn_job_capacity(db)
     job.attempts = 0
@@ -206,7 +219,7 @@ def claim_turn(db: Session, tenant: TenantContext, payload: TurnClaimIn) -> dict
             turn.state = "unknown"
             turn.last_error = "send_outcome_unknown"
         return _finish(db, turn)
-    if not _check_consent(db, turn):
+    if not _check_consent(db, turn) or not _check_ai_control(db, tenant, turn):
         return _finish(db, turn)
     if turn.lease_until and turn.lease_until > _now():
         return _finish(db, turn)
@@ -225,7 +238,7 @@ def prepare_turn(db: Session, tenant: TenantContext, turn_id: int, payload: Turn
         return _finish(db, turn)
     if turn.state != "generating":
         raise HTTPException(status_code=409, detail="Turn is not generating")
-    if not _check_consent(db, turn):
+    if not _check_consent(db, turn) or not _check_ai_control(db, tenant, turn):
         return _finish(db, turn)
     turn.reply_body = payload.reply_body
     turn.requires_human = payload.requires_human
@@ -251,7 +264,7 @@ def begin_turn_send(
     # lost after commit. Only the first successful transition grants permission.
     if turn.state != "prepared":
         raise HTTPException(status_code=409, detail="Send already started or turn unavailable")
-    if not _check_consent(db, turn):
+    if not _check_consent(db, turn) or not _check_ai_control(db, tenant, turn, allow_handoff_send=True):
         return _finish(db, turn)
     now = _now()
     if provider_message_id is not None:

@@ -6,12 +6,43 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
+from app.core.security import CurrentPrincipal, require_permission
 from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
-from app.schemas.conversation import ConversationCursor, ConversationListResponse, ConversationOut, ConversationReadIn, ConversationReadOut, HandoffHistoryPage, MessageListResponse
+from app.schemas.conversation import (
+    ConversationClaimIn,
+    ConversationControlOut,
+    ConversationCursor,
+    ConversationHandoffIn,
+    ConversationListResponse,
+    ConversationOut,
+    ConversationReadIn,
+    ConversationReadOut,
+    ConversationResolveIn,
+    ConversationReturnToAIIn,
+    HandoffHistoryPage,
+    HumanReplyIn,
+    HumanReplyOut,
+    MessageListResponse,
+)
+from app.services.conversation_control_service import (
+    claim_conversation,
+    get_conversation_control,
+    request_handoff,
+    resolve_conversation,
+    return_conversation_to_ai,
+    send_human_reply,
+)
 from app.services.conversation_service import get_conversation, list_conversations, list_messages, list_pending_replies, mark_conversation_read
 from app.services.handoff_history import list_handoff_history
 
 router = APIRouter(prefix="/api/v1/conversations", tags=["Conversations"])
+SUPERVISOR_ROLES = frozenset({"owner", "admin", "supervisor"})
+
+
+def _is_supervisor(principal: CurrentPrincipal) -> bool:
+    return principal.has_permission("crm.supervise") or any(
+        role.lower() in SUPERVISOR_ROLES for role in principal.roles
+    )
 
 
 @router.get("", response_model=ConversationListResponse)
@@ -86,4 +117,108 @@ def messages(
     items, total = list_messages(db, tenant, conversation_id, limit, offset, recent=order == "recent", before_id=before_id)
     pending = list_pending_replies(db, tenant, conversation_id) if order == "recent" and before_id is None and offset == 0 else []
     return MessageListResponse(items=items, total=total, limit=limit, offset=offset, pending_replies=pending)
+
+
+@router.get("/{conversation_id}/control", response_model=ConversationControlOut)
+def get_control(
+    conversation_id: int,
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    db: Session = Depends(get_db),
+):
+    return get_conversation_control(db, tenant, conversation_id)
+
+
+@router.post("/{conversation_id}/handoff", response_model=ConversationControlOut)
+def handoff(
+    conversation_id: int,
+    payload: ConversationHandoffIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return request_handoff(
+        db,
+        tenant,
+        conversation_id,
+        actor_user_id=principal.user_id,
+        reason=payload.reason,
+        expected_version=payload.expected_version,
+    )
+
+
+@router.post("/{conversation_id}/claim", response_model=ConversationControlOut)
+def claim(
+    conversation_id: int,
+    payload: ConversationClaimIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return claim_conversation(
+        db,
+        tenant,
+        conversation_id,
+        actor_user_id=principal.user_id,
+        expected_version=payload.expected_version,
+        is_supervisor=_is_supervisor(principal),
+        reason=payload.reason,
+    )
+
+
+@router.post("/{conversation_id}/messages", response_model=HumanReplyOut, status_code=status.HTTP_202_ACCEPTED)
+def send_reply(
+    conversation_id: int,
+    payload: HumanReplyIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return send_human_reply(
+        db,
+        tenant,
+        conversation_id,
+        actor_user_id=principal.user_id,
+        body=payload.body,
+        idempotency_key=payload.idempotency_key,
+        is_supervisor=_is_supervisor(principal),
+    )
+
+
+@router.post("/{conversation_id}/return-to-ai", response_model=ConversationControlOut)
+def return_to_ai(
+    conversation_id: int,
+    payload: ConversationReturnToAIIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return return_conversation_to_ai(
+        db,
+        tenant,
+        conversation_id,
+        actor_user_id=principal.user_id,
+        expected_version=payload.expected_version,
+        reason=payload.reason,
+        is_supervisor=_is_supervisor(principal),
+    )
+
+
+@router.post("/{conversation_id}/resolve", response_model=ConversationControlOut)
+def resolve(
+    conversation_id: int,
+    payload: ConversationResolveIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return resolve_conversation(
+        db,
+        tenant,
+        conversation_id,
+        actor_user_id=principal.user_id,
+        expected_version=payload.expected_version,
+        reason=payload.reason,
+        is_supervisor=_is_supervisor(principal),
+    )
+
 

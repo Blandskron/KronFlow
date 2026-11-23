@@ -87,3 +87,52 @@ class MessageListResponse(BaseModel):
     offset: int
     pending_replies: list[PendingReplyOut] = Field(default_factory=list)
 
+
+class ConversationControlOut(BaseModel):
+    conversation_id: int
+    mode: Literal["ai_active", "waiting_human", "human_active", "resolved"]
+    owner_user_id: str | None = None
+    ai_enabled: bool
+    tenant_ai_enabled: bool
+    control_version: int
+    handoff_reason: str | None = None
+    resolution_reason: str | None = None
+    updated_by: str | None = None
+    updated_at: datetime
+    cancelled_ai_turns: int = 0
+
+
+class ConversationHandoffIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=180)
+    expected_version: int | None = Field(default=None, ge=1)
+
+
+class ConversationClaimIn(BaseModel):
+    expected_version: int = Field(ge=1)
+    reason: str | None = Field(default=None, max_length=180)
+
+
+class ConversationReturnToAIIn(BaseModel):
+    expected_version: int = Field(ge=1)
+    reason: str | None = Field(default=None, max_length=180)
+
+
+class ConversationResolveIn(BaseModel):
+    expected_version: int = Field(ge=1)
+    reason: str = Field(min_length=1, max_length=180)
+
+
+class HumanReplyIn(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+    idempotency_key: str = Field(min_length=1, max_length=120)
+
+
+class HumanReplyOut(BaseModel):
+    status: Literal["queued"]
+    duplicate: bool
+    outbox_job_id: int
+    message_id: int | None = None
+    conversation_id: int
+    control_version: int
+
+

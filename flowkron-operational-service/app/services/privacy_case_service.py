@@ -1,12 +1,18 @@
+from datetime import UTC, datetime, timedelta
+
 from fastapi import HTTPException
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, inspect, select, update
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
 from app.schemas.privacy_case import CaseState, PrivacyCaseTransition
-from app.services.tenant_data import count_for_tenant, execute_for_tenant
+from app.services.consent_authorization_service import record_suppression
+from app.services.tenant_data import bind_tenant_session, count_for_tenant, execute_for_tenant
 from app.services.tenant_provisioning_service import create_system_event
-from app.tenant_models.operations import SolicitudDerecho
+from app.tenant_models.consent_ledger import ContactConsentDecision, ContactSuppression
+from app.tenant_models.contact_capture import ContactPoint
+from app.tenant_models.operations import Cliente, Lead, LogLimpieza, Message, SolicitudDerecho
+from app.tenant_models.opportunity import Opportunity
 
 
 CASE_FIELDS = (
@@ -54,3 +60,223 @@ def transition_privacy_case(
     })
     db.commit()
     return result
+
+
+def export_privacy_case_data(db: Session, tenant: TenantContext, case_id: int, *, actor_id: str) -> dict:
+    """Export all tenant-scoped CRM, messaging, and consent records for a privacy case subject (FK-27)."""
+    now = datetime.now(UTC)
+    bind_tenant_session(db, tenant.schema_name)
+    case_row = db.get(SolicitudDerecho, case_id)
+    if case_row is None:
+        raise HTTPException(status_code=404, detail="Privacy case not found")
+
+    existing_tables = set(inspect(db.connection()).get_table_names(schema=tenant.schema_name))
+    subject = db.scalar(select(Cliente).where(Cliente.whatsapp_id == case_row.whatsapp_id))
+    subject_dict = None
+    contact_points = []
+    leads = []
+    opportunities = []
+    decisions = []
+    suppressions = []
+
+    if subject is not None:
+        subject_dict = {
+            "id": subject.id,
+            "nombre": subject.nombre,
+            "email": subject.email,
+            "telefono": subject.telefono,
+            "whatsapp_id": subject.whatsapp_id,
+            "consentimiento_datos": subject.consentimiento_datos,
+            "creado_en": subject.creado_en.isoformat() if subject.creado_en else None,
+        }
+        if ContactPoint.__tablename__ in existing_tables:
+            contact_points = [
+                {"id": p.id, "point_type": p.point_type, "normalized_value": p.normalized_value, "verified": p.verified}
+                for p in db.scalars(select(ContactPoint).where(ContactPoint.client_id == subject.id)).all()
+            ]
+        leads = [
+            {"id": l.id, "estado": l.estado, "clasificacion": l.clasificacion}
+            for l in db.scalars(select(Lead).where(Lead.cliente_id == subject.id)).all()
+        ]
+        if Opportunity.__tablename__ in existing_tables:
+            opportunities = [
+                {"id": o.id, "title": o.title, "outcome": o.outcome, "currency": o.currency}
+                for o in db.scalars(select(Opportunity).where(Opportunity.contact_id == subject.id)).all()
+            ]
+        if ContactConsentDecision.__tablename__ in existing_tables:
+            decisions = [
+                {
+                    "id": d.id,
+                    "channel": d.channel,
+                    "destination": d.destination,
+                    "purpose": d.purpose,
+                    "granted": d.granted,
+                    "effective_at": d.effective_at.isoformat(),
+                }
+                for d in db.scalars(select(ContactConsentDecision).where(ContactConsentDecision.client_id == subject.id)).all()
+            ]
+        if ContactSuppression.__tablename__ in existing_tables:
+            suppressions = [
+                {"id": s.id, "channel": s.channel, "destination": s.destination, "purpose": s.purpose, "reason": s.reason}
+                for s in db.scalars(select(ContactSuppression).where(ContactSuppression.client_id == subject.id)).all()
+            ]
+
+    message_count = int(
+        db.scalar(select(func.count()).select_from(Message).where(Message.whatsapp_id == case_row.whatsapp_id)) or 0
+    )
+    create_system_event(
+        db,
+        "privacy.case.exported",
+        tenant.auth_tenant_id,
+        tenant.schema_name,
+        {"case_id": case_id, "actor_id": actor_id, "message_count": message_count, "lead_count": len(leads)},
+    )
+    db.commit()
+    return {
+        "case_id": case_id,
+        "kind": case_row.tipo_derecho,
+        "exported_at": now,
+        "subject_contact": subject_dict,
+        "contact_points": contact_points,
+        "leads": leads,
+        "opportunities": opportunities,
+        "message_count": message_count,
+        "consent_decisions": decisions,
+        "suppressions": suppressions,
+    }
+
+
+def execute_privacy_erasure(
+    db: Session, tenant: TenantContext, case_id: int, *, actor_id: str, confirmed: bool,
+) -> dict:
+    """Atomically anonymize subject PII, redact messages, suppress re-contact, and log cleanup (FK-27)."""
+    if not confirmed:
+        raise HTTPException(status_code=422, detail="Explicit confirmation is required to execute erasure")
+    now = datetime.now(UTC)
+    bind_tenant_session(db, tenant.schema_name)
+
+    case_row = db.scalar(select(SolicitudDerecho).where(SolicitudDerecho.id == case_id).with_for_update())
+    if case_row is None:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Privacy case not found")
+
+    original_wa = case_row.whatsapp_id
+    existing_tables = set(inspect(db.connection()).get_table_names(schema=tenant.schema_name))
+
+    clients = list(db.scalars(select(Cliente).where(Cliente.whatsapp_id == original_wa).with_for_update()).all())
+    points_deleted = 0
+    for client in clients:
+        client.nombre = "Anonimizado"
+        client.email = None
+        client.telefono = None
+        client.whatsapp_id = f"anon:{client.id}"
+        client.consentimiento_datos = False
+        if ContactPoint.__tablename__ in existing_tables:
+            res_pt = db.execute(delete(ContactPoint).where(ContactPoint.client_id == client.id))
+            points_deleted += int(res_pt.rowcount or 0)
+
+    msg_res = db.execute(
+        update(Message).where(Message.whatsapp_id == original_wa).values(mensaje="[REDACTED_PRIVACY]")
+    )
+    messages_redacted = int(msg_res.rowcount or 0)
+
+    suppression_recorded = False
+    if ContactSuppression.__tablename__ in existing_tables and original_wa and not original_wa.startswith("anon:"):
+        record_suppression(
+            db,
+            tenant,
+            channel="whatsapp",
+            destination=original_wa,
+            purpose=None,
+            reason="baja",
+            source="operational",
+            client_id=clients[0].id if clients else None,
+            actor_id=actor_id,
+            recorded_at=now,
+            commit=False,
+        )
+        suppression_recorded = True
+
+    case_row.estado = "completada"
+    case_row.fecha_resolucion = now
+
+    cleanup = LogLimpieza(
+        fecha_ejecucion=now,
+        mensajes_eliminados=messages_redacted,
+        clientes_anonimizados=len(clients),
+        solicitudes_eliminadas=1,
+        estado="exitoso",
+        detalle={"case_id": case_id, "actor_id": actor_id, "contact_points_deleted": points_deleted},
+        notas=f"Ejecucion de borrado/anonimizacion caso #{case_id}",
+    )
+    db.add(cleanup)
+    db.flush()
+    create_system_event(
+        db,
+        "privacy.case.erased",
+        tenant.auth_tenant_id,
+        tenant.schema_name,
+        {
+            "case_id": case_id,
+            "actor_id": actor_id,
+            "clients_anonymized": len(clients),
+            "messages_redacted": messages_redacted,
+            "cleanup_log_id": cleanup.id,
+        },
+    )
+    db.commit()
+    return {
+        "case_id": case_id,
+        "state": case_row.estado,
+        "clients_anonymized": len(clients),
+        "messages_redacted": messages_redacted,
+        "contact_points_deleted": points_deleted,
+        "suppression_recorded": suppression_recorded,
+        "cleanup_log_id": cleanup.id,
+    }
+
+
+def run_retention_sweep(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    message_retention_days: int,
+    actor_id: str,
+    now: datetime | None = None,
+) -> dict:
+    """Purge messages older than tenant retention window and record LogLimpieza audit (FK-27)."""
+    if message_retention_days < 1 or message_retention_days > 3650:
+        raise HTTPException(status_code=422, detail="message_retention_days must be between 1 and 3650")
+    current = now.astimezone(UTC) if now is not None else datetime.now(UTC)
+    cutoff = current - timedelta(days=message_retention_days)
+
+    bind_tenant_session(db, tenant.schema_name)
+    del_res = db.execute(delete(Message).where(Message.creado_en < cutoff))
+    deleted = int(del_res.rowcount or 0)
+
+    cleanup = LogLimpieza(
+        fecha_ejecucion=current,
+        mensajes_eliminados=deleted,
+        clientes_anonimizados=0,
+        solicitudes_eliminadas=0,
+        estado="exitoso",
+        detalle={"retention_days": message_retention_days, "cutoff": cutoff.isoformat(), "actor_id": actor_id},
+        notas="Barrido de retencion de mensajes",
+    )
+    db.add(cleanup)
+    db.flush()
+    create_system_event(
+        db,
+        "privacy.retention.swept",
+        tenant.auth_tenant_id,
+        tenant.schema_name,
+        {"retention_days": message_retention_days, "messages_deleted": deleted, "cleanup_log_id": cleanup.id},
+    )
+    db.commit()
+    return {
+        "message_retention_days": message_retention_days,
+        "messages_deleted": deleted,
+        "cleanup_log_id": cleanup.id,
+        "swept_at": current,
+    }
+

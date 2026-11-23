@@ -12,6 +12,14 @@
       </label>
       <button class="btn btn-secondary" type="submit">Aplicar filtro</button>
     </form>
+    @if (auth.hasPermission('crm.manage')) {
+      <form class="filters" (submit)="$event.preventDefault(); runRetention(retentionDays.value)">
+        <label>Retención de mensajes (días)
+          <input #retentionDays class="field" type="number" min="1" max="3650" value="90" required />
+        </label>
+        <button class="btn btn-secondary" type="submit" [disabled]="saving()">Ejecutar barrido de retención</button>
+      </form>
+    }
   }
   @if (notice(); as message) { <p [attr.role]="message.error ? 'alert' : 'status'">{{ message.text }}</p> }
   @switch (result.status) {
@@ -33,11 +41,18 @@
           @if (entry.completed_at) { <p class="muted">Cierre registrado {{ entry.completed_at | date:'dd/MM/yyyy HH:mm' }}</p> }
           @if (auth.hasPermission('crm.manage')) {
             @if (entry.state === 'pendiente') {
-              <button class="btn btn-primary case-action" type="button" [disabled]="saving()" (click)="advance(entry)">Iniciar revisión</button>
+              <div class="case-action">
+                <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="advance(entry)">Iniciar revisión</button>
+                <button class="btn btn-secondary" type="button" [disabled]="saving()" (click)="exportCase(entry)">Exportar JSON</button>
+              </div>
             } @else if (entry.state === 'en_proceso') {
               <form class="case-action" (submit)="$event.preventDefault(); advance(entry, confirmed.checked)">
                 <label><input #confirmed type="checkbox" required /> Confirmo que la solicitud fue atendida</label>
                 <button class="btn btn-primary" type="submit" [disabled]="saving()">Registrar cierre</button>
+                <button class="btn btn-secondary" type="button" [disabled]="saving()" (click)="exportCase(entry)">Exportar JSON</button>
+                @if (entry.kind === 'eliminacion') {
+                  <button class="btn btn-secondary" type="button" [disabled]="saving() || !confirmed.checked" (click)="eraseCase(entry, confirmed.checked)">Ejecutar borrado/anonimización</button>
+                }
               </form>
             }
           }

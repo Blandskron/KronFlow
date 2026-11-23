@@ -32,4 +32,23 @@ export class PrivacyCasesApiService {
       expected_state: entry.state, state, confirmed
     }).pipe(map(({ data }) => data));
   }
+
+  exportData(caseId: number) {
+    return this.http.post<ApiResponse<Record<string, unknown>>>(`${this.url}/${caseId}/export`, {})
+      .pipe(map(({ data }) => data));
+  }
+
+  eraseData(caseId: number, confirmed: boolean) {
+    return this.http.post<ApiResponse<{ case_id: number; clients_anonymized: number; messages_redacted: number }>>(
+      `${this.url}/${caseId}/erase`,
+      { confirmed }
+    ).pipe(map(({ data }) => data));
+  }
+
+  retentionSweep(messageRetentionDays: number) {
+    return this.http.post<ApiResponse<{ messages_deleted: number; cleanup_log_id: number }>>(
+      `${OPERATIONAL_API_BASE_URL}/operational/retention/sweep`,
+      { message_retention_days: messageRetentionDays }
+    ).pipe(map(({ data }) => data));
+  }
 }

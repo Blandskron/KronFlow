@@ -9,7 +9,7 @@ import {
   LucideUsers,
   LucideXCircle
 } from '@lucide/angular';
-import { AnalyticsApiService } from '@domains/analytics/data-access/analytics-api.service';
+import { AnalyticsApiService, AnalyticsKpis } from '@domains/analytics/data-access/analytics-api.service';
 import { ActivityFilters, AnalyticsActivity } from '@domains/analytics/domain/analytics.model';
 import { finalize } from 'rxjs';
 
@@ -47,6 +47,7 @@ export class AnalyticsPageComponent implements OnInit {
   readonly activity = signal<AnalyticsActivity | null>(null);
   readonly activityLoading = signal(false);
   readonly activityError = signal('');
+  readonly kpis = signal<AnalyticsKpis | null>(null);
 
   metrics: { label: string; value: string; icon: string }[] = [];
 
@@ -55,6 +56,10 @@ export class AnalyticsPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadAnalytics();
     this.loadActivity(this.initialFilters);
+    this.operational.kpis().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (report) => this.kpis.set(report),
+      error: () => undefined
+    });
   }
 
   loadAnalytics(): void {

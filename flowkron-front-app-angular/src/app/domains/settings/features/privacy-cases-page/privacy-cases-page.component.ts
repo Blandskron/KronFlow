@@ -75,4 +75,56 @@ export class PrivacyCasesPageComponent {
       }
     });
   }
+
+  exportCase(entry: PrivacyCase): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.api.exportData(entry.id).pipe(
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))
+    ).subscribe({
+      next: (payload) => {
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `privacy-case-${entry.id}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.notice.set({ error: false, text: `Exportación JSON generada para la solicitud #${entry.id}.` });
+      },
+      error: () => this.notice.set({ error: true, text: 'No pudimos exportar los datos de esta solicitud.' })
+    });
+  }
+
+  eraseCase(entry: PrivacyCase, confirmed: boolean): void {
+    if (this.saving() || !confirmed) return;
+    this.saving.set(true);
+    this.api.eraseData(entry.id, true).pipe(
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))
+    ).subscribe({
+      next: (res) => {
+        this.notice.set({
+          error: false,
+          text: `Borrado ejecutado en solicitud #${entry.id}: ${res.clients_anonymized} contactos anonimizados, ${res.messages_redacted} mensajes redactados.`
+        });
+        this.retry();
+      },
+      error: () => this.notice.set({ error: true, text: 'No pudimos ejecutar el borrado/anonimización.' })
+    });
+  }
+
+  runRetention(daysRaw: string): void {
+    const days = Number(daysRaw);
+    if (this.saving() || !Number.isSafeInteger(days) || days < 1) return;
+    this.saving.set(true);
+    this.api.retentionSweep(days).pipe(
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))
+    ).subscribe({
+      next: (res) => this.notice.set({
+        error: false,
+        text: `Barrido de retención completado (${days} días): ${res.messages_deleted} mensajes purgados.`
+      }),
+      error: () => this.notice.set({ error: true, text: 'No pudimos ejecutar el barrido de retención.' })
+    });
+  }
 }

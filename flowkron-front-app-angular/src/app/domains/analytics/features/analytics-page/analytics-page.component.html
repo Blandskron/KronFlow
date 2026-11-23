@@ -101,4 +101,24 @@
           </div>
         }
       </section>
+
+      @if (kpis(); as kpi) {
+        <section class="card panel lower" aria-label="Indicadores consolidados">
+          <h2>Indicadores consolidados (Pipeline, Campañas y Gobernanza)</h2>
+          <div class="grid grid-3">
+            <article class="card metric">
+              <small class="muted">Oportunidades (Abiertas / Ganadas / Perdidas)</small>
+              <strong>{{ kpi.pipeline.open_opportunities }} / {{ kpi.pipeline.won_opportunities }} / {{ kpi.pipeline.lost_opportunities }}</strong>
+            </article>
+            <article class="card metric">
+              <small class="muted">Campañas (Entregados / Aceptados)</small>
+              <strong>{{ kpi.campaigns.recipients_delivered }} / {{ kpi.campaigns.recipients_accepted }}</strong>
+            </article>
+            <article class="card metric">
+              <small class="muted">Eventos durables · Propuestas IA pendientes</small>
+              <strong>{{ kpi.events.total_domain_events }} · {{ kpi.governance.pending_ai_proposals }}</strong>
+            </article>
+          </div>
+        </section>
+      }
     </section>

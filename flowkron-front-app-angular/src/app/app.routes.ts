@@ -128,6 +128,14 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'campaigns',
+        title: 'Campañas y canales · Flowkron',
+        loadComponent: () =>
+          import('@domains/campaigns/features/campaigns-page/campaigns-page.component').then(
+            (m) => m.CampaignsPageComponent
+          )
+      },
+      {
         path: 'whatsapp',
         title: 'Conectar WhatsApp · Flowkron',
         loadComponent: () =>

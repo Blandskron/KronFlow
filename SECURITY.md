@@ -2,7 +2,7 @@
 
 ## Report privately
 
-Use [GitHub's private vulnerability reporting form](https://github.com/Blandskron/flowkron/security/advisories/new). Include the affected version or commit, the affected component, prerequisites, impact and steps to reproduce with synthetic data. Keep credentials, customer information and exploit details out of public issues.
+Use [GitHub's private vulnerability reporting form](https://github.com/Blandskron/KronFlow/security/advisories/new). Include the affected version or commit, the affected component, prerequisites, impact and steps to reproduce with synthetic data. Keep credentials, customer information and exploit details out of public issues.
 
 ## Scope
 

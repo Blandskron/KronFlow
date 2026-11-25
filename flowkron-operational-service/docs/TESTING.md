@@ -67,7 +67,7 @@ python -m unittest discover -s tests -p test_message_identity.py -v
 
 Validación FK-01: 9 pruebas aprobadas (8 con PostgreSQL 18.3 y 1 de contrato de entrada). La suite del conector también aprobó sus 10 pruebas. Durante FK-01, `test_security.py` no se pudo importar porque la versión instalada de Starlette solicitaba `httpx2`, mientras `requirements-dev.txt` declaraba `httpx`.
 
-El 22 de noviembre de 2026 se reprodujo el fallo del fixture de consentimiento del [job Validate](https://github.com/Blandskron/flowkron/actions/runs/44824257725) sobre `3e538686`. Tras corregir el fixture, la ejecución local de `python -m unittest discover -s tests -v` con PostgreSQL 18.3 descartable registró 57 pruebas aprobadas y una omitida, la medición opcional del inbox. Para que `TestClient` cargara con el Starlette 1.10.0 local, se usó `httpx2==2.16.2` desde un directorio temporal mediante `PYTHONPATH`.
+El 22 de noviembre de 2026 se reprodujo el fallo del fixture de consentimiento del [job Validate](https://github.com/Blandskron/KronFlow/actions/runs/44824257725) sobre `3e538686`. Tras corregir el fixture, la ejecución local de `python -m unittest discover -s tests -v` con PostgreSQL 18.3 descartable registró 57 pruebas aprobadas y una omitida, la medición opcional del inbox. Para que `TestClient` cargara con el Starlette 1.10.0 local, se usó `httpx2==2.16.2` desde un directorio temporal mediante `PYTHONPATH`.
 
 ### Integración PostgreSQL en Validate (FK-15)
 
@@ -81,7 +81,7 @@ python -c 'from app.main import app; assert app.openapi()["paths"]'
 
 Validación del cambio sobre `c5da59a`: 57 aprobadas y una omitida en Ubuntu 24.04 con PostgreSQL 16.15 y las dependencias de `requirements-dev.txt`. La comprobación de OpenAPI pasó. En Windows con PostgreSQL 18.3 se repitió el mismo resultado de la suite con la dependencia de cliente temporal indicada arriba. En ambos casos el único skip fue el benchmark optativo.
 
-En `c65a364`, GitHub Actions ejecutó Operational con PostgreSQL 18.7. Pasaron 61 pruebas y la comprobación de OpenAPI, con una omisión correspondiente al benchmark optativo. Los jobs de arranque estándar y demo también terminaron con éxito en esa revisión. [Job de Operational](https://github.com/Blandskron/flowkron/actions/runs/45077569420/job/137378120307) · [Validate](https://github.com/Blandskron/flowkron/actions/runs/45077569420)
+En `c65a364`, GitHub Actions ejecutó Operational con PostgreSQL 18.7. Pasaron 61 pruebas y la comprobación de OpenAPI, con una omisión correspondiente al benchmark optativo. Los jobs de arranque estándar y demo también terminaron con éxito en esa revisión. [Job de Operational](https://github.com/Blandskron/KronFlow/actions/runs/45077569420/job/137378120307) · [Validate](https://github.com/Blandskron/KronFlow/actions/runs/45077569420)
 
 ### Perfil de puntos de contacto (FK-28)
 

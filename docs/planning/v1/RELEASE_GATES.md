@@ -17,7 +17,7 @@
 
 ## Gates externos pendientes para producción
 
-Todo el alcance funcional v1.0 y POST-v1 (`tenant_schema_v16`) está implementado y verificado en CI ([Validate `45222208571`](https://github.com/Blandskron/flowkron/actions/runs/45222208571)). Restan únicamente dos comprobaciones operativas externas antes de etiquetar una release estable en producción:
+Todo el alcance funcional v1.0 y POST-v1 (`tenant_schema_v16`) está implementado y verificado en CI ([Validate `45222208571`](https://github.com/Blandskron/KronFlow/actions/runs/45222208571)). Restan únicamente dos comprobaciones operativas externas antes de etiquetar una release estable en producción:
 
 | Ticket | Evidencia actual | Falta para cerrar |
 | --- | --- | --- |

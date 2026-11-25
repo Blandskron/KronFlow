@@ -4,8 +4,8 @@ From the repository root run `docker compose config --quiet`. Use one disposable
 
 | Cold start | Start command | Smoke command |
 | --- | --- | --- |
-| Standard | `docker compose -p flowkron-smoke-standard up --build --wait` | `python flowkron-deploy/bootstrap/smoke.py flowkron-smoke-standard --standard` |
-| Demo | `docker compose -f compose.demo.yaml -p flowkron-smoke-demo up --build --wait` | `python flowkron-deploy/bootstrap/smoke.py flowkron-smoke-demo` |
+| Standard | `docker compose -p kronflow-smoke-standard up --build --wait` | `python deploy/bootstrap/smoke.py kronflow-smoke-standard --standard` |
+| Demo | `docker compose -f compose.demo.yaml -p kronflow-smoke-demo up --build --wait` | `python deploy/bootstrap/smoke.py kronflow-smoke-demo` |
 
 The standard smoke uses console email and both variants insert synthetic data. Stop each project using the same Compose file and project name with `down`.
 

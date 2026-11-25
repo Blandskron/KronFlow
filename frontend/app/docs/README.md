@@ -1,19 +1,20 @@
-# Documentación de flowkron-front-app-angular
+# Documentación de KronFlow CRM (`frontend/app`)
 
-Documentación contrastada con código y configuración actuales.
+Documentación alineada con el código y la configuración vigentes (`Angular 21.2 Zoneless`, `OnPush`, `Vitest`, `ESLint`).
 
 | Documento | Contenido |
 | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura, estado y alcance funcional |
-| [ROUTES_AND_APIS.md](ROUTES_AND_APIS.md) | Rutas, guards, APIs y contratos |
-| [CONFIGURATION_AND_OPERATIONS.md](CONFIGURATION_AND_OPERATIONS.md) | Environment, build, Docker y operación |
-| [TESTING.md](TESTING.md) | Cobertura real y estrategia pendiente |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura Feature-Based/DDD, estado con Signals y límites del cliente |
+| [ROUTES_AND_APIS.md](ROUTES_AND_APIS.md) | Rutas, guards y endpoints consumidos en IAM, Operational y Agent Core |
+| [CONFIGURATION_AND_OPERATIONS.md](CONFIGURATION_AND_OPERATIONS.md) | Environments, build args, Docker y Nginx |
+| [SECURITY.md](SECURITY.md) | Tokens RS256, XSS, CORS y manejo seguro de almacenamiento local |
+| [TESTING.md](TESTING.md) | Suite Vitest (`28/28`), ESLint a11y, Playwright y auditoría WCAG 2.2 AA |
 
-Las instrucciones agenticas se mantienen solo en [../AGENTS.md](../AGENTS.md). No se conserva una copia paralela bajo `docs/agent/`.
+Las instrucciones agénticas se consolidan únicamente en [../AGENTS.md](../AGENTS.md).
 
 ## Mantenimiento
 
-- Rutas/guards/endpoints/DTOs: actualizar `ROUTES_AND_APIS.md`.
-- Funcionalidad o estado de pantallas: actualizar `ARCHITECTURE.md`.
-- Environment/Docker/Nginx: actualizar `CONFIGURATION_AND_OPERATIONS.md`.
-- No llamar unit test a una suite inexistente ni regresión visual a screenshots sin baseline.
+- Rutas, guards, endpoints o DTOs: actualizar `ROUTES_AND_APIS.md`.
+- Componentes, diseño o límites de pantalla: actualizar `ARCHITECTURE.md`.
+- Variables, build args, Docker o Nginx: actualizar `CONFIGURATION_AND_OPERATIONS.md`.
+- Cobertura o suites ejecutadas: actualizar `TESTING.md`.

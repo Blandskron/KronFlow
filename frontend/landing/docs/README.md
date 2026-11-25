@@ -1,6 +1,6 @@
-# Documentación de flowkron-front-landing-angular
+# Documentación de KronFlow Landing (`frontend/landing`)
 
-Documentación mantenida contra el código y configuración actuales.
+Documentación mantenida contra el código y la configuración vigentes (`Angular 21.2 Zoneless`, `OnPush`, `Vitest`, `ESLint`).
 
 | Documento | Contenido |
 | --- | --- |

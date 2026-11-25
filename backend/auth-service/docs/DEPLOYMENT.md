@@ -179,4 +179,4 @@ Validar:
 - `/healthz/` o `/health/` responde (solo liveness)
 - `/api/v1/auth/jwks/` responde
 
-See the [transactional email setup](../../README.md#enable-transactional-email) for the HTTP backend. SMTP variables apply to existing deployments using the explicit SMTP backend.
+See the [transactional email setup](../../../README.md#correo-transaccional) for the HTTP backend. SMTP variables apply to existing deployments using the explicit SMTP backend.

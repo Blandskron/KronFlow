@@ -1,13 +1,15 @@
-# Local deployment
+# KronFlow Deployment (`deploy/`)
 
-The root [Compose entry point](../compose.yaml) includes this directory. Run `docker compose up --build --wait` from the root. A new local project provisions IAM, Operational, Agent Core, both Angular apps, PostgreSQL, Redis, the mail gateway and Baileys. For a separate demo with the BLANDSKRON superuser and generic agent context, use `docker compose -f compose.demo.yaml up --build --wait`. See [first login and provider setup](../README.md) and the [upgrade notes](../CHANGELOG.md).
+El [Compose raíz](../compose.yaml) (`kronflow-stack`) incluye este directorio. Ejecuta `docker compose up --build --wait` desde la raíz del repositorio para levantar `auth-service`, `operational-service`, `agent-core`, `app`, `landing`, `postgres`, `redis`, `mail-service` y `baileys-services`. Para el entorno demo con el superusuario inicial de BLANDSKRON y contexto de ejemplo, usa `docker compose -f compose.demo.yaml up --build --wait`. Consulta [la guía raíz](../README.md) y [el historial de migración](../CHANGELOG.md).
 
-- `compose/infrastructure.yml` defines PostgreSQL and Redis.
-- `compose/backend.yml` builds IAM, Operational and Agent Core and shares IAM's public signing key.
-- `compose/frontend.yml` builds the public landing and CRM.
-- `compose/email.yml` runs the email gateway on the internal Compose network. It shares Redis in DB 1.
-- `compose/whatsapp.yml` runs the [Baileys connector](../flowkron-baileys-services/README.md) on the internal network. New workspaces start disconnected; the connector restores linked accounts from its private volume.
-- `.env.example` shows optional overrides when launching directly from this directory. The root example has the same values.
+## Módulos Compose
 
-Validate either entry point with `docker compose config --quiet`. If a local port is occupied, copy the example to `.env` and change the port. Compose derives local frontend URLs and CORS defaults from the ports. Keep the named volumes across restarts. To serve other machines, configure your public URLs, allowed hosts, CORS, and TLS at your proxy. The generated workspace is restricted to loopback and Django debug mode.
-- `compose/bootstrap.yml` prepares persistent settings for the services before they start.
+- `compose/bootstrap.yml`: servicio `init` que genera y preserva credenciales por volumen (`/bootstrap/*`).
+- `compose/infrastructure.yml`: servicios `postgres` (PostgreSQL 18) y `redis` (Redis 7) sobre `kronflow-network`.
+- `compose/backend.yml`: construye `auth-service`, `operational-service` y `agent-core` desde `../../backend/*` y comparte la clave pública JWT por volumen read-only.
+- `compose/frontend.yml`: construye `landing` y `app` desde `../../frontend/*`.
+- `compose/email.yml`: ejecuta `mail-service` sobre `kronflow-network` compartiendo Redis DB 1.
+- `compose/whatsapp.yml`: ejecuta [baileys-services](../backend/baileys-services/README.md) en la red interna; las sesiones vinculadas persisten en `baileys-lab-sessions`.
+- `.env.example`: overrides opcionales equivalentes a los de la raíz.
+
+Valida ambas configuraciones con `docker compose --env-file .env.example config --quiet` y `docker compose -f compose.demo.yaml --env-file .env.example config --quiet`. Si un puerto local está ocupado, copia `.env.example` a `.env` y ajústalo. El despliegue incluido restringe puertos a loopback y modo local de desarrollo; antes de exponer en producción, revisa [docs/SECURITY.md](docs/SECURITY.md) y [docs/README.md](docs/README.md).

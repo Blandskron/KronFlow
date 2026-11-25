@@ -71,7 +71,7 @@ El 22 de noviembre de 2026 se reprodujo el fallo del fixture de consentimiento d
 
 ### Integración PostgreSQL en Validate (FK-15)
 
-El [workflow](../../.github/workflows/validate.yml) resuelve los binarios del runner con `pg_config --bindir` y verifica `initdb` y `pg_ctl` antes de ejecutar la suite. Cada clase abre su propio clúster temporal TCP en `127.0.0.1`. El fixture desactiva el socket Unix del clúster de prueba para permitir que un usuario sin privilegios ejecute PostgreSQL en Ubuntu.
+El [workflow](../../../.github/workflows/validate.yml) resuelve los binarios del runner con `pg_config --bindir` y verifica `initdb` y `pg_ctl` antes de ejecutar la suite. Cada clase abre su propio clúster temporal TCP en `127.0.0.1`. El fixture desactiva el socket Unix del clúster de prueba para permitir que un usuario sin privilegios ejecute PostgreSQL en Ubuntu.
 
 ```bash
 export FLOWKRON_TEST_POSTGRES_BIN="$(pg_config --bindir)"
@@ -93,7 +93,7 @@ python -m scripts.profile_contact_points C:/ruta/aislada/contactos-sinteticos.cs
 
 El JSON cuenta filas, valores ausentes, formatos sin resolver y valores normalizados por tipo. `duplicate_values` cuenta los valores normalizados que se repiten y `contacts_with_duplicates` cuenta las filas implicadas por tipo. Solo imprime agregados y usa las mismas reglas que la ficha y `test_capture_and_events.py`.
 
-Validación local del 23 de noviembre de 2026. Pasaron 65 pruebas de Operational con PostgreSQL 18 descartable y se omitió el benchmark opcional. Se comprobó el JSON del diagnóstico con un CSV sintético y se validó OpenAPI. Pasaron cinco pruebas de Chromium con respuestas de API simuladas, incluidas la visualización de datos normalizados y la compatibilidad con la respuesta anterior. [Pruebas de Chromium](../../flowkron-front-app-angular/tests/visual/flowkron-front.visual.spec.ts)
+Validación local del 23 de noviembre de 2026. Pasaron 65 pruebas de Operational con PostgreSQL 18 descartable y se omitió el benchmark opcional. Se comprobó el JSON del diagnóstico con un CSV sintético y se validó OpenAPI. Pasaron cinco pruebas de Chromium con respuestas de API simuladas, incluidas la visualización de datos normalizados y la compatibilidad con la respuesta anterior. [Pruebas de Chromium](../../../frontend/app/tests/visual/flowkron-front.visual.spec.ts)
 
 ### Plan de backfill de solo lectura (FK-28)
 

@@ -43,6 +43,6 @@ Los screenshots visuales de Playwright se revisan manualmente. `npm test` ejecut
 - Fallback, cache y headers de Nginx.
 - Baselines con `toHaveScreenshot` si se desea regresión visual real.
 
-## Estrategia recomendada
+## Estrategia de pruebas
 
-Elegir explícitamente un runner compatible con Angular 21, añadir target y specs antes de habilitar `npm test`. Para E2E, separar smoke público de flujos autenticados y usar un ambiente/mocks reproducibles; nunca usar credenciales o tokens reales en fixtures y capturas.
+Separar las pruebas unitarias/accesibilidad rápidas de Vitest (ejecutables sin backend mediante `TestBed` Zoneless) de las validaciones visuales/WCAG 2.2 AA con Playwright y `axe-core` sobre APIs mockeadas o despliegues Compose autorizados, sin incluir credenciales reales ni tokens en fixtures.

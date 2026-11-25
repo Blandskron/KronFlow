@@ -1,25 +1,20 @@
-# flowkron-operational-service
+# KronFlow Operational Service (`backend/operational-service`)
 
-Microservicio FastAPI que mantiene datos operacionales aislados en un schema PostgreSQL por tenant. Expone lectura/escritura para el dashboard, ingesta WhatsApp para automatizaciones y endpoints internos de aprovisionamiento, migracion y contexto del agente.
+Microservicio FastAPI de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) que mantiene datos operacionales aislados en un schema PostgreSQL 18 por tenant (`tenant_schema_v16`, migraciones repetibles `v3–v16`). Expone lectura/escritura para el CRM, bandeja HITL, pipeline comercial, campañas y privacidad, ingesta WhatsApp durable y endpoints internos de aprovisionamiento, migración y contexto RAG.
 
 ## Capacidades reales
 
-- Provisiona schemas `tenant_<slug>` y registra su runtime en tablas publicas.
-- Valida JWT RS256 humanos emitidos por `flowkron-auth-service` para APIs de dashboard.
-- Valida `X-Tenant-Code` + `X-Ingest-Key` para ingesta WhatsApp.
-- Ingresa mensajes idempotentes, clasificacion de leads, handoffs y estados.
-- Lista/actualiza leads, conversaciones, mensajes y metricas.
-- Expone ocho colecciones operacionales para el frontend: clientes, leads, inventario, conversaciones, mensajes, solicitudes de derechos, ejecutivos y log de limpiezas.
-- Provisiona y persiste contexto documental de Agent Core dentro del schema tenant activo: documentos, chunks, embeddings futuros y perfil del agente.
-- Expone endpoints internos para que Agent Core cree/lista documentos, consulte status y recupere fuentes RAG sin conocer `schema_name`.
-- Migra todos los runtimes activos mediante creacion idempotente de tablas/vistas/triggers.
+- Provisiona schemas `tenant_<slug>` con aislamiento estricto y registra su runtime en tablas públicas.
+- Valida JWT RS256 emitidos por `auth-service` para APIs de dashboard y aplica permisos RBAC por recurso (`users.read`, `crm.manage`, `agents.create`, `audit.read`).
+- Valida `X-Tenant-Code` + `X-Ingest-Key` para ingesta de canales y ejecuta outbox transaccional (`FK-03`), ledger de consentimiento (`FK-04`), turnos recuperables (`FK-02`/`FK-07`) y control HITL CAS (`FK-06`/`FK-19`).
+- Administra contactos canónicos, captura pública (`FK-28`), pipeline de oportunidades con control optimista (`FK-29`), propuestas tipadas IA `at-most-once` (`FK-17`/`FK-18`), campañas/conexiones delegadas (`FK-23`/`FK-24`/`FK-30`), webhooks HMAC/SSRF (`FK-11`), adjuntos privados (`FK-13`), agenda (`FK-22`), eventos de dominio (`FK-10`), KPIs consolidados (`FK-09`) y ciclo de privacidad (`export`, `erase`, `retention`, `FK-27`).
+- Persiste documentos y chunks de contexto empresarial consumidos por `agent-core` mediante endpoints `/internal/*` autenticados con `X-Internal-Token`.
 
-Limites importantes:
+Límites documentados:
 
-- Los endpoints publicos `/api/v1/agents` son stubs: listar devuelve `[]`, configurar responde 501 y actualizar termina en 404. Esto no afecta los endpoints internos de contexto usados por Agent Core.
-- Los routers JWT validan firma/tenant/plan, pero actualmente no aplican permisos RBAC especificos aunque existe `require_permission`.
-- El rate limit de ingest es en memoria por proceso; no es distribuido ni persistente.
-- No existe suite automatizada versionada.
+- Los endpoints públicos heredados `/api/v1/agents` permanecen como stubs (`[]` / `501`); las capacidades activas de agente viven en `agent-core` y `/api/v1/ai-proposals`.
+- El rate limit de ingesta opera por proceso; producción requiere límites distribuidos en ingress.
+- Suite automatizada contra PostgreSQL 18 verificable localmente (`python -m unittest discover -s tests -v`).
 
 ## Inicio local
 
@@ -80,4 +75,4 @@ Consulta [docs/README.md](docs/README.md) para arquitectura, API, datos, segurid
 
 ## Propiedad
 
-See the repository license for distribution terms. Consulta [LICENSE](../LICENSE). No incluyas secretos, ingest keys ni datos personales en documentacion o logs.
+See the repository license for distribution terms. Consulta [LICENSE](../../LICENSE). No incluyas secretos, ingest keys ni datos personales en documentacion o logs.

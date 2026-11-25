@@ -15,13 +15,13 @@
 
 ---
 
-**KronFlow** (anteriormente *Flowkron*) es una plataforma CRM inteligente, modular y multi-tenant open source dentro del ecosistema **BLANDSKRON**, diseñada para centralizar conversaciones de WhatsApp, gestionar contactos y oportunidades comerciales, operar propuestas tipadas de IA con contexto empresarial verificable (RAG) y gobernanza Human-in-the-Loop (HITL).
+**KronFlow** (anteriormente *Flowkron*) es una plataforma CRM inteligente, modular y multi-tenant open source del ecosistema **BLANDSKRON**, diseñada para centralizar conversaciones de WhatsApp, gestionar contactos y oportunidades comerciales, operar propuestas tipadas de IA con contexto empresarial verificable (RAG) y gobernanza Human-in-the-Loop (HITL).
 
-Cada workspace gestiona su propio esquema PostgreSQL aislado (`tenant_schema_v16`), conexión y contexto de agente.
+- **Multi-tenant schema-per-tenant:** cada empresa opera en su propio esquema PostgreSQL 18 aislado (`tenant_schema_v16`) con auditoría, retención y flujos de privacidad (`export` / `erase` / `retention`).
+- **Frontend Angular 21 Zoneless:** 100% `OnPush`, Design System unificado Teal/Esmeralda/Cyan con tipografía `Sora` + `Inter` + `JetBrains Mono`, Floating Glassmorphism, modo oscuro/claro persistente, `0` violaciones WCAG 2.2 AA en `31/31` auditorías y Lighthouse Desktop `100/100/100/100` en Landing.
+- **Orquestación RAG + HITL:** outbox transaccional durable, ledger de consentimientos, control humano CAS de conversaciones, simulador RAG con trazas de fuentes y aprobación `at-most-once` de acciones IA.
 
-KronFlow es un proyecto independiente y no tiene afiliación ni respaldo de Meta o WhatsApp. Se distribuye bajo [Apache License 2.0](LICENSE). Consulta la [revisión de release](RELEASE_READINESS.md) para el alcance de verificación y despliegue.
-
-El repositorio ofrece una vista previa de código fuente y demo local. Antes de hospedarlo para otras organizaciones, sigue la [guía de seguridad de despliegue](deploy/docs/SECURITY.md) y revisa [componentes de terceros](THIRD_PARTY.md).
+KronFlow es un proyecto independiente y no tiene afiliación ni respaldo de Meta o WhatsApp. Se distribuye bajo [Apache License 2.0](LICENSE). Consulta la [revisión de release](RELEASE_READINESS.md) para el alcance de verificación y despliegue y sigue la [guía de seguridad de despliegue](deploy/docs/SECURITY.md) antes de exponer una instancia.
 
 ## Capturas de la plataforma
 
@@ -57,61 +57,57 @@ KronFlow/
 └── docs/                      # Planificación v1, estado de implementación y capturas reales
 ```
 
-## Start locally
+## Inicio rápido local
 
-Use Docker Desktop or Docker Engine with the Docker Compose plugin. From the repository root, start the full local stack:
+Usa Docker Desktop o Docker Engine con el plugin Docker Compose. Desde la raíz del repositorio:
 
 ```sh
 docker compose up --build --wait
 ```
 
-A fresh checkout can start without an `.env`. The init job generates instance credentials and keeps them in Docker volumes. Add a private `.env` based on [the example](.env.example) only for overrides or external providers.
+Un checkout limpio arranca sin `.env`: el servicio `init` genera credenciales persistentes en volúmenes Docker. Agrega un `.env` privado a partir de [la plantilla](.env.example) únicamente para sobreescribir puertos o configurar proveedores externos. En Windows, clona en una ruta corta para evitar límites de longitud de ruta al construir las fuentes Angular.
 
-On Windows, clone into a short directory path if Git reports `Filename too long` while checking out the Angular sources.
-
-| Surface | Default address |
+| Superficie | Dirección local |
 | --- | --- |
-| Landing and contact | http://localhost:8080 |
+| Landing pública y contacto | http://localhost:8080 |
 | KronFlow CRM | http://localhost:8081 |
 | IAM health | http://localhost:8000/healthz/ |
-| Operational health | http://localhost:8001/healthz |
-| Agent Core health | http://localhost:8002/health |
-| Email gateway | Internal address at `http://mail-service:8000` |
+| Operational readiness | http://localhost:8001/readyz |
+| Agent Core readiness | http://localhost:8002/ready |
+| Email gateway | Dirección interna en `http://mail-service:8000` |
 
-### Start from scratch
+### Arranque estándar (desde cero)
 
-Open the landing or the CRM, create and verify your account, and register your company. KronFlow provisions the company's isolated database schema during setup and opens the workspace without a plan selection. Go to **WhatsApp** to link a device and **Contexto empresarial** to add products and policies. The standard deployment starts without an administrator or demo company.
+Abre la landing o el CRM, registra y verifica tu cuenta y crea tu empresa. KronFlow provisiona el esquema PostgreSQL aislado de la empresa durante el onboarding sin exigir selección de plan. Este modo arranca limpio, sin superusuario ni empresa demo precargada.
 
-### Start the demo
+### Arranque demo
 
-Run the demo separately from the standard deployment. Both use the same host ports by default.
+Ejecútalo de forma independiente al despliegue estándar (comparten puertos locales por defecto):
 
 ```sh
 docker compose -f compose.demo.yaml up --build --wait
 ```
 
-On its first local start, the demo creates the verified Django superuser `admin@example.com` as owner of **BLANDSKRON** and loads a generic business context for the agent. Sign in to [KronFlow CRM](http://localhost:8081/login) or [Django admin](http://localhost:8000/admin/). Retrieve its generated password in your private terminal:
+En el primer inicio, la demo crea el superusuario verificado `admin@example.com` como propietario de **BLANDSKRON** y carga un contexto empresarial genérico para el agente. Inicia sesión en [KronFlow CRM](http://localhost:8081/login) o [Django admin](http://localhost:8000/admin/) y consulta la contraseña generada desde tu terminal privada:
 
 ```sh
 docker compose -f compose.demo.yaml exec -T auth-service cat /run/flowkron/bootstrap_admin_password
 ```
 
-Console mail, local agent responses and the WhatsApp connector work with no provider credentials for a local install. If you need email delivery to real inboxes, configure the transactional provider below. See the [deployment guide](deploy/README.md) for ports, persistence and server configuration.
+El correo de consola en desarrollo, las respuestas locales del agente y el conector de WhatsApp operan sin credenciales externas. Consulta la [guía de despliegue](deploy/README.md) para puertos, persistencia y diagnóstico.
 
-## Configure account registration and Google sign-in
+## Registro de cuentas y Google Sign-In
 
-KronFlow CRM supports email registration and Google sign-in. Email registration sends a verification link to the address entered, then lets the recipient choose a password. Configure transactional email for real delivery. With the local console backend, the link is written to the IAM container logs.
+KronFlow CRM admite registro por correo electrónico y acceso con Google Identity Services:
 
-- Set `GOOGLE_OAUTH_CLIENT_ID` in the private root `.env` to the Google OAuth client ID for a **Web application**. An empty value hides the Google button.
-- In Google Cloud, add `http://localhost` and `http://localhost:8081` to **Authorized JavaScript origins** for Docker development. If you use a different CRM port, add that exact origin. For a hosted CRM, add its exact HTTPS origin. Apply **KronFlow** branding in Google Auth Platform. [Google Identity Services setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
-- KronFlow uses the Google Identity Services popup callback. Leave **Authorized redirect URIs** empty for a client dedicated to KronFlow. The server validates Google's ID token and uses the `sub` claim to identify the account. This flow uses the public client ID. [Google ID token verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
-- Set `AUTH_SELF_SIGNUP_ENABLED=False` if this instance should accept only existing users and invitations. Existing Google-linked accounts can still sign in when the client ID remains configured.
+- Configura `GOOGLE_OAUTH_CLIENT_ID` en tu `.env` privado con el Client ID de una **aplicación web** de Google OAuth (vacío oculta el botón).
+- En Google Cloud, registra `http://localhost` y `http://localhost:8081` (o tu origen HTTPS productivo exacto) en **Authorized JavaScript origins**, dejando **Authorized redirect URIs** vacío para el callback popup dedicado.
+- Define `AUTH_SELF_SIGNUP_ENABLED=False` si la instancia debe aceptar solo usuarios existentes e invitaciones.
+- Para dominios propios, configura `APP_PUBLIC_URL` y añade los orígenes de CRM y landing a `CORS_ALLOWED_ORIGINS`.
 
-Apply the configuration and account migration with `docker compose up --build --wait`. If you host the frontends on custom domains, set `APP_PUBLIC_URL` to the CRM URL and include the CRM and landing origins in `CORS_ALLOWED_ORIGINS`.
+## Correo transaccional
 
-## Enable transactional email
-
-The included [KronFlow mail service](backend/mail-service/README.md) sends email through Resend. Set the following values in your private environment file.
+El servicio incluido [KronFlow Mail Service](backend/mail-service/README.md) envía mediante la API HTTPS de Resend. Configura tu `.env` privado con:
 
 ```dotenv
 EMAIL_BACKEND=apps.shared.email_backend.EmailGatewayBackend
@@ -124,25 +120,24 @@ EMAIL_SENDERS_JSON='{"flowkron":{"from":"KronFlow <no-reply@example.com>"}}'
 INTERNAL_CLIENTS_JSON='{"iam":{"api_key":"replace-with-a-generated-client-secret","allowed_senders":["flowkron"]}}'
 ```
 
-Set a valid provider key and replace the example sender with an address on your verified sending domain. The IAM client key must match the gateway client entry. The gateway's `/health` checks process liveness and `/ready` checks configuration. An existing SMTP deployment can keep its explicitly configured Django SMTP backend and settings. An externally hosted gateway can be set through `MAIL_GATEWAY_URL` using HTTPS.
+Consulta `/health` para liveness y `/ready` para verificar configuración completa del proveedor y remitentes. También puede utilizarse un backend SMTP Django explícito o una URL HTTPS externa en `MAIL_GATEWAY_URL`.
 
-## Connect a channel or AI provider
+## Canales y proveedor IA
 
-- **WhatsApp** pairs one account per workspace using the QR in the CRM. The [Baileys connector](backend/baileys-services/README.md) records consent, stores text conversations and relays replies from Agent Core.
-- **AI** in Agent Core can use Groq or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](backend/agent-core/docs/CONFIGURATION.md) for model selection and local mode.
-- **Operating costs** depend on the infrastructure, messaging, email and AI providers selected by the instance operator.
+- **WhatsApp:** empareja una cuenta por empresa escaneando el QR desde el CRM. El [conector Baileys](backend/baileys-services/README.md) registra consentimientos (`ACEPTO` / `BAJA`), ingesta texto con durabilidad y reenvía respuestas del agente.
+- **IA / RAG:** configura `GROQ_API_KEY` en tu `.env` privado y recrea `agent-core` para usar Groq con `CHAT_PROVIDER=auto`. Revisa la [guía de configuración](backend/agent-core/docs/CONFIGURATION.md) para seleccionar modelo u operar en modo local.
 
-## Develop and contribute
+## Centro de documentación
 
-- [Architecture and component links](ARCHITECTURE.md)
-- [KronFlow Brand & UI/UX Roadmap](ROADMAP.md)
-- [Local validation and contribution guide](CONTRIBUTING.md)
-- [Migration and change history](CHANGELOG.md)
-- [Release readiness and gates](RELEASE_READINESS.md)
-- [Implementation traceability](docs/planning/v1/TRACEABILITY.md)
-- [Responsible disclosure](SECURITY.md)
-- [Brand assets](assets/brand/README.md)
-
-### Inicio rápido en español
-
-Ejecuta `docker compose up --build --wait` desde la raíz, registra tu cuenta y crea tu empresa. Para probar con la cuenta administradora de BLANDSKRON y el agente de ejemplo, usa `docker compose -f compose.demo.yaml up --build --wait`.
+| Documento | Contenido |
+| --- | --- |
+| [Arquitectura e integración](ARCHITECTURE.md) | Topología de servicios, diagrama de flujo y fronteras de contratos HTTP/eventos |
+| [Estado de implementación](docs/IMPLEMENTATION_STATUS.md) | Matriz verificada de capacidades, propietarios y brechas vigentes |
+| [Despliegue y operaciones](deploy/README.md) | Stacks Compose modulares, volúmenes persistentes y validación smoke |
+| [Contribución y pruebas](CONTRIBUTING.md) | Comandos locales para Angular 21, Python 3.12, Node 24 y Compose |
+| [Release readiness](RELEASE_READINESS.md) | Criterios de liberación RC/producción y [gates de release](docs/planning/v1/RELEASE_GATES.md) |
+| [Trazabilidad técnica](docs/planning/v1/TRACEABILITY.md) | Mapa código–pruebas de los tickets `FK-01`–`FK-30` |
+| [Historial de cambios](CHANGELOG.md) | Registro cronológico de evolución y notas de migración |
+| [Política de seguridad](SECURITY.md) | Canal privado de divulgación y superficie crítica |
+| [Terceros y licencias](THIRD_PARTY.md) | Dependencias clave, SBOM y obligaciones de redistribución |
+| [Kit de marca SVG](assets/brand/README.md) | Logotipos, paleta Teal/Esmeralda/Cyan y reglas de uso |

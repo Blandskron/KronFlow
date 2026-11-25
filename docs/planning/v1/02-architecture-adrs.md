@@ -1,6 +1,6 @@
 # Arquitectura objetivo y decisiones de Community v1
 
-**Estado:** arquitectura activa de Community v1 (`tenant_schema_v16`). Se basa en la [arquitectura actual](../../../ARCHITECTURE.md) y el [mapa de contratos](../../../flowkron-api-contracts/docs/architecture/integration-map.md). Los presupuestos de rendimiento son criterios de evaluación propuestos.
+**Estado:** arquitectura activa de Community v1 (`tenant_schema_v16`). Se basa en la [arquitectura actual](../../../ARCHITECTURE.md) y sus [reglas de integración](../../../ARCHITECTURE.md#integration-contracts--service-boundaries). Los presupuestos de rendimiento son criterios de evaluación propuestos.
 
 ## ADR · Campañas y analítica como módulos de Operational
 
@@ -16,7 +16,7 @@ Operational conserva contactos, conversaciones, oportunidades, campañas y la pu
 | Adecuación al código y rollout gradual | 10% | 5 | 3 | 2 |
 | **Resultado de diseño sobre 5** | **100%** | **4,40** | **3,40** | **2,80** |
 
-La puntuación de 1 a 5 representa adecuación al criterio. A permite reservar un envío y revisar el consentimiento dentro de una transacción de Operational. B permite aislar el cómputo de campañas, con un contrato explícito de permisos de envío y sincronización. C permite escalar también las consultas analíticas y agrega otro ciclo de proyección y operación. La base de la decisión es que `WhatsAppTurnJob` ya evidencia el patrón de recuperación y `analytics_summary` usa SQL tenantizado. La medida histórica del inbox es local y acotada. [Patrón de recuperación](../../../flowkron-operational-service/docs/TURN_RECOVERY.md) · [Medición existente](../../../flowkron-operational-service/docs/TESTING.md)
+La puntuación de 1 a 5 representa adecuación al criterio. A permite reservar un envío y revisar el consentimiento dentro de una transacción de Operational. B permite aislar el cómputo de campañas, con un contrato explícito de permisos de envío y sincronización. C permite escalar también las consultas analíticas y agrega otro ciclo de proyección y operación. La base de la decisión es que `WhatsAppTurnJob` ya evidencia el patrón de recuperación y `analytics_summary` usa SQL tenantizado. La medida histórica del inbox es local y acotada. [Patrón de recuperación](../../../backend/operational-service/docs/TURN_RECOVERY.md) · [Medición existente](../../../backend/operational-service/docs/TESTING.md)
 
 ### Cuándo reabrir la decisión
 
@@ -62,8 +62,8 @@ Las flechas indican dependencias objetivo. El proceso worker y la proyección de
 
 - **PostgreSQL** como almacén durable de trabajos y, si hace falta delivery separado, outbox. Escribir estado y trabajo en la misma transacción cuando deba sobrevivir a un reinicio. Reclamar trabajos en lotes acotados con lease, intento, fecha de siguiente ejecución y deduplicación. Usar inbox por ID de evento en consumidores con efectos para poder repetir entregas. El diseño reutiliza invariantes de turnos sin acoplar campañas al ciclo de respuesta de WhatsApp.
 - **Redis** para usos efímeros como cuotas y caché o como señal de despertar. El estado, el cursor y la autorización de envío residen en PostgreSQL. La pérdida de Redis puede provocar degradación controlada y se comprueba recuperación desde la tabla durable.
-- **HTTP y contratos.** Extender OpenAPI de Operational para contactos, formularios, oportunidades, control de conversación y campañas. Extender IAM para scopes de integración si el análisis demuestra que sus credenciales actuales necesitan cambios. Mantener envelopes compartidos, `meta.tenant_id` resuelto, identificador de correlación y paginación estable. Para eventos reutilizar `domain-event`, `async-job` y `webhook-envelope`, con eventos de dominio versionados según ADR-0004. [OpenAPI Operational](../../../flowkron-api-contracts/openapi/services/operational-service.openapi.yml) · [OpenAPI IAM](../../../flowkron-api-contracts/openapi/services/auth-service.openapi.yml) · [ADR de eventos](../../../flowkron-api-contracts/docs/decisions/ADR-0004-event-contracts.md)
-- **Esquema tenant.** Migraciones aditivas sobre v8 en el componente dueño. Orden propuesto: identidad y consentimientos, control y pipeline, campañas y trabajos, proyecciones. Ensayar schemas nuevos y existentes, repetir cada upgrade y validar datos históricos. Mantener lectura compatible durante el rollout. Si se revierte, desactivar rutas y workers nuevos, conservar las tablas y evitar reenviar trabajos inciertos. [Provisioning activo](../../../flowkron-operational-service/app/services/tenant_provisioning_service.py)
+- **HTTP y contratos.** Extender OpenAPI de Operational (`/openapi.json`) para contactos, formularios, oportunidades, control de conversación y campañas, manteniendo los sobres JSON estándar, `meta.tenant_id` resuelto, identificador de correlación, paginación estable y eventos versionados según [las fronteras de contrato](../../../ARCHITECTURE.md#integration-contracts--service-boundaries).
+- **Esquema tenant.** Migraciones aditivas sobre v8 en el componente dueño. Orden propuesto: identidad y consentimientos, control y pipeline, campañas y trabajos, proyecciones. Ensayar schemas nuevos y existentes, repetir cada upgrade y validar datos históricos. Mantener lectura compatible durante el rollout. Si se revierte, desactivar rutas y workers nuevos, conservar las tablas y evitar reenviar trabajos inciertos. [Provisioning activo](../../../backend/operational-service/app/services/tenant_provisioning_service.py)
 
 ## Controles por límite
 

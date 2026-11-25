@@ -1,64 +1,55 @@
-# KronFlow CRM (`flowkron-front-app-angular`)
+# KronFlow CRM (`frontend/app`)
 
-SPA privada de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) construida con Angular 21 standalone Zoneless (`OnPush`), Design System Teal/Esmeralda/Cyan con `Sora` + `Inter` + `JetBrains Mono`, autenticación JWT RS256 + Google Sign-In, administración de tenant y consumo de Auth, Operational y Agent Core.
+SPA privada de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) construida con **Angular 21.2** standalone en modo **100% Zoneless (`provideZonelessChangeDetection`) + `ChangeDetectionStrategy.OnPush`**, Design System Teal/Esmeralda/Cyan con tipografía `Sora` + `Inter` + `JetBrains Mono`, Floating Glassmorphism, temas claro/oscuro persistentes y accesibilidad WCAG 2.2 AA.
 
-## Alcance real
+## Capacidades implementadas
 
-- Autenticacion por email/password.
-- Recuperacion de contrasena e invitaciones de tenant para usuarios creados manualmente.
-- Sesion JWT y tenant activo persistidos en `localStorage`.
-- Dashboard protegido con conversaciones, workflow derivado, analytics, pricing y settings.
-- Administracion de perfil, empresa, logo/avatar, miembros e invitaciones.
-- Creacion de agente contra la API operacional.
-- Contexto Empresarial contra Agent Core: descarga plantillas Word/PDF, sube documentos, consulta status real y ejecuta simulador RAG.
+- **Autenticación y acceso multi-tenant:** login por correo/contraseña, Google Identity Services, registro/confirmación de correo, recuperación de contraseña y onboarding obligatorio de empresa (`authGuard` / `noAuthGuard`).
+- **Workspace y administración:** edición de empresa y logo, perfil y avatar, gestión de equipo, invitaciones, roles RBAC y notificaciones.
+- **Bandeja HITL y conversaciones (`/app/conversations`):** búsqueda y segmentación de hilos, toma/liberación de control humano (`CAS`), compositor de respuestas y cambio entre atención humana e IA.
+- **Directorio de contactos (`/app/contacts`) y leads (`/app/leads`):** alta idempotente, búsqueda por origen/texto, consentimiento, eventos de dominio y fichas detalladas.
+- **Pipeline de oportunidades (`/app/opportunities` y `/app/workflows`):** etapas editables, creación reactiva tipada y control optimista de versión.
+- **Contexto empresarial y simulador RAG (`/app/business-context`):** progreso real del agente, carga multipart de documentos, plantillas Word/PDF, asistente interactivo de setup y simulador RAG con inspección de fuentes y confianza.
+- **Propuestas IA (`/app/ai-proposals`):** bandeja de aprobación, rechazo y ejecución `at-most-once` con previsualización de argumentos.
+- **Campañas y analítica (`/app/campaigns`, `/app/analytics`):** conexiones de correo delegadas, plantillas, worker stub, métricas comerciales, temperatura de leads, actividad diaria e indicadores consolidados.
+- **Privacidad y auditoría (`/app/settings/privacy`, `/app/settings/audit-events`):** solicitudes de exportación/supresión y feed histórico filtrado.
+- **Canal WhatsApp (`/app/whatsapp`):** vinculación QR multi-tenant, transiciones de estado y desconexión segura.
 
-Limitaciones actuales:
+El frontend nunca invoca rutas `/internal/*` ni envía `schema_name`. Para Contexto Empresarial y Simulación consume `agent-core`; para CRM, pipeline, campañas y analítica consume `operational-service`; para identidad y sesión consume `auth-service`.
 
-- No existe ruta `/app/agents`; las capacidades de agente visibles viven en `/app/business-context`.
-- `/app/integrations` es placeholder.
-- Conversaciones permite consultar conversaciones/mensajes, pero no enviar mensajes.
-- Workflow es una vista derivada de conversaciones/leads; no administra workflows persistentes.
-- Notificaciones usa una lista local vacia.
-- Pricing es contenido estatico y deriva contratacion a WhatsApp; no activa suscripciones.
-- No existe suite unitaria configurada. El smoke Playwright solo cubre login y guarda screenshots sin baselines.
+## Desarrollo local
 
-## Desarrollo
-
-```powershell
+```sh
 npm ci
 npm start
 ```
 
-Angular sirve en `http://localhost:4200`. Build de produccion:
+Angular sirve en `http://localhost:4200`. Validación y build de producción:
 
-```powershell
+```sh
+npm run lint
+npm test
 npm run build
 ```
 
-Salida: `dist/flowkron-front-app-angular/browser`.
+Salida de producción: `dist/app/browser` (presupuestos CSS por componente: `8 kB` warning / `12 kB` error).
 
 ## Docker
 
-```powershell
+```sh
 docker compose --env-file .env.local up --build
 ```
 
-Nginx publica la SPA en `http://localhost:8081`. Los valores de environment se compilan en el bundle; no cambian en runtime.
-
-## Configuracion
+Nginx endurecido publica la SPA en `http://localhost:8081` con `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y cache inmutable para assets hasheados. Los literales de `src/environments/environment.ts` se inyectan en tiempo de build:
 
 | Build arg | Default Docker | Uso |
 | --- | --- | --- |
-| `API_PUBLIC_URL` | `http://localhost:8000/api/v1` | API de auth/tenants |
+| `API_PUBLIC_URL` | `http://localhost:8000/api/v1` | API IAM / tenants |
 | `OPERATIONAL_API_PUBLIC_URL` | `http://localhost:8001/api/v1` | API operacional |
-| `AGENT_CORE_API_PUBLIC_URL` | `http://localhost:8002/api/v1` | Agent Core para contexto y simulacion |
-| `LANDING_PUBLIC_URL` | `http://localhost:8080` | Enlaces de retorno |
-| `SALES_WHATSAPP_NUMBER` | `521234567890` | CTA comercial de pricing |
+| `AGENT_CORE_API_PUBLIC_URL` | `http://localhost:8002/api/v1` | Agent Core (contexto y RAG) |
+| `LANDING_PUBLIC_URL` | `http://localhost:8080` | Retorno a portal público |
+| `SALES_WHATSAPP_NUMBER` | `""` | Botón comercial opcional (oculto si está vacío) |
 
-Son datos publicos del frontend, nunca un mecanismo para secretos.
+## Documentación
 
-El frontend no consume endpoints internos de Operational ni envia `schema_name`. Para Contexto Empresarial siempre llama a Agent Core; Agent Core resuelve tenant autenticado y delega persistencia/RAG a Operational.
-
-## Documentacion
-
-Consulta [docs/README.md](docs/README.md) para arquitectura, rutas, contratos, configuracion, seguridad, operacion y pruebas. Las instrucciones para agentes estan en [AGENTS.md](AGENTS.md).
+Consulta [docs/README.md](docs/README.md) para arquitectura, rutas, APIs, configuración, seguridad y pruebas. Las reglas para agentes de código viven en [AGENTS.md](AGENTS.md).

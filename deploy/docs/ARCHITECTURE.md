@@ -2,21 +2,21 @@
 
 ## Modelo Compose
 
-`docker-compose.yml` define `name: flowkron-stack` e incluye inicialización, infraestructura, backends, frontends, correo y Baileys.
+`docker-compose.yml` define `name: kronflow-stack` e incluye inicialización (`init`), infraestructura (`postgres`, `redis`), backends (`auth-service`, `operational-service`, `agent-core`), frontends (`landing`, `app`), correo (`mail-service`) y Baileys (`baileys-services`).
 
 ```text
 Browser
   -> :8080 landing (Nginx)
   -> :8081 app (Nginx)
-  -> :8000 auth (Django)
-  -> :8001 operational (FastAPI)
+  -> :8000 auth-service (Django)
+  -> :8001 operational-service (FastAPI)
   -> :8002 agent-core (FastAPI)
 
-flowkron-network
-  -> postgres:5432  <- auth + operational
-  -> redis:6379     <- auth
-  -> auth:8000      -> operational:8001
-  -> agent-core:8002 -> operational:8001
+kronflow-network
+  -> postgres:5432            <- auth-service + operational-service
+  -> redis:6379               <- auth-service + mail-service
+  -> auth-service:8000        -> operational-service:8001
+  -> agent-core:8002          -> operational-service:8001
 ```
 
 
@@ -36,11 +36,11 @@ La red bridge facilita DNS interno, pero los puertos publicados siguen expuestos
 
 | Recurso | Tipo | Uso |
 | --- | --- | --- |
-| `flowkron-postgres-18-cluster` | Named volume | Datos PostgreSQL |
-| `flowkron-redis-data` | Named volume | Redis |
-| `flowkron-jwt-keys`, `flowkron-jwt-public` | Named volumes | Clave privada en Auth. Clave pública de verificación en Operational y Agent Core |
-| `flowkron-auth-media` | Named volume | Media de Auth |
-| `flowkron-*-config` | Named volumes | Credenciales iniciales por servicio |
+| `kronflow-postgres-18-cluster` | Named volume | Datos PostgreSQL |
+| `kronflow-redis-data` | Named volume | Redis |
+| `kronflow-jwt-keys`, `kronflow-jwt-public` | Named volumes | Clave privada en Auth. Clave pública de verificación en Operational y Agent Core |
+| `kronflow-auth-media` | Named volume | Media de Auth |
+| `kronflow-*-config` | Named volumes | Credenciales iniciales por servicio |
 | `baileys-lab-sessions` | Named volume | Sesión vinculada de Baileys |
 
 `docker compose down` preserva datos. `down -v` borra named volumes.
@@ -56,7 +56,7 @@ Operational resuelve tenant, schema fisico y futura variante por industria. El a
 El flujo integrado es:
 
 ```text
-Browser -> flowkron-front-app-angular -> flowkron-agent-core -> flowkron-operational-service -> PostgreSQL tenant schema
+Browser -> frontend/app -> agent-core -> operational-service -> PostgreSQL tenant schema
 ```
 
 El navegador nunca llama endpoints `/internal/*`. Agent Core extrae texto/chunks y llama a Operational con `X-Internal-Token`. Operational resuelve `TenantRuntime`, aplica `schema_translate_map` y escribe en tablas como:

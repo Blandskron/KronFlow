@@ -1,4 +1,4 @@
-# Documentación de flowkron-auth-service
+# Documentación de KronFlow Auth Service (`backend/auth-service`)
 
 Documentación mantenida contra la implementación. El esquema de `/api/schema/` es la referencia generada para payloads; estos documentos explican decisiones, invariantes y operación.
 

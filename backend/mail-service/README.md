@@ -1,6 +1,6 @@
-# flowkron-mail-service
+# KronFlow Mail Service (`backend/mail-service`)
 
-Blandskron Email Gateway es una API FastAPI centralizada para correo transaccional. Recibe solicitudes autenticadas, valida el remitente autorizado y envía mediante la API HTTPS de Resend. No acepta ni utiliza credenciales SMTP.
+KronFlow / BLANDSKRON Email Gateway es una API FastAPI centralizada para correo transaccional. Recibe solicitudes autenticadas, valida el remitente autorizado y envía mediante la API HTTPS de Resend. No acepta ni utiliza credenciales SMTP.
 
 El proceso no mantiene datos de negocio, pero la idempotencia sí requiere estado:
 usa Redis cuando `REDIS_URL` está configurado y memoria local en caso contrario.

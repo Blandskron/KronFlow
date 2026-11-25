@@ -38,6 +38,6 @@ docker compose --profile visual up --build --abort-on-container-exit
 - Headers/caching/fallback de Nginx.
 - Baselines reales si se desea regresión visual.
 
-## Recomendación
+## Estándares de prueba
 
-Elegir explícitamente un runner compatible con Angular 21 antes de habilitar `npm test`. Para visual regression, fijar Playwright como dependencia/versionada, configurar proyecto y baselines, y usar `toHaveScreenshot`; revisar actualizaciones de snapshots en code review.
+La suite unitaria corre con Vitest en modo Zoneless (`npm test`). Al agregar pruebas de regresión visual automatizada con Playwright `toHaveScreenshot()`, fijar versión y revisar snapshots en code review.

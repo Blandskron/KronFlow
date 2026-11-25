@@ -1,6 +1,6 @@
-# flowkron-auth-service
+# KronFlow Auth Service (`backend/auth-service`)
 
-Microservicio IAM multi-tenant de Flowkron. Gestiona usuarios humanos, tenants y membresías, RBAC, sesiones, JWT RS256, MFA TOTP, service accounts, API keys y auditoría. También coordina el aprovisionamiento del runtime de cada tenant con `flowkron-operational-service`.
+Microservicio IAM multi-tenant de **KronFlow — Intelligent CRM** (*By BLANDSKRON*). Gestiona usuarios humanos, registro y verificación por correo, Google Identity Services, tenants y membresías, RBAC, sesiones, JWT RS256, MFA TOTP, service accounts, API keys y auditoría. También coordina el aprovisionamiento del runtime de cada tenant con `operational-service`.
 
 ## Capacidades implementadas
 
@@ -84,15 +84,14 @@ Consulta el inventario y los requisitos de autorización en [API y contratos](do
 
 ## Flujo humano principal
 
-1. Un administrador crea el usuario. No existe registro publico abierto.
-2. El servicio envia un token de verificacion de email. El usuario no puede operar sin `email_verified_at`.
-3. El usuario confirma el email en `/api/v1/auth/email/confirm/`; puede incluir `new_password` si necesita definir la password inicial.
-4. El usuario inicia sesion en `/api/v1/auth/login/`.
-5. Si no tiene tenant activo, el login devuelve `onboarding_required=true` y tokens limitados.
-6. El frontend llama `/api/v1/tenants/onboarding/` con el nombre de empresa. El servicio crea tenant, membership activa, rol `TENANT_OWNER`, marca `onboarding_completed_at` y entrega tokens con tenant.
-7. Toda operacion tenantizada posterior debe ejecutarse con tenant activo y permisos efectivos.
+1. El usuario se registra mediante self-signup (`AUTH_SELF_SIGNUP_ENABLED=True`), Google Sign-In o invitación de administrador.
+2. Para registro por correo, el servicio envía un token de verificación (ver [email](../../README.md#correo-transaccional)). El usuario confirma su correo en `/api/v1/auth/email/confirm/`.
+3. El usuario inicia sesión en `/api/v1/auth/login/` o `/api/v1/auth/google/`.
+4. Si no tiene tenant activo, el login devuelve `onboarding_required=true` y tokens limitados.
+5. El frontend llama `/api/v1/tenants/onboarding/` con el nombre de empresa; el servicio crea el tenant, membresía `TENANT_OWNER`, aprovisiona el runtime operacional y entrega tokens con `tenant_id`.
+6. Toda operación tenantizada posterior se ejecuta con tenant activo y permisos efectivos.
 
-Las invitaciones no abren registro publico: requieren un token de invitacion valido. Si el email invitado ya existe, el usuario debe iniciar sesion para aceptar. Si no existe, el token permite activar una cuenta nueva con password y asociarla al tenant.
+Las invitaciones requieren un token válido: si el email ya existe, el usuario inicia sesión para aceptar; si no existe, activa su cuenta y se asocia al tenant.
 
 ## Validación
 
@@ -112,4 +111,4 @@ El índice mantenido está en [docs/README.md](docs/README.md). Las reglas para 
 
 ## Propiedad
 
-See the repository license for distribution terms. Consulta [LICENSE](../LICENSE) y [uso aceptable](docs/LEGAL_AND_ACCEPTABLE_USE.md). No incluyas secretos ni credenciales reales en código, ejemplos o documentación.
+See the repository license for distribution terms. Consulta [LICENSE](../../LICENSE) y [uso aceptable](docs/LEGAL_AND_ACCEPTABLE_USE.md). No incluyas secretos ni credenciales reales en código, ejemplos o documentación.

@@ -1,6 +1,6 @@
-# Documentación de flowkron-deploy
+# Documentación de KronFlow Deployment (`deploy/`)
 
-Documentación contrastada con los modelos Compose y los contratos básicos de los repositorios hermanos.
+Documentación contrastada con los módulos Compose de `deploy/compose/` y los servicios de `backend/` y `frontend/`.
 
 | Documento | Contenido |
 | --- | --- |

@@ -1,4 +1,4 @@
-# Documentación de flowkron-operational-service
+# Documentación de KronFlow Operational Service (`backend/operational-service`)
 
 Documentación mantenida contra la implementación. OpenAPI (`/openapi.json`) es la referencia generada para schemas HTTP; estos documentos explican límites, seguridad y operación.
 

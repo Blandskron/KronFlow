@@ -1,8 +1,8 @@
-# flowkron-agent-core
+# KronFlow Agent Core (`backend/agent-core`)
 
-Nucleo conversacional omnicanal de Flowkron. Recibe eventos normalizados desde gateways externos, construye respuestas usando contexto empresarial por tenant y devuelve un contrato estandar sin depender de WhatsApp ni de otro canal especifico.
+Núcleo conversacional omnicanal de **KronFlow — Intelligent CRM** (*By BLANDSKRON*). Recibe eventos normalizados desde adaptadores externos, construye respuestas usando contexto empresarial por tenant y devuelve un contrato estándar sin depender de WhatsApp ni de un canal específico.
 
-`flowkron-agent-core` no provisiona tenants, no crea schemas y no decide en que schema escribir. La resolucion de runtime, schema fisico e industria pertenece a `flowkron-operational-service`; este core opera con contratos transversales y delega persistencia/RAG por API interna.
+`agent-core` no provisiona tenants, no crea schemas y no decide en qué schema escribir. La resolución de runtime y schema físico pertenece a `operational-service`; este core opera con contratos transversales y delega persistencia y RAG por API interna.
 
 ## Por que existe
 

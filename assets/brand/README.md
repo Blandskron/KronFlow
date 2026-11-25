@@ -26,7 +26,7 @@ El isotipo de KronFlow combina:
 | [`kronflow-og-card.svg`](kronflow-og-card.svg) | Tarjeta Open Graph (`1200×630`) y previsualización social |
 | [`kronflow-hero-flow.svg`](kronflow-hero-flow.svg) | Diagrama arquitectónico SVG de orquestación conversacional |
 
-Las copias en `flowkron-front-app-angular/public/kronflow-icon.svg` y `flowkron-front-landing-angular/public/kronflow-icon.svg` reflejan exactamente `kronflow-icon.svg` para que cada aplicación compile de forma independiente.
+Las copias en `frontend/app/public/kronflow-icon.svg` y `frontend/landing/public/kronflow-icon.svg` reflejan exactamente `kronflow-icon.svg` (junto con `frontend/landing/public/kronflow-og-card.svg` para metadatos sociales) para que cada aplicación compile de forma independiente.
 
 ---
 

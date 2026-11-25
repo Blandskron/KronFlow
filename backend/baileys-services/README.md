@@ -1,4 +1,4 @@
-# Flowkron Baileys Services
+# KronFlow Baileys Services (`backend/baileys-services`)
 
 La ingestión conserva el ID real del proveedor en cada mensaje. Para una respuesta, registra el ID devuelto por su propio envío y el estado reportado `sent`; ese estado no confirma entrega ni lectura. Ver la [decisión de identidad de mensajes](../operational-service/docs/MESSAGE_IDENTITY.md).
 

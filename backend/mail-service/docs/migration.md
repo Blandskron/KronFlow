@@ -11,4 +11,4 @@ Antes, `/mail` aceptaba credenciales SMTP y el remitente en cada request. Ahora:
 7. Mantén `ENABLE_LEGACY_MAIL_ENDPOINT=true` solo durante la transición.
 8. Desactiva legacy después de migrar todos los consumidores.
 
-Flowkron IAM usa `apps/shared/email_backend.py` y el endpoint nuevo. Consulta la [configuración](../../README.md#enable-transactional-email).
+KronFlow IAM usa `apps/shared/email_backend.py` y el endpoint nuevo. Consulta la [configuración](../../../README.md#correo-transaccional).

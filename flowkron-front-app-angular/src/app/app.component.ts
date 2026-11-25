@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'kronflow-root',
@@ -7,4 +8,10 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   template: `<router-outlet />`
 })
-export class AppComponent {}
+export class AppComponent {
+  private readonly themeService = inject(ThemeService);
+
+  constructor() {
+    this.themeService.initialize();
+  }
+}

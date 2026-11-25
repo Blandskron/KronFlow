@@ -152,6 +152,22 @@ Para garantizar **cero regresiones** en Docker, Nginx, CI/CD (`.github/workflows
   - Lighthouse CRM Login: Performance `100`, Accessibility `100`, Best Practices `96` (`SEO 54` intencional por `<meta name="robots" content="noindex, nofollow">`).
   - Todas las capturas en `docs/screenshots/` actualizadas e inspeccionadas sin defectos visuales.
 
+### Etapa 7 — Auditoría Independiente y Perfeccionamiento de Producción
+- **Estado:** `DONE`
+- **Dependencias:** Etapa 6.
+- **Hallazgos reales corregidos mediante evidencia (Playwright Dark/Light + `axe-core` + Lighthouse + inspección visual):**
+  - [x] **Persistencia de tema en CRM (`flowkron-front-app-angular`):** `AppComponent` no inyectaba ni inicializaba `ThemeService`, provocando que el modo claro revirtiera a oscuro al recargar la página. Corregido en `app.component.ts` y cubierto en `theme.service.spec.ts`.
+  - [x] **Showcase raíz `index.html`:** Corregida deformación vertical en `.hero-shot img` (`height: auto`), eliminada violación seria WCAG 2.5.3 `label-content-name-mismatch` en `#theme-toggle` y reemplazados backticks literales `` (`v16`) `` por `<code>v16</code>`.
+  - [x] **Lighthouse SEO `100` y metadatos Open Graph:** Añadidos `public/robots.txt` en ambos frontends (`Allow: /` en Landing, `Disallow: /` en CRM), publicado `kronflow-og-card.svg` en Landing `public/` y agregados `og:image` y `twitter:card` en `flowkron-front-landing-angular/src/index.html`.
+  - [x] **Tokens y Auth Layout (`0` hex/rgba hardcodeados):** Añadidos tokens semánticos `--showcase-*` en `tokens.css` (sincronizado byte-a-byte entre ambas apps), migrados los 14 colores hardcodeados de `auth-layout.component.css`, y blindado `.badge` con `white-space: nowrap; flex-shrink: 0;` en `primitives.css`.
+  - [x] **Consistencia, padding y accesibilidad en vistas CRM:** Renovadas `analytics-page` (padding real en `.metric` y `.panel`, `kronflow-page-header`, `.glass-surface`, `kronflow-skeleton`, `tabular-nums`), `contacts-page` (`kronflow-page-header`, tarjeta `.search` espaciada con placeholders y `kronflow-empty-state`), `settings-page` (`kronflow-page-header`, `aria-label` faltantes en selects de roles WCAG 4.1.2, contraste `.notice` `--success-text` y ortografía), contraste `--badge-primary-ink` en `chats-page`, `ai-proposals-page` y `opportunities-page`, ancho de selector de proveedor en `campaigns-page`, espaciado en `whatsapp-page` y guarda `documentVersion()` sin warning `NG8102` en `context-summary-panel`.
+  - [x] **Refinamiento de `viewBox` SVG:** Ampliados márgenes y centrado en `kronflow-horizontal-*.svg`, `kronflow-stacked-*.svg` y `kronflow-hero-flow.svg`.
+- **Criterios de aceptación verificados tras los últimos cambios:**
+  - `31/31` auditorías `axe-core` WCAG 2.2 AA (`root-index`, Landing y CRM en modos oscuro, claro y móvil `390×844`): **`0` violaciones, `0` overflow horizontal, `0` errores de consola**.
+  - Persistencia modo claro tras `page.reload()`: `hasDarkClass: false`, `storedTheme: "light"`, `bodyBg: rgb(241, 248, 247)`, `theme-color: #f1f8f7`.
+  - Lighthouse Desktop: Landing **`100 / 100 / 100 / 100`** (Perf / A11y / BP / SEO); CRM Login **`99 / 100 / 96 / 63`** (Perf / A11y / BP / SEO con `robots.txt` válido y `noindex` intencional); Mobile default throttling: Landing `81 / 100 / 100 / 100`, CRM Login `87 / 100 / 96 / 63`.
+  - `npm run lint`, `npm test` (`28/28` CRM, `11/11` Landing), `npm run build` (`0` warnings, `0` alertas CSS), `npm audit --omit=dev --audit-level=high` (`0` vulnerabilidades) y paridad SHA256 en `tokens.css`, `primitives.css` y `reset.css`.
+
 ---
 
 ## 4. Registro de Seguimiento de Etapas
@@ -160,8 +176,9 @@ Para garantizar **cero regresiones** en Docker, Nginx, CI/CD (`.github/workflows
 |---|---|---|---|---|
 | **Etapa 0** | Auditoría completa, skill `ui-ux-pro-max` y `ROADMAP.md` | **DONE** | `search.py` CLI verificado en Python 3.13 | 48 archivos de skill instalados en `.agents/skills/ui-ux-pro-max/`. |
 | **Etapa 1** | Identidad visual original y kit SVG en `assets/brand/` | **DONE** | 8 SVGs válidos + `kronflow-icon.svg` en ambos `public/` | 0 archivos `flowkron-*.svg` remanentes. |
-| **Etapa 2** | Design System unificado (`tokens`, `reset`, `primitives`, `ThemeService`) | **DONE** | `tokens.css`, `reset.css` y `primitives.css` sincronizados byte-a-byte | Paleta Teal/Esmeralda/Cyan, `Sora` + `Inter` + `JetBrains Mono`, `styles-*.css` = `9.61 kB` (`2.64 kB` transfer) en ambas apps. |
-| **Etapa 3** | Renombrado y pulido UX/UI de CRM (`flowkron-front-app-angular`) | **DONE** | `lint` (0/0) + `test` (28/28) + `build` (`302.91 kB` initial) + `audit` (0 vulns) | 0 selectores `flowkron-*`, 0 colores violetas, WCAG 2.5.3 corregido en `Salir`, padding `.page-section` unificado. |
-| **Etapa 4** | Rediseño de Landing (`flowkron-front-landing-angular`) y `index.html` | **DONE** | `lint` (0/0) + `test` (11/11) + `build` (`262.22 kB` initial) + `audit` (0 vulns) | Bento Grid `01–04`, preview IA/RAG, `contactForm` CSRF preservado, `index.html` actualizado. |
+| **Etapa 2** | Design System unificado (`tokens`, `reset`, `primitives`, `ThemeService`) | **DONE** | `tokens.css`, `reset.css` y `primitives.css` sincronizados byte-a-byte | Paleta Teal/Esmeralda/Cyan, `Sora` + `Inter` + `JetBrains Mono`, `styles-*.css` = `10.21 kB` (`2.78 kB` transfer) en ambas apps. |
+| **Etapa 3** | Renombrado y pulido UX/UI de CRM (`flowkron-front-app-angular`) | **DONE** | `lint` (0/0) + `test` (28/28) + `build` (`304.40 kB` initial) + `audit` (0 vulns) | 0 selectores `flowkron-*`, 0 colores violetas, WCAG 2.5.3 corregido en `Salir`, padding `.page-section` unificado. |
+| **Etapa 4** | Rediseño de Landing (`flowkron-front-landing-angular`) y `index.html` | **DONE** | `lint` (0/0) + `test` (11/11) + `build` (`262.86 kB` initial) + `audit` (0 vulns) | Bento Grid `01–04`, preview IA/RAG, `contactForm` CSRF preservado, `index.html` actualizado. |
 | **Etapa 5** | READMEs, documentación, metadatos y `smoke.py` | **DONE** | Revisión transversal y `git grep` | `README.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `NOTICE`, `smoke.py` y docs de frontends actualizados. |
 | **Etapa 6** | Validación Playwright, capturas, WCAG 2.2 AA y Lighthouse | **DONE** | 15 auditorías `axe-core` WCAG 2.2 AA (`0` violaciones, `0` overflow, `0` console errors) + Lighthouse + inspección visual | Landing LH: `98/100/100/91`; CRM Login LH: `100/100/96/54` (`noindex`); `docs/screenshots/01..10-*.png` actualizadas. |
+| **Etapa 7** | Auditoría independiente y perfeccionamiento de producción | **DONE** | `31/31` auditorías `axe-core` WCAG 2.2 AA (`0` violaciones Dark/Light/Móvil + `index.html`) + Lighthouse Desktop/Mobile + recarga de tema + inspección visual | Persistencia `ThemeService` CRM corregida; `0` hex hardcodeados en `auth-layout`; `analytics`/`contacts`/`settings` pulidos; Landing LH Desktop **`100/100/100/100`**. |

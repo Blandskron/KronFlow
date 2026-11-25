@@ -164,7 +164,7 @@
       .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
       .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
       .hero-shot { padding: 14px; border-radius: 22px; }
-      .hero-shot img { width: 100%; display: block; border-radius: 14px; border: 1px solid var(--border); }
+      .hero-shot img { width: 100%; height: auto; display: block; border-radius: 14px; border: 1px solid var(--border); }
       .hero-shot figcaption { margin-top: 10px; font-size: 0.82rem; color: var(--muted-foreground); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
       section.block { padding: clamp(44px, 6vw, 76px) 0; }
       .section-head { max-width: 68ch; margin-bottom: 28px; }
@@ -244,7 +244,7 @@
         </nav>
 
         <div class="header-actions">
-          <button id="theme-toggle" class="btn btn-secondary" type="button" aria-label="Cambiar tema claro u oscuro">
+          <button id="theme-toggle" class="btn btn-secondary" type="button" aria-pressed="true">
             Modo claro
           </button>
           <a class="btn btn-primary" href="https://github.com/Blandskron/KronFlow" target="_blank" rel="noopener">
@@ -347,7 +347,7 @@
               </div>
               <code>flowkron-operational-service · :8001</code>
               <p>
-                Esquema por tenant (`v16`): contactos, leads, pipeline de oportunidades, bandeja HITL, propuestas IA,
+                Esquema por tenant (<code>v16</code>): contactos, leads, pipeline de oportunidades, bandeja HITL, propuestas IA,
                 campañas, consentimiento, privacidad (export/erasure/retention) y KPIs consolidados.
               </p>
             </article>
@@ -655,6 +655,7 @@ python flowkron-deploy/bootstrap/smoke.py flowkron-demo</pre>
       function applyTheme(dark) {
         root.classList.toggle('dark', dark);
         themeBtn.textContent = dark ? 'Modo claro' : 'Modo oscuro';
+        themeBtn.setAttribute('aria-pressed', String(dark));
         if (themeMeta) themeMeta.setAttribute('content', dark ? '#060d10' : '#f1f8f7');
         try {
           localStorage.setItem('kronflow-pages-theme', dark ? 'dark' : 'light');

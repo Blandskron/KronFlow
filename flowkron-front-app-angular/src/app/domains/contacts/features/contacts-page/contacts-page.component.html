@@ -1,15 +1,21 @@
 <section class="page-section">
-  <h1>Contactos</h1>
-  @if (auth.hasPermission('crm.manage')) {
-    <a class="btn btn-primary" routerLink="/app/contacts/new" queryParamsHandling="preserve"
-      [state]="{ contactSearch: filters().query }">Nuevo contacto</a>
-  }
-  <form class="search" role="search" (submit)="$event.preventDefault(); search(query.value, source.value)">
-    <label for="contacts-search">Buscar por nombre, correo o teléfono
-      <input #query class="field" id="contacts-search" type="search" maxlength="120" [value]="filters().query" />
+  <kronflow-page-header
+    eyebrow="CRM · DIRECTORIO"
+    title="Contactos"
+    subtitle="Administra contactos, orígenes y acceso a su ficha de consentimiento."
+  >
+    @if (auth.hasPermission('crm.manage')) {
+      <a class="btn btn-primary" routerLink="/app/contacts/new" queryParamsHandling="preserve"
+        [state]="{ contactSearch: filters().query }">Nuevo contacto</a>
+    }
+  </kronflow-page-header>
+
+  <form class="search card glass-surface" role="search" (submit)="$event.preventDefault(); search(query.value, source.value)">
+    <label class="query-field" for="contacts-search">Buscar por nombre, correo o teléfono
+      <input #query class="field" id="contacts-search" type="search" maxlength="120" placeholder="Nombre, correo o teléfono…" [value]="filters().query" />
     </label>
-    <label for="contacts-source">Origen
-      <input #source class="field" id="contacts-source" list="contact-sources" maxlength="120" [value]="filters().source" />
+    <label class="source-field" for="contacts-source">Origen
+      <input #source class="field" id="contacts-source" list="contact-sources" maxlength="120" placeholder="Ej. whatsapp, webchat" [value]="filters().source" />
       <datalist id="contact-sources">
         @for (item of sources(); track item) { <option [value]="item"></option> }
       </datalist>
@@ -19,14 +25,22 @@
 
   @if (directory(); as state) {
     @switch (state.status) {
-      @case ('loading') { <p class="muted" role="status">Consultando contactos…</p> }
+      @case ('loading') {
+        <div class="loading-stack" role="status" aria-label="Consultando contactos">
+          <span class="sr-only">Consultando contactos…</span>
+          <kronflow-skeleton height="68px" />
+          <kronflow-skeleton height="68px" />
+          <kronflow-skeleton height="68px" />
+        </div>
+      }
       @case ('error') {
-        <p role="alert">{{ state.message }}</p>
-        <button class="btn btn-secondary" type="button" (click)="retry()">Reintentar</button>
+        <kronflow-empty-state title="No pudimos consultar los contactos" [description]="state.message">
+          <button class="btn btn-secondary" type="button" (click)="retry()">Reintentar</button>
+        </kronflow-empty-state>
       }
       @case ('ready') {
         @if (state.page.items.length) {
-          <ul class="card contacts">
+          <ul class="card glass-surface contacts">
             @for (contact of state.page.items; track contact.id) {
               <li>
                 <div>
@@ -34,13 +48,16 @@
                     [state]="{ contactSearch: filters().query }">{{ contact.full_name || 'Contacto sin nombre' }}</a>
                   <span class="muted">{{ contact.email || 'Sin correo' }}</span>
                 </div>
-                <span>{{ contact.phone || 'Sin teléfono' }}</span>
+                <span class="contact-phone">{{ contact.phone || 'Sin teléfono' }}</span>
                 <time class="muted" [attr.datetime]="contact.created_at">{{ contact.created_at | date:'dd/MM/yyyy' }}</time>
               </li>
             }
           </ul>
         } @else {
-          <p class="muted" role="status">No hay contactos en esta página.</p>
+          <kronflow-empty-state
+            title="Sin contactos coincidentes"
+            description="No hay contactos registrados en esta vista o con los filtros aplicados."
+          />
         }
         @if (state.page.offset || state.page.total > state.page.limit) {
           <nav class="pagination" aria-label="Páginas de contactos">

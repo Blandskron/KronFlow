@@ -1,20 +1,20 @@
 
     <section class="page-section">
-      <div class="heading">
-        <div>
-          <h1>Configuración</h1>
-          @if (auth.hasPermission('audit.read')) {
-            <nav class="settings-links" aria-label="Auditoría y privacidad">
-              <a routerLink="/app/settings/privacy">Solicitudes de privacidad</a>
-              <a routerLink="/app/settings/audit-events">Eventos de auditoría</a>
-            </nav>
-          }
-          <p class="muted">Empresa, perfil y equipo del tenant activo.</p>
-        </div>
+      <kronflow-page-header
+        eyebrow="WORKSPACE · CONFIGURACIÓN"
+        title="Configuración"
+        subtitle="Empresa, perfil y equipo del tenant activo."
+      >
+        @if (auth.hasPermission('audit.read')) {
+          <nav class="settings-links" aria-label="Auditoría y privacidad">
+            <a class="btn btn-secondary btn-sm" routerLink="/app/settings/privacy">Solicitudes de privacidad</a>
+            <a class="btn btn-secondary btn-sm" routerLink="/app/settings/audit-events">Eventos de auditoría</a>
+          </nav>
+        }
         @if (auth.currentTenant(); as tenant) {
           <span class="badge badge-primary">{{ tenant.plan }}</span>
         }
-      </div>
+      </kronflow-page-header>
 
       <div class="tabs" role="group" aria-label="Secciones de configuración">
         @for (item of tabs; track item.id) {
@@ -25,7 +25,7 @@
       </div>
 
       @if (activeTab() === 'company') {
-        <article class="card panel">
+        <article class="card glass-surface panel">
           <div class="panel-title">
             <div>
               <h2>Empresa</h2>
@@ -64,7 +64,7 @@
                   <input class="field" type="text" formControlName="name">
                 </label>
                 <label>
-                  Razon social
+                  Razón social
                   <input class="field" type="text" formControlName="legal_name">
                 </label>
                 <label>
@@ -72,14 +72,14 @@
                   <input class="field" type="text" formControlName="tax_id">
                 </label>
                 <label>
-                  Pais
+                  País
                   <input class="field" type="text" formControlName="country" maxlength="2">
                 </label>
               </div>
             </form>
             <dl class="meta">
               <dt>Estado</dt><dd>{{ tenant.status }}</dd>
-              <dt>Suscripcion</dt><dd>{{ tenant.subscription_status }}</dd>
+              <dt>Suscripción</dt><dd>{{ tenant.subscription_status }}</dd>
               <dt>Tenant</dt><dd>{{ tenant.slug }}</dd>
             </dl>
           } @else if (workspace.company(); as company) {
@@ -89,13 +89,13 @@
               <dt>Usuarios</dt><dd>{{ company.teamSize }}</dd>
             </dl>
           } @else {
-            <p class="muted">Aun no hay datos de empresa configurados.</p>
+            <p class="muted">Aún no hay datos de empresa configurados.</p>
           }
         </article>
       }
 
       @if (activeTab() === 'profile') {
-        <article class="card panel">
+        <article class="card glass-surface panel">
           <div class="panel-title">
             <div>
               <h2>Mi perfil</h2>
@@ -146,7 +146,7 @@
                   <input class="field" type="text" formControlName="last_name">
                 </label>
                 <label>
-                  Telefono
+                  Teléfono
                   <input class="field" type="tel" formControlName="phone">
                 </label>
                 <label>
@@ -160,7 +160,7 @@
               </div>
             </form>
             <dl class="meta">
-              <dt>Email verificado</dt><dd>{{ user.profile.email_verified_at ? 'Si' : 'No' }}</dd>
+              <dt>Email verificado</dt><dd>{{ user.profile.email_verified_at ? 'Sí' : 'No' }}</dd>
               <dt>MFA</dt><dd>{{ user.profile.mfa_enabled ? 'Activo' : 'Inactivo' }}</dd>
             </dl>
           } @else {
@@ -170,7 +170,7 @@
       }
 
       @if (activeTab() === 'team') {
-        <article class="card panel">
+        <article class="card glass-surface panel">
           <div class="panel-title">
             <div>
               <h2>Equipo</h2>
@@ -191,7 +191,7 @@
           } @else {
             <form class="invite-row" [formGroup]="inviteForm" (ngSubmit)="inviteMember()">
               <input class="field" type="email" formControlName="email" aria-label="Correo de la persona invitada" autocomplete="off" placeholder="correo@example.com">
-              <select class="field" formControlName="roleCode">
+              <select class="field" formControlName="roleCode" aria-label="Rol de la persona invitada">
                 @for (role of roleOptions; track role.code) {
                   <option [value]="role.code">{{ role.label }}</option>
                 }
@@ -229,7 +229,7 @@
                     <em class="badge" [class.badge-success]="member.status === 'active'" [class.badge-warning]="member.status !== 'active'">
                       {{ member.status }}
                     </em>
-                    <select class="field role-select" [value]="primaryRole(member)" [disabled]="isCurrentUser(member)" (change)="setPendingRole(member.id, $event)">
+                    <select class="field role-select" [value]="primaryRole(member)" [disabled]="isCurrentUser(member)" aria-label="Rol del miembro" (change)="setPendingRole(member.id, $event)">
                       @for (role of roleOptions; track role.code) {
                         <option [value]="role.code">{{ role.label }}</option>
                       }

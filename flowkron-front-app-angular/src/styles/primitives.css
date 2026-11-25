@@ -173,6 +173,8 @@
   padding: 4px 10px;
   font-size: var(--text-xs);
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-primary {

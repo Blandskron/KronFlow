@@ -40,7 +40,7 @@
 
 .filter-active {
   background: var(--selected);
-  color: var(--primary);
+  color: var(--badge-primary-ink);
   border-color: color-mix(in srgb, var(--primary) 35%, transparent);
 }
 

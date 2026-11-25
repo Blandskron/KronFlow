@@ -6,6 +6,7 @@ import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/rout
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { Contact, ContactsApiService } from '@domains/contacts/data-access/contacts-api.service';
 import { PaginatedResponse } from '@shared/types/api.types';
+import { EmptyStateComponent, PageHeaderComponent, SkeletonComponent } from '@shared/ui';
 import { Subject, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 
 type DirectoryState =
@@ -16,7 +17,7 @@ type DirectoryState =
 @Component({
   selector: 'kronflow-contacts-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, EmptyStateComponent, PageHeaderComponent, SkeletonComponent],
   templateUrl: './contacts-page.component.html',
   styleUrl: './contacts-page.component.css'
 })

@@ -88,7 +88,7 @@
                 <td><strong>{{ doc.title }}</strong></td>
                 <td><code>{{ doc.filename }}</code></td>
                 <td>{{ documentType(doc) }}</td>
-                <td>v{{ doc.version }}</td>
+                <td>v{{ documentVersion(doc) }}</td>
                 <td>
                   <kronflow-badge [tone]="documentTone(doc)">
                     {{ documentStatusLabel(doc.status) }}

@@ -39,7 +39,7 @@
       }
 
       .tabs button.active {
-        color: var(--primary);
+        color: var(--badge-primary-ink);
         border-bottom-color: var(--primary);
       }
 
@@ -159,7 +159,7 @@
         padding: 14px;
         border-radius: 12px;
         background: var(--success-50);
-        color: var(--success-600);
+        color: var(--success-text);
         font-weight: 800;
       }
 
@@ -294,4 +294,4 @@
         }
       }
 
-.settings-links { display: flex; gap: 12px; flex-wrap: wrap; margin-block: 8px; }
+.settings-links { display: flex; gap: 8px; flex-wrap: wrap; }

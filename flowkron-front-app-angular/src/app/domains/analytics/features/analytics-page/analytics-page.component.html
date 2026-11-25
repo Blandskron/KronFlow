@@ -1,21 +1,27 @@
 
     <section class="page-section">
-      <div class="heading">
-        <h1>Métricas comerciales</h1>
-        <p class="muted">Consulta la actividad de la bandeja y la distribución de leads.</p>
-      </div>
+      <kronflow-page-header
+        eyebrow="ANALYTICS · KRONFLOW"
+        title="Métricas comerciales"
+        subtitle="Consulta la actividad de la bandeja y la distribución de leads."
+      />
 
       @if (isLoading()) {
-        <p class="muted" role="status">Cargando métricas…</p>
+        <div class="grid grid-3" role="status" aria-label="Cargando métricas">
+          <span class="sr-only">Cargando métricas…</span>
+          <kronflow-skeleton height="104px" />
+          <kronflow-skeleton height="104px" />
+          <kronflow-skeleton height="104px" />
+        </div>
       } @else if (loadError()) {
-        <article class="card empty-state">
+        <article class="card glass-surface empty-state">
           <p class="muted" role="alert">{{ loadError() }}</p>
           <button type="button" class="btn btn-secondary" (click)="loadAnalytics()">Reintentar</button>
         </article>
       } @else {
       <div class="grid grid-3">
         @for (metric of metrics(); track metric.label) {
-          <article class="card metric">
+          <article class="card glass-surface metric">
             <span>
               @switch (metric.icon) {
                 @case ('message-square') {
@@ -41,7 +47,7 @@
         }
       </div>
 
-      <article class="card panel lower">
+      <article class="card glass-surface panel lower">
         <h2>Leads por temperatura</h2>
         @for (group of leadStats(); track group.label) {
           <div class="bar-row">
@@ -56,7 +62,7 @@
       </article>
       }
 
-      <section class="card panel lower" aria-labelledby="activity-title">
+      <section class="card glass-surface panel lower" aria-labelledby="activity-title">
         <h2 id="activity-title">Actividad por día</h2>
         <form class="activity-filters" (submit)="$event.preventDefault(); loadActivity({ start_date: start.value, end_date: end.value, time_zone: zone.value })">
           <label>Desde <input #start class="field" type="date" [value]="initialFilters.start_date" required /></label>
@@ -103,18 +109,18 @@
       </section>
 
       @if (kpis(); as kpi) {
-        <section class="card panel lower" aria-label="Indicadores consolidados">
+        <section class="card glass-surface panel lower" aria-label="Indicadores consolidados">
           <h2>Indicadores consolidados (Pipeline, Campañas y Gobernanza)</h2>
           <div class="grid grid-3">
-            <article class="card metric">
+            <article class="card glass-surface metric">
               <small class="muted">Oportunidades (Abiertas / Ganadas / Perdidas)</small>
               <strong>{{ kpi.pipeline.open_opportunities }} / {{ kpi.pipeline.won_opportunities }} / {{ kpi.pipeline.lost_opportunities }}</strong>
             </article>
-            <article class="card metric">
+            <article class="card glass-surface metric">
               <small class="muted">Campañas (Entregados / Aceptados)</small>
               <strong>{{ kpi.campaigns.recipients_delivered }} / {{ kpi.campaigns.recipients_accepted }}</strong>
             </article>
-            <article class="card metric">
+            <article class="card glass-surface metric">
               <small class="muted">Eventos durables · Propuestas IA pendientes</small>
               <strong>{{ kpi.events.total_domain_events }} · {{ kpi.governance.pending_ai_proposals }}</strong>
             </article>

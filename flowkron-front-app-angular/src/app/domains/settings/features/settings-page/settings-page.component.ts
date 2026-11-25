@@ -6,6 +6,7 @@ import { InviteMemberResponse, TenantInvitation, TenantMembership } from '@domai
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { TenantService } from '@domains/auth/data-access/tenant.service';
 import { WorkspaceStateService } from '@core/services/workspace-state.service';
+import { PageHeaderComponent } from '@shared/ui';
 
 type SettingsTab = 'company' | 'profile' | 'team';
 type AlertKind = 'success' | 'error' | 'info';
@@ -18,7 +19,7 @@ interface AlertState {
 @Component({
   selector: 'kronflow-settings-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload],
+  imports: [ReactiveFormsModule, RouterLink, LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload, PageHeaderComponent],
   templateUrl: './settings-page.component.html',
   styleUrl: './settings-page.component.css'
 })
@@ -240,7 +241,7 @@ export class SettingsPageComponent implements OnInit {
       .subscribe({
         next: (result) => this.handleInviteResult(result, tenantId),
         error: () => {
-          this.teamAlert.set({ kind: 'error', text: 'No pudimos crear la invitacion.' });
+          this.teamAlert.set({ kind: 'error', text: 'No pudimos crear la invitación.' });
           this.inviting.set(false);
         }
       });
@@ -325,9 +326,9 @@ export class SettingsPageComponent implements OnInit {
     this.invitations.update((invitations) => [result.invitation, ...invitations.filter((item) => item.id !== result.invitation.id)]);
     if (result.invite_url) {
       this.lastInviteUrl.set(result.invite_url);
-      this.teamAlert.set({ kind: 'info', text: 'Invitacion creada. Usa el enlace local si el correo no salio por SMTP.' });
+      this.teamAlert.set({ kind: 'info', text: 'Invitación creada. Usa el enlace local si el correo no salió por SMTP.' });
     } else {
-      this.teamAlert.set({ kind: 'success', text: result.email_sent ? 'Invitacion enviada.' : 'Invitacion creada.' });
+      this.teamAlert.set({ kind: 'success', text: result.email_sent ? 'Invitación enviada.' : 'Invitación creada.' });
     }
     this.inviting.set(false);
     this.loadInvitations(tenantId);

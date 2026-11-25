@@ -110,6 +110,24 @@
   --error-100: #fee2e2;
   --error-500: #ef4444;
   --error-text: #991b1b;
+
+  /* Dark architectural showcase surface tokens */
+  --showcase-bg: #061b20;
+  --showcase-bg-end: #040b0e;
+  --showcase-glow-teal: rgba(45, 212, 191, 0.24);
+  --showcase-glow-cyan: rgba(6, 182, 212, 0.20);
+  --showcase-card: rgba(8, 22, 27, 0.88);
+  --showcase-card-blur: rgba(8, 22, 27, 0.72);
+  --showcase-card-solid: #08161b;
+  --showcase-edge: rgba(45, 212, 191, 0.26);
+  --showcase-shadow: 0 24px 56px rgba(2, 8, 10, 0.55);
+  --showcase-ink: #eef7f6;
+  --showcase-muted: #b7d2d8;
+  --showcase-subtle: #94b4bc;
+  --showcase-eyebrow: #5eead4;
+  --showcase-chip-bg: rgba(13, 148, 136, 0.16);
+  --showcase-chip-edge: rgba(45, 212, 191, 0.28);
+  --showcase-chip-ink: #99f6e4;
 }
 
 .dark {

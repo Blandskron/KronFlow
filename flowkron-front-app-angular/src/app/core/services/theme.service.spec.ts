@@ -23,11 +23,17 @@ describe('ThemeService', () => {
   });
 
   it('respects stored light theme preference', () => {
+    const meta = doc.createElement('meta');
+    meta.setAttribute('name', 'theme-color');
+    doc.head.appendChild(meta);
+
     localStorage.setItem('theme', 'light');
     service.initialize();
 
     expect(service.isDark()).toBe(false);
     expect(doc.documentElement.classList.contains('dark')).toBe(false);
+    expect(meta.getAttribute('content')).toBe('#f1f8f7');
+    meta.remove();
   });
 
   it('toggles between dark and light themes', () => {

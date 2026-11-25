@@ -94,6 +94,10 @@ export class ContextSummaryPanelComponent {
     return 'neutral';
   }
 
+  documentVersion(doc: DocumentRead): number {
+    return typeof doc.version === 'number' ? doc.version : 1;
+  }
+
   documentType(doc: DocumentRead): string {
     const ext = doc.filename.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? '';
     return doc.content_type || ext.toUpperCase() || 'No disponible';

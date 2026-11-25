@@ -11,6 +11,7 @@ import {
 } from '@lucide/angular';
 import { AnalyticsApiService, AnalyticsKpis } from '@domains/analytics/data-access/analytics-api.service';
 import { ActivityFilters, AnalyticsActivity } from '@domains/analytics/domain/analytics.model';
+import { PageHeaderComponent, SkeletonComponent } from '@shared/ui';
 import { finalize } from 'rxjs';
 
 function localDate(date: Date): string {
@@ -33,7 +34,9 @@ function defaultDates(): ActivityFilters {
     LucideClock,
     LucideMessageSquare,
     LucideUsers,
-    LucideXCircle
+    LucideXCircle,
+    PageHeaderComponent,
+    SkeletonComponent
   ],
   templateUrl: './analytics-page.component.html',
   styleUrl: './analytics-page.component.css'
@@ -114,17 +117,17 @@ export class AnalyticsPageComponent implements OnInit {
 
   private operationalErrorMessage(error: unknown): string {
     if (!(error instanceof HttpErrorResponse)) {
-      return 'El servicio operacional no respondio correctamente.';
+      return 'El servicio operacional no respondió correctamente.';
     }
     if (error.status === 401) {
-      return 'Tu sesion expiro o no pudo validarse con operational. Vuelve a iniciar sesion.';
+      return 'Tu sesión expiró o no pudo validarse con operational. Vuelve a iniciar sesión.';
     }
     if (error.status === 403) {
       return 'No tienes acceso a las métricas de esta empresa.';
     }
     if (error.status === 404) {
-      return 'El entorno operacional del tenant aun no esta provisionado.';
+      return 'El entorno operacional del tenant aún no está provisionado.';
     }
-    return 'El servicio operacional no respondio correctamente.';
+    return 'El servicio operacional no respondió correctamente.';
   }
 }

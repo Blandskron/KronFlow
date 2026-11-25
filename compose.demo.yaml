@@ -1,11 +1,11 @@
-name: flowkron-demo
+name: kronflow-demo
 
 include:
-  - ./flowkron-deploy/compose/bootstrap.yml
-  - ./flowkron-deploy/compose/infrastructure.yml
+  - ./deploy/compose/bootstrap.yml
+  - ./deploy/compose/infrastructure.yml
   - path:
-      - ./flowkron-deploy/compose/backend.yml
-      - ./flowkron-deploy/compose/demo.override.yml
-  - ./flowkron-deploy/compose/frontend.yml
-  - ./flowkron-deploy/compose/email.yml
-  - ./flowkron-deploy/compose/whatsapp.yml
+      - ./deploy/compose/backend.yml
+      - ./deploy/compose/demo.override.yml
+  - ./deploy/compose/frontend.yml
+  - ./deploy/compose/email.yml
+  - ./deploy/compose/whatsapp.yml

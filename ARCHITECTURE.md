@@ -1,39 +1,51 @@
 # KronFlow architecture
 
 > **KronFlow — Intelligent CRM** (*Smart conversations. Seamless automation.* · Open Source · By **BLANDSKRON**).
->
-> Los directorios de microservicios conservan su slug histórico `flowkron-*` para estabilidad de despliegue y CI.
 
 See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [implementation traceability](docs/planning/v1/TRACEABILITY.md) and [release readiness](RELEASE_READINESS.md) for current Community v1.0 (`tenant_schema_v16`) boundaries and verification.
 
-| Boundary | Implementation | Responsibilities |
+## Service topology & monorepo boundaries
+
+| Boundary | Directory & docs | Responsibilities |
 | --- | --- | --- |
-| Browser | [CRM Angular](flowkron-front-app-angular/README.md) and [landing Angular](flowkron-front-landing-angular/README.md) | Auth and tenant context, HITL inbox, contacts, opportunities pipeline, AI proposals review, campaigns, consolidated KPIs, privacy workflows, agent setup and public contact form |
-| IAM | [Django](flowkron-auth-service/README.md) | Identity, tenant membership, plan state, RBAC data, JWT issuance, account email |
-| Operational | [FastAPI and PostgreSQL](flowkron-operational-service/README.md) | Tenant provisioning (`tenant_schema_v16`, repeatable `v3–v16`), durable action outbox, consent ledger, HITL control, opportunities, AI proposals, contact points/forms/credentials, domain events, campaigns/channels, KPIs, privacy/retention, webhooks, private attachments and scheduling |
-| Agent Core | [FastAPI](flowkron-agent-core/README.md) | Channel-agnostic agent API, business context, simulation and optional LLM calls |
-| Email | [Mail service](flowkron-mail-service/README.md) | Bearer authentication, scoped sender keys, idempotency using Redis and delivery through Resend |
-| WhatsApp lab | [Baileys connector](flowkron-baileys-services/README.md) | Optional private QR pairing and consent-gated text ingestion for one tenant per instance |
-| Interfaces | [API contracts](flowkron-api-contracts/README.md) | Canonical specifications with partial runtime adoption |
+| Browser (CRM) | [frontend/app](frontend/app/README.md) | Angular 21 Zoneless SPA: auth and tenant context, HITL inbox, contacts, opportunities pipeline, AI proposals review, campaigns, consolidated KPIs, privacy workflows, agent setup |
+| Browser (Landing) | [frontend/landing](frontend/landing/README.md) | Angular 21 Zoneless SPA: public portal, Floating Glassmorphism showcase and CSRF-protected contact form |
+| IAM | [backend/auth-service](backend/auth-service/README.md) | Django/DRF: identity, tenant membership, plan state, RBAC data, RS256 JWT issuance, account email |
+| Operational | [backend/operational-service](backend/operational-service/README.md) | FastAPI + PostgreSQL 18: tenant provisioning (`tenant_schema_v16`, repeatable `v3–v16`), durable action outbox, consent ledger, HITL control, opportunities, AI proposals, contact points/forms/credentials, domain events, campaigns/channels, KPIs, privacy/retention, webhooks, private attachments and scheduling |
+| Agent Core | [backend/agent-core](backend/agent-core/README.md) | FastAPI: channel-agnostic conversational runtime, business context extraction/RAG, simulation and optional Groq LLM calls |
+| Email | [backend/mail-service](backend/mail-service/README.md) | FastAPI + Redis: Bearer authentication, scoped sender keys, idempotency using Redis and delivery through Resend |
+| WhatsApp lab | [backend/baileys-services](backend/baileys-services/README.md) | Node/TypeScript: optional private QR pairing and consent-gated text ingestion for one tenant per instance |
+| Deployment | [deploy](deploy/README.md) | Modular Docker Compose stacks (`infrastructure`, `bootstrap`, `backend`, `frontend`, `email`, `whatsapp`), credential init and smoke verification |
 
 ```mermaid
 flowchart LR
-  Landing --> IAM
-  CRM --> IAM
-  CRM --> Operational
-  CRM --> Agent
+  Landing[frontend/landing] --> IAM[backend/auth-service :8000]
+  CRM[frontend/app] --> IAM
+  CRM --> Operational[backend/operational-service :8001]
+  CRM --> Agent[backend/agent-core :8002]
   IAM -->|Provisioning| Operational
-  IAM -->|Transactional email| Gateway
+  IAM -->|Transactional email| Gateway[backend/mail-service]
   Gateway --> Resend
   Gateway --> Redis
   Agent -->|Context persistence| Operational
-  Adapter[External WhatsApp adapter] -->|Normalized events| Operational
+  Adapter[backend/baileys-services / WhatsApp] -->|Normalized events| Operational
   IAM --> PostgreSQL
   Operational --> PostgreSQL
 ```
 
-IAM issues JWTs consumed by Operational and Agent Core. Operational resolves database schemas from authenticated tenant context. Ingestion uses separate tenant code and ingest key headers. The email gateway has its own credential and sender allowlist.
+## Integration contracts & service boundaries
 
-The stack uses one PostgreSQL cluster for IAM and Operational and a Redis instance for local cache and mail idempotency. IAM issues signing keys at bootstrap and shares the public key with the validation services. Only local development use is documented for the included Compose configuration.
+Services never share internal ORM models, SQL queries or domain repositories; every cross-service boundary communicates over explicit HTTP contracts exposed under `/api/v1/` (and runtime `/openapi.json`):
 
-See the [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [deployment notes](flowkron-deploy/README.md).
+1. **Tenant resolution without trusting `schema_name`:** Public and dashboard contracts never accept a physical database `schema_name`. `operational-service` resolves `schema_name` internally from the authenticated tenant context.
+2. **Three strict authentication boundaries:**
+   - **Dashboard Angular (`frontend/app`) → `auth-service` / `operational-service` / `agent-core`:** `Authorization: Bearer <JWT RS256>` issued by IAM with `tenant_id`, `roles`, `permissions` and `subscription` claims. Refresh tokens are rejected for API resource access.
+   - **Channel adapters (`baileys-services` / external WhatsApp) → `operational-service` ingest:** Rotatable `X-Tenant-Code` + `X-Ingest-Key` (never end-user JWTs).
+   - **Service-to-service internal routes (`/internal/*`):** Shared `X-Internal-Token` (`auth-service` → `operational-service` runtime provisioning; `agent-core` → `operational-service` context persistence); never exposed to public clients.
+3. **Standard response & error semantics:** Responses follow standard JSON envelopes (`success`, `data`, optional `meta`/`links` and stable pagination), `snake_case` backend payloads, ISO 8601 UTC timestamps and domain-prefixed error codes (`AUTH_*`, `OPERATIONAL_*`, `AI_*`, `TENANT_*`, `WHATSAPP_*`, `PLATFORM_*`).
+4. **AI metadata & versioned events:** Conversational AI responses expose model confidence, retrieval `sources`, prepared typed `actions` and `requires_human` handoff state for HITL approval (`at-most-once` execution). Domain events and webhook envelopes carry `event_id`, `event_type`, `event_version`, `occurred_at`, `producer`, `tenant_id` and `correlation_id`.
+5. **Backward-compatible cryptographic defaults:** Existing JWT issuer (`JWT_ISSUER=flowkron-auth-service`), audience (`JWT_AUDIENCE=flowkron`), encryption salt (`SIGNING_KEY_ENCRYPTION_SALT=flowkron-auth-service`), `/run/flowkron` container secret mounts and browser storage keys remain preserved to protect existing deployments and session continuity.
+
+IAM issues signing keys at bootstrap and shares the public key with validation services over a read-only mount. PostgreSQL hosts IAM and Operational schemas in one cluster, while Redis handles local cache and mail idempotency. Only local development use is documented for the included Compose configuration.
+
+See the [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [deployment notes](deploy/README.md).

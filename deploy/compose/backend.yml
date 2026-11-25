@@ -1,0 +1,158 @@
+services:
+  auth-service:
+    build:
+      context: ../../backend/auth-service
+      dockerfile: Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.base}
+      DJANGO_SECRET_KEY_FILE: /run/flowkron/django_secret_key
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      AUTH_SELF_SIGNUP_ENABLED: ${AUTH_SELF_SIGNUP_ENABLED:-True}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,auth-service}
+      DATABASE_URL_FILE: /run/flowkron/database_url
+      AUTH_DATABASE_SCHEMA: ${AUTH_DATABASE_SCHEMA:-auth_}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://127.0.0.1:4200,http://localhost:${LANDING_PORT:-8080},http://127.0.0.1:${LANDING_PORT:-8080},http://localhost:${APP_PORT:-8081},http://127.0.0.1:${APP_PORT:-8081},http://localhost:8000,http://127.0.0.1:8000}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:${APP_PORT:-8081}}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-flowkron}
+      JWT_ISSUER: ${JWT_ISSUER:-flowkron-auth-service}
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-keys/jwt_private.pem}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/jwt-public/jwt_public.pem}
+      SIGNING_KEY_ENCRYPTION_KEY_FILE: /run/flowkron/signing_key_encryption_key
+      SIGNING_KEY_ENCRYPTION_SALT: ${SIGNING_KEY_ENCRYPTION_SALT:-flowkron-auth-service}
+      GENERATE_JWT_KEYS: ${GENERATE_JWT_KEYS:-True}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-True}
+      RUN_SEEDS: ${RUN_SEEDS:-True}
+      RUN_COLLECTSTATIC: ${RUN_COLLECTSTATIC:-True}
+      CREATE_SUPERUSER: ${CREATE_SUPERUSER:-False}
+      FLOWKRON_BOOTSTRAP_ADMIN: ${FLOWKRON_BOOTSTRAP_ADMIN:-False}
+      BAILEYS_INTERNAL_TOKEN_FILE: /run/flowkron/baileys_internal_token
+      BAILEYS_SERVICE_URL: http://baileys-services:3001
+      FLOWKRON_BIND_HOST: ${FLOWKRON_BIND_HOST:-127.0.0.1}
+      FLOWKRON_PROVISION_WORKSPACES: "true"
+      FLOWKRON_BOOTSTRAP_PASSWORD_FILE: /run/flowkron/bootstrap_admin_password
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+      IAM_PLATFORM_TENANT_SLUG: ${IAM_PLATFORM_TENANT_SLUG:-flowkron-platform}
+      IAM_AUTO_VERIFY_USER_EMAIL: ${IAM_AUTO_VERIFY_USER_EMAIL:-False}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      MAIL_GATEWAY_URL: ${MAIL_GATEWAY_URL:-http://mail-service:8000}
+      MAIL_INTERNAL_API_KEY: ${MAIL_INTERNAL_API_KEY:-}
+      MAIL_SENDER_KEY: ${MAIL_SENDER_KEY:-flowkron}
+      EMAIL_HOST: ${EMAIL_HOST:-mail.blandskron.com}
+      EMAIL_PORT: ${EMAIL_PORT:-465}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-no-reply@flowkron.example}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-False}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-True}
+      EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-10}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-${EMAIL_HOST_USER:-no-reply@flowkron.example}}
+      EMAIL_LOG_TOKEN_ON_FAILURE: ${EMAIL_LOG_TOKEN_ON_FAILURE:-False}
+      OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://operational-service:8001}
+      OPERATIONAL_INTERNAL_TOKEN_FILE: /run/flowkron/operational_internal_token
+    ports:
+      - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${AUTH_PORT:-8000}:8000"
+    volumes:
+      - ${FLOWKRON_JWT_MOUNT:-kronflow-jwt-keys}:/app/keys
+      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-kronflow-jwt-public}:/jwt-public
+      - ${FLOWKRON_MEDIA_MOUNT:-kronflow-auth-media}:/app/media
+      - kronflow-iam-config:/run/flowkron:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      operational-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=5).read()\""]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - kronflow-network
+
+  operational-service:
+    build:
+      context: ../../backend/operational-service
+      dockerfile: Dockerfile
+    environment:
+      FLOWKRON_SETTINGS_DIR: /run/flowkron
+      DATABASE_SCHEMA: ${OPERATIONAL_DATABASE_SCHEMA:-operational}
+      DATABASE_GRANT_ROLE: ${OPERATIONAL_DATABASE_GRANT_ROLE:-}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-flowkron}
+      JWT_ISSUER: ${JWT_ISSUER:-flowkron-auth-service}
+      JWT_PUBLIC_KEY_PATH: ${OPERATIONAL_JWT_PUBLIC_KEY_PATH:-/keys/jwt_public.pem}
+      JWT_PUBLIC_KEY: ${OPERATIONAL_JWT_PUBLIC_KEY:-}
+      CORS_ALLOWED_ORIGINS: ${OPERATIONAL_CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://127.0.0.1:4200,http://localhost:${LANDING_PORT:-8080},http://127.0.0.1:${LANDING_PORT:-8080},http://localhost:${APP_PORT:-8081},http://127.0.0.1:${APP_PORT:-8081},http://localhost:8000,http://127.0.0.1:8000}
+    ports:
+      - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${OPERATIONAL_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-kronflow-jwt-public}:/keys:ro
+      - kronflow-operational-config:/run/flowkron:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/readyz', timeout=4).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - kronflow-network
+
+  agent-core:
+    build:
+      context: ../../backend/agent-core
+      dockerfile: Dockerfile
+    environment:
+      PERSISTENCE_MODE: ${AGENT_CORE_PERSISTENCE_MODE:-operational}
+      ALLOW_LOCAL_DB_BOOTSTRAP: ${AGENT_CORE_ALLOW_LOCAL_DB_BOOTSTRAP:-false}
+      OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://operational-service:8001}
+      FLOWKRON_SETTINGS_DIR: /run/flowkron
+      JWT_PUBLIC_KEY_PATH: ${AGENT_CORE_JWT_PUBLIC_KEY_PATH:-/keys/jwt_public.pem}
+      JWT_PUBLIC_KEY: ${AGENT_CORE_JWT_PUBLIC_KEY:-}
+      JWT_AUDIENCE: ${AGENT_CORE_JWT_AUDIENCE:-${JWT_AUDIENCE:-flowkron}}
+      JWT_ISSUER: ${AGENT_CORE_JWT_ISSUER:-${JWT_ISSUER:-flowkron-auth-service}}
+      ALLOW_INSECURE_TENANT_HEADER: ${AGENT_CORE_ALLOW_INSECURE_TENANT_HEADER:-false}
+      CORS_ALLOWED_ORIGINS: ${AGENT_CORE_CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://127.0.0.1:4200,http://localhost:${APP_PORT:-8081},http://127.0.0.1:${APP_PORT:-8081}}
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-auto}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      CHAT_COMPLETION_MAX_TOKENS: ${CHAT_COMPLETION_MAX_TOKENS:-2000}
+      CHAT_COMPLETION_TEMPERATURE: ${CHAT_COMPLETION_TEMPERATURE:-0.3}
+      CHAT_COMPLETION_TIMEOUT_SECONDS: ${CHAT_COMPLETION_TIMEOUT_SECONDS:-60}
+    ports:
+      - "${FLOWKRON_BIND_HOST:-127.0.0.1}:${AGENT_CORE_PORT:-8002}:8002"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      operational-service:
+        condition: service_healthy
+    volumes:
+      - ${FLOWKRON_JWT_PUBLIC_MOUNT:-kronflow-jwt-public}:/keys:ro
+      - kronflow-agent-config:/run/flowkron:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/ready', timeout=4).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - kronflow-network
+
+networks:
+  kronflow-network:
+    driver: bridge
+
+volumes:
+  kronflow-jwt-keys:
+  kronflow-jwt-public:
+  kronflow-auth-media:

@@ -19,7 +19,7 @@ Esta es la vista transversal del sistema ejecutable. El código, la configuraci�
 | Contexto empresarial y simulación IA | `IMPLEMENTED` | Agent Core + Operational + App | Plantillas, carga documental, recuperación, simulación y evaluación sintética con presupuesto por solicitud | Evaluación semántica con proveedor real en producción |
 | Landing y contacto público | `PARTIAL` | Landing + Auth | CSRF, `POST /contact/messages/` y build limpio | Textos legales finales y pruebas browser-integradas |
 | Adaptador WhatsApp | `PARTIAL` | Baileys (laboratorio) | QR, ingesta, turnos durables admitidos por Operational, consentimiento y recibos (32/32 tests) | Validación manual en cuenta real autorizada (`FK-14`) |
-| Contratos compartidos | `IMPLEMENTED` | API Contracts | JSON Schema, YAML y docs validados en CI | Sincronización continua endpoint a endpoint |
+| Contratos compartidos | `IMPLEMENTED` | Servicios + Arquitectura | OpenAPI por servicio (`/openapi.json`) y fronteras/reglas consolidadas en `ARCHITECTURE.md` | Sincronización continua endpoint a endpoint |
 | Compose local y CI | `IMPLEMENTED` | Deploy + CI | Validate verde (`45222208571`): builds, PostgreSQL, Compose estándar/demo y auditorías | Revisión de excepción `picomatch` antes del 18 dic 2026 |
 
-Ver también: [Arquitectura](../ARCHITECTURE.md) · [Readiness](../RELEASE_READINESS.md) · [Gates de release](planning/v1/RELEASE_GATES.md) · [Trazabilidad](planning/v1/TRACEABILITY.md) · [Rutas CRM](../flowkron-front-app-angular/docs/ROUTES_AND_APIS.md).
+Ver también: [Arquitectura](../ARCHITECTURE.md) · [Readiness](../RELEASE_READINESS.md) · [Gates de release](planning/v1/RELEASE_GATES.md) · [Trazabilidad](planning/v1/TRACEABILITY.md) · [Rutas CRM](../frontend/app/docs/ROUTES_AND_APIS.md).

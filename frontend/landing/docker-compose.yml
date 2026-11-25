@@ -1,0 +1,40 @@
+services:
+  landing:
+    env_file:
+      - path: .env.local
+        required: false
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8081}
+        CONTACT_API_BASE_URL: ${CONTACT_API_BASE_URL:-http://localhost:8000}
+        SALES_WHATSAPP_NUMBER: ${SALES_WHATSAPP_NUMBER:-}
+    container_name: kronflow-landing
+    ports:
+      - "${LANDING_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  visual-test:
+    image: mcr.microsoft.com/playwright:v1.53.0-noble
+    profiles:
+      - visual
+    depends_on:
+      landing:
+        condition: service_healthy
+    working_dir: /workspace
+    environment:
+      BASE_URL: http://landing
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8081}
+    volumes:
+      - ./tests/visual:/workspace/tests/visual:ro
+      - ./visual-test-results:/workspace/visual-test-results
+    command: >
+      bash -lc "npm init -y >/dev/null
+      && npm install --save-dev @playwright/test@1.53.0 >/dev/null
+      && npx playwright test tests/visual --reporter=list"

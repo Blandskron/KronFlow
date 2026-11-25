@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [flowkron-front-app-angular, flowkron-front-landing-angular]
+        service: [frontend/app, frontend/landing]
     defaults:
       run:
         working-directory: ${{ matrix.service }}
@@ -33,25 +33,25 @@ jobs:
         run: |
           report=$(mktemp)
           if npm audit --json > "$report"; then
-            node ../.github/scripts/check-dev-audit.mjs < "$report"
+            node ../../.github/scripts/check-dev-audit.mjs < "$report"
           else
             status=$?
             [ "$status" -eq 1 ] || exit "$status"
-            node ../.github/scripts/check-dev-audit.mjs < "$report"
+            node ../../.github/scripts/check-dev-audit.mjs < "$report"
           fi
 
   whatsapp-lab:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: flowkron-baileys-services
+        working-directory: backend/baileys-services
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: flowkron-baileys-services/package-lock.json
+          cache-dependency-path: backend/baileys-services/package-lock.json
       - run: npm ci
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
@@ -62,14 +62,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - service: flowkron-auth-service
+          - service: backend/auth-service
             requirements: requirements.txt
             checks: |
               python scripts/generate_jwt_keys.py
               export DJANGO_DEBUG=True JWT_PRIVATE_KEY_PATH=keys/jwt_private.pem JWT_PUBLIC_KEY_PATH=keys/jwt_public.pem
               python manage.py check
               python manage.py test
-          - service: flowkron-operational-service
+          - service: backend/operational-service
             requirements: requirements-dev.txt
             checks: |
               export FLOWKRON_TEST_POSTGRES_BIN="$(pg_config --bindir)"
@@ -78,10 +78,10 @@ jobs:
               "$FLOWKRON_TEST_POSTGRES_BIN/postgres" --version
               python -m unittest discover -s tests -v
               python -c 'from app.main import app; assert app.openapi()["paths"]'
-          - service: flowkron-agent-core
+          - service: backend/agent-core
             requirements: requirements-dev.txt
             checks: python -m pytest -q
-          - service: flowkron-mail-service
+          - service: backend/mail-service
             requirements: requirements.txt
             checks: python -m pytest -q
     defaults:
@@ -97,20 +97,12 @@ jobs:
       - run: ${{ matrix.checks }}
       - run: pip-audit -r ${{ matrix.requirements }}
 
-  contracts-and-compose:
+  compose-config:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: python -m pip install pyyaml jsonschema
-      - working-directory: flowkron-api-contracts
-        run: |
-          python scripts/validate-json-schemas.py
-          python scripts/validate-yaml-structure.py
-          python scripts/validate-agent-docs.py
-      - run: docker compose config --quiet
+      - run: docker compose --env-file .env.example config --quiet
+      - run: docker compose -f compose.demo.yaml --env-file .env.example config --quiet
 
   compose-startup:
     runs-on: ubuntu-latest
@@ -129,12 +121,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: docker compose -f ${{ matrix.compose }} -p flowkron-smoke up --build --wait --wait-timeout 180
-      - run: python flowkron-deploy/bootstrap/smoke.py flowkron-smoke ${{ matrix.smoke_args }}
+      - run: docker compose -f ${{ matrix.compose }} -p kronflow-smoke up --build --wait --wait-timeout 180
+      - run: python deploy/bootstrap/smoke.py kronflow-smoke ${{ matrix.smoke_args }}
       - if: failure()
-        run: docker compose -f ${{ matrix.compose }} -p flowkron-smoke ps --all
+        run: docker compose -f ${{ matrix.compose }} -p kronflow-smoke ps --all
       - if: always()
-        run: docker compose -f ${{ matrix.compose }} -p flowkron-smoke down
+        run: docker compose -f ${{ matrix.compose }} -p kronflow-smoke down
 
   secrets:
     runs-on: ubuntu-latest

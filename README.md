@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/brand/kronflow-horizontal-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="assets/brand/kronflow-horizontal-light.svg" />
-    <img src="assets/brand/kronflow-horizontal-dark.svg" alt="KronFlow — Intelligent CRM by BLANDSKRON" width="380" />
+    <img src="assets/brand/kronflow-horizontal-dark.svg" alt="KronFlow — Intelligent CRM by BLANDSKRON" width="404" />
   </picture>
 </p>
 
@@ -21,9 +21,41 @@ Cada workspace gestiona su propio esquema PostgreSQL aislado (`tenant_schema_v16
 
 KronFlow es un proyecto independiente y no tiene afiliación ni respaldo de Meta o WhatsApp. Se distribuye bajo [Apache License 2.0](LICENSE). Consulta la [revisión de release](RELEASE_READINESS.md) para el alcance de verificación y despliegue.
 
-> **Nota de estabilidad operativa:** Para preservar compatibilidad con Compose, Dockerfiles, contratos y pipelines existentes, los directorios de servicio en el repositorio conservan su slug histórico (`flowkron-*`). Consulta [ROADMAP.md](ROADMAP.md) para el detalle del rebranding y la arquitectura visual.
+El repositorio ofrece una vista previa de código fuente y demo local. Antes de hospedarlo para otras organizaciones, sigue la [guía de seguridad de despliegue](deploy/docs/SECURITY.md) y revisa [componentes de terceros](THIRD_PARTY.md).
 
-El repositorio ofrece una vista previa de código fuente y demo local. Antes de hospedarlo para otras organizaciones, sigue la [guía de seguridad de despliegue](flowkron-deploy/docs/SECURITY.md) y revisa [componentes de terceros](THIRD_PARTY.md).
+## Capturas de la plataforma
+
+Capturas reales generadas sobre los builds de producción de KronFlow (modo oscuro por defecto y modo claro con contraste WCAG 2.2 AA).
+
+| Landing Pública · Modo Oscuro | Cambio de Tema · Modo Claro |
+| :---: | :---: |
+| ![Landing Pública de KronFlow en modo oscuro](docs/screenshots/01-landing-dark.png) | ![Landing Pública de KronFlow en modo claro](docs/screenshots/02-landing-light.png) |
+| **Inicio de Sesión · Auth IAM (JWT RS256)** | **Workspace Home · Shell CRM** |
+| ![Inicio de sesión de KronFlow CRM](docs/screenshots/03-crm-login.png) | ![Inicio del workspace de KronFlow CRM](docs/screenshots/04-crm-home.png) |
+| **Directorio de Contactos y Consentimiento** | **Pipeline de Oportunidades** |
+| ![Directorio de contactos en KronFlow CRM](docs/screenshots/05-crm-contacts.png) | ![Pipeline de oportunidades en KronFlow CRM](docs/screenshots/06-crm-pipeline.png) |
+| **Contexto Empresarial (RAG)** | **Simulador IA + Trazas de Fuentes** |
+| ![Contexto empresarial RAG en KronFlow CRM](docs/screenshots/07-crm-business-context.png) | ![Simulador IA e inspector RAG en KronFlow CRM](docs/screenshots/08-crm-ai-simulator.png) |
+| **Campañas y Canales Delegados** | **Métricas Comerciales y KPIs** |
+| ![Campañas y canales en KronFlow CRM](docs/screenshots/09-crm-campaigns.png) | ![Métricas comerciales y KPIs en KronFlow CRM](docs/screenshots/10-crm-analytics.png) |
+
+## Estructura del repositorio
+
+```text
+KronFlow/
+├── backend/
+│   ├── auth-service/          # IAM, JWT RS256, tenants, membresías y RBAC (Django)
+│   ├── operational-service/   # CRM multi-schema PG18, inbox HITL, pipeline, campañas y privacidad (FastAPI)
+│   ├── agent-core/            # Runtime conversacional omnicanal, RAG y simulador IA (FastAPI)
+│   ├── mail-service/          # Gateway HTTP de correo transaccional e idempotencia Redis (FastAPI)
+│   └── baileys-services/      # Conector WhatsApp QR por tenant con ingestión de consentimiento (Node/TS)
+├── frontend/
+│   ├── app/                   # KronFlow CRM Web App (Angular 21 Zoneless · OnPush)
+│   └── landing/               # Portal público y formulario CSRF (Angular 21 Zoneless · OnPush)
+├── deploy/                    # Stack Docker Compose modular, bootstrap y smoke E2E
+├── assets/brand/              # Logotipos, isotipos, OG card y diagramas SVG oficiales
+└── docs/                      # Planificación v1, estado de implementación y capturas reales
+```
 
 ## Start locally
 
@@ -44,7 +76,7 @@ On Windows, clone into a short directory path if Git reports `Filename too long`
 | IAM health | http://localhost:8000/healthz/ |
 | Operational health | http://localhost:8001/healthz |
 | Agent Core health | http://localhost:8002/health |
-| Email gateway | Internal address at `http://flowkron-mail-service:8000` |
+| Email gateway | Internal address at `http://mail-service:8000` |
 
 ### Start from scratch
 
@@ -61,10 +93,10 @@ docker compose -f compose.demo.yaml up --build --wait
 On its first local start, the demo creates the verified Django superuser `admin@example.com` as owner of **BLANDSKRON** and loads a generic business context for the agent. Sign in to [KronFlow CRM](http://localhost:8081/login) or [Django admin](http://localhost:8000/admin/). Retrieve its generated password in your private terminal:
 
 ```sh
-docker compose -f compose.demo.yaml exec -T flowkron-auth-service cat /run/flowkron/bootstrap_admin_password
+docker compose -f compose.demo.yaml exec -T auth-service cat /run/flowkron/bootstrap_admin_password
 ```
 
-Console mail, local agent responses and the WhatsApp connector work with no provider credentials for a local install. If you need email delivery to real inboxes, configure the transactional provider below. See the [deployment guide](flowkron-deploy/README.md) for ports, persistence and server configuration.
+Console mail, local agent responses and the WhatsApp connector work with no provider credentials for a local install. If you need email delivery to real inboxes, configure the transactional provider below. See the [deployment guide](deploy/README.md) for ports, persistence and server configuration.
 
 ## Configure account registration and Google sign-in
 
@@ -79,11 +111,11 @@ Apply the configuration and account migration with `docker compose up --build --
 
 ## Enable transactional email
 
-The included [KronFlow mail service](flowkron-mail-service/README.md) sends email through Resend. Set the following values in your private environment file.
+The included [KronFlow mail service](backend/mail-service/README.md) sends email through Resend. Set the following values in your private environment file.
 
 ```dotenv
 EMAIL_BACKEND=apps.shared.email_backend.EmailGatewayBackend
-MAIL_GATEWAY_URL=http://flowkron-mail-service:8000
+MAIL_GATEWAY_URL=http://mail-service:8000
 MAIL_INTERNAL_API_KEY=replace-with-a-generated-client-secret
 MAIL_SENDER_KEY=flowkron
 EMAIL_TIMEOUT=25
@@ -96,8 +128,8 @@ Set a valid provider key and replace the example sender with an address on your 
 
 ## Connect a channel or AI provider
 
-- **WhatsApp** pairs one account per workspace using the QR in the CRM. The [Baileys connector](flowkron-baileys-services/README.md) records consent, stores text conversations and relays replies from Agent Core.
-- **AI** in Agent Core can use Groq or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](flowkron-agent-core/docs/CONFIGURATION.md) for model selection and local mode.
+- **WhatsApp** pairs one account per workspace using the QR in the CRM. The [Baileys connector](backend/baileys-services/README.md) records consent, stores text conversations and relays replies from Agent Core.
+- **AI** in Agent Core can use Groq or local context. Set `GROQ_API_KEY` in your private `.env` and recreate Agent Core to use Groq with the default `CHAT_PROVIDER=auto`. See the [configuration guide](backend/agent-core/docs/CONFIGURATION.md) for model selection and local mode.
 - **Operating costs** depend on the infrastructure, messaging, email and AI providers selected by the instance operator.
 
 ## Develop and contribute

@@ -168,6 +168,19 @@ Para garantizar **cero regresiones** en Docker, Nginx, CI/CD (`.github/workflows
   - Lighthouse Desktop: Landing **`100 / 100 / 100 / 100`** (Perf / A11y / BP / SEO); CRM Login **`99 / 100 / 96 / 63`** (Perf / A11y / BP / SEO con `robots.txt` válido y `noindex` intencional); Mobile default throttling: Landing `81 / 100 / 100 / 100`, CRM Login `87 / 100 / 96 / 63`.
   - `npm run lint`, `npm test` (`28/28` CRM, `11/11` Landing), `npm run build` (`0` warnings, `0` alertas CSS), `npm audit --omit=dev --audit-level=high` (`0` vulnerabilidades) y paridad SHA256 en `tokens.css`, `primitives.css` y `reset.css`.
 
+### Etapa 8 — Reorganización del Monorepo (`backend/`, `frontend/`, `deploy/`) y Galería en `README.md`
+- **Estado:** `DONE`
+- **Dependencias:** Etapa 7.
+- **Tareas:**
+  - [x] Consolidar en [`ARCHITECTURE.md`](ARCHITECTURE.md) el conocimiento y las invariantes de contratos de `flowkron-api-contracts` (límites de servicio, autenticación RS256 / `X-Tenant-Code` + `X-Ingest-Key` / `X-Internal-Token`, resolución interna de `schema_name`, sobres JSON estándar y eventos versionados) y eliminar `flowkron-api-contracts/`.
+  - [x] Reorganizar la estructura raíz en `backend/` (`agent-core`, `auth-service`, `baileys-services`, `mail-service`, `operational-service`), `frontend/` (`app`, `landing`) y `deploy/`, eliminando el prefijo `flowkron-` de los directorios y servicios Compose.
+  - [x] Actualizar `compose.yaml`, `compose.demo.yaml`, `deploy/compose/*.yml`, `deploy/bootstrap/*`, Dockerfiles, `angular.json`, `package.json` / `package-lock.json`, `.env.example`, `.gitignore` y `.github/workflows/validate.yml` (incluyendo rutas `../../.github/scripts/check-dev-audit.mjs`).
+  - [x] Incorporar la galería completa de 10 capturas reales y el mapa de estructura en [`README.md`](README.md), junto con actualización de [`index.html`](index.html), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`RELEASE_READINESS.md`](RELEASE_READINESS.md) y [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+- **Criterios de aceptación:**
+  - `docker compose --env-file .env.example config --quiet` y `docker compose -f compose.demo.yaml --env-file .env.example config --quiet` resuelven con exit code `0`.
+  - `frontend/app` y `frontend/landing` compilan (`dist/app` y `dist/landing`), pasan `lint`, `test` y auditorías de seguridad tras la migración.
+  - Todas las capturas enlazadas en `README.md` existen en `docs/screenshots/` y `index.html` mantiene `0` violaciones WCAG 2.2 AA.
+
 ---
 
 ## 4. Registro de Seguimiento de Etapas
@@ -177,8 +190,9 @@ Para garantizar **cero regresiones** en Docker, Nginx, CI/CD (`.github/workflows
 | **Etapa 0** | Auditoría completa, skill `ui-ux-pro-max` y `ROADMAP.md` | **DONE** | `search.py` CLI verificado en Python 3.13 | 48 archivos de skill instalados en `.agents/skills/ui-ux-pro-max/`. |
 | **Etapa 1** | Identidad visual original y kit SVG en `assets/brand/` | **DONE** | 8 SVGs válidos + `kronflow-icon.svg` en ambos `public/` | 0 archivos `flowkron-*.svg` remanentes. |
 | **Etapa 2** | Design System unificado (`tokens`, `reset`, `primitives`, `ThemeService`) | **DONE** | `tokens.css`, `reset.css` y `primitives.css` sincronizados byte-a-byte | Paleta Teal/Esmeralda/Cyan, `Sora` + `Inter` + `JetBrains Mono`, `styles-*.css` = `10.21 kB` (`2.78 kB` transfer) en ambas apps. |
-| **Etapa 3** | Renombrado y pulido UX/UI de CRM (`flowkron-front-app-angular`) | **DONE** | `lint` (0/0) + `test` (28/28) + `build` (`304.40 kB` initial) + `audit` (0 vulns) | 0 selectores `flowkron-*`, 0 colores violetas, WCAG 2.5.3 corregido en `Salir`, padding `.page-section` unificado. |
-| **Etapa 4** | Rediseño de Landing (`flowkron-front-landing-angular`) y `index.html` | **DONE** | `lint` (0/0) + `test` (11/11) + `build` (`262.86 kB` initial) + `audit` (0 vulns) | Bento Grid `01–04`, preview IA/RAG, `contactForm` CSRF preservado, `index.html` actualizado. |
+| **Etapa 3** | Renombrado y pulido UX/UI de CRM (`frontend/app`) | **DONE** | `lint` (0/0) + `test` (28/28) + `build` (`304.40 kB` initial) + `audit` (0 vulns) | 0 selectores `flowkron-*`, 0 colores violetas, WCAG 2.5.3 corregido en `Salir`, padding `.page-section` unificado. |
+| **Etapa 4** | Rediseño de Landing (`frontend/landing`) y `index.html` | **DONE** | `lint` (0/0) + `test` (11/11) + `build` (`262.86 kB` initial) + `audit` (0 vulns) | Bento Grid `01–04`, preview IA/RAG, `contactForm` CSRF preservado, `index.html` actualizado. |
 | **Etapa 5** | READMEs, documentación, metadatos y `smoke.py` | **DONE** | Revisión transversal y `git grep` | `README.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `NOTICE`, `smoke.py` y docs de frontends actualizados. |
 | **Etapa 6** | Validación Playwright, capturas, WCAG 2.2 AA y Lighthouse | **DONE** | 15 auditorías `axe-core` WCAG 2.2 AA (`0` violaciones, `0` overflow, `0` console errors) + Lighthouse + inspección visual | Landing LH: `98/100/100/91`; CRM Login LH: `100/100/96/54` (`noindex`); `docs/screenshots/01..10-*.png` actualizadas. |
 | **Etapa 7** | Auditoría independiente y perfeccionamiento de producción | **DONE** | `31/31` auditorías `axe-core` WCAG 2.2 AA (`0` violaciones Dark/Light/Móvil + `index.html`) + Lighthouse Desktop/Mobile + recarga de tema + inspección visual | Persistencia `ThemeService` CRM corregida; `0` hex hardcodeados en `auth-layout`; `analytics`/`contacts`/`settings` pulidos; Landing LH Desktop **`100/100/100/100`**. |
+| **Etapa 8** | Reorganización monorepo (`backend/`, `frontend/`, `deploy/`) y capturas en `README.md` | **DONE** | `docker compose config --quiet` (standard + demo) + builds/tests frontend/baileys + `py_compile` + WCAG `index.html` | Eliminado `flowkron-api-contracts` con reglas absorbidas en `ARCHITECTURE.md`; galería de 10 capturas añadida a `README.md`. |

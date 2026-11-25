@@ -321,9 +321,9 @@
             <span class="eyebrow">01 / Arquitectura del ecosistema</span>
             <h2>Microservicios desacoplados con contratos explícitos</h2>
             <p>
-              Cada dominio opera en su propio servicio con contratos JSON Schema / OpenAPI en
-              <code>flowkron-api-contracts</code>, autenticación JWT RS256 centralizada y aislamiento estricto por
-              tenant.
+              Cada dominio opera en su propio servicio dentro de <code>backend/</code>, <code>frontend/</code> y
+              <code>deploy/</code> con contratos explícitos <code>/api/v1/</code>, autenticación JWT RS256 centralizada
+              y aislamiento estricto por tenant.
             </p>
           </div>
 
@@ -333,7 +333,7 @@
                 <h3>Auth &amp; IAM</h3>
                 <span class="badge badge-primary">Django</span>
               </div>
-              <code>flowkron-auth-service · :8000</code>
+              <code>backend/auth-service · :8000</code>
               <p>
                 Registro con verificación de correo, login + Google Sign-In, JWT RS256 con rotación de refresh tokens,
                 RBAC multi-tenant, onboarding y administración de workspaces.
@@ -345,7 +345,7 @@
                 <h3>Operational CRM</h3>
                 <span class="badge badge-success">FastAPI · PG18</span>
               </div>
-              <code>flowkron-operational-service · :8001</code>
+              <code>backend/operational-service · :8001</code>
               <p>
                 Esquema por tenant (<code>v16</code>): contactos, leads, pipeline de oportunidades, bandeja HITL, propuestas IA,
                 campañas, consentimiento, privacidad (export/erasure/retention) y KPIs consolidados.
@@ -357,7 +357,7 @@
                 <h3>Agent Core (IA + RAG)</h3>
                 <span class="badge badge-info">FastAPI · Python</span>
               </div>
-              <code>flowkron-agent-core · :8002</code>
+              <code>backend/agent-core · :8002</code>
               <p>
                 Ingesta de documentos empresariales (PDF, DOCX, TXT, MD), plantillas descargables, asistente de
                 configuración, simulador RAG con trazas de fuentes y reglas de corrección.
@@ -369,7 +369,7 @@
                 <h3>KronFlow CRM Web App</h3>
                 <span class="badge badge-primary">Angular 21</span>
               </div>
-              <code>flowkron-front-app-angular · :8081</code>
+              <code>frontend/app · :8081</code>
               <p>
                 SPA privada 100% Zoneless + OnPush con arquitectura Feature-Based/DDD, Design System atómico WCAG 2.2
                 AA, Vitest, ESLint estricto y Nginx endurecido.
@@ -381,7 +381,7 @@
                 <h3>KronFlow Landing</h3>
                 <span class="badge badge-primary">Angular 21</span>
               </div>
-              <code>flowkron-front-landing-angular · :8080</code>
+              <code>frontend/landing · :8080</code>
               <p>
                 Portal público con Floating Glassmorphism, tipografía Sora e Inter, formulario de contacto protegido por
                 CSRF y modales legales con <code>&lt;dialog&gt;</code> nativo.
@@ -393,7 +393,7 @@
                 <h3>WhatsApp &amp; Mail</h3>
                 <span class="badge badge-warning">Node · Python</span>
               </div>
-              <code>flowkron-baileys-services · flowkron-mail-service</code>
+              <code>backend/baileys-services · backend/mail-service</code>
               <p>
                 Conector WhatsApp QR por tenant con webhooks firmados y servicio SMTP-over-HTTP dedicado para correos
                 transaccionales de verificación, recuperación y campañas.
@@ -574,12 +574,12 @@
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>CRM Angular 21 (<code>flowkron-front-app-angular</code>)</strong></td>
+                  <td><strong>CRM Angular 21 (<code>frontend/app</code>)</strong></td>
                   <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code></td>
                   <td><span class="badge badge-success">PASS · 28/28 tests</span></td>
                 </tr>
                 <tr>
-                  <td><strong>Landing Angular 21 (<code>flowkron-front-landing-angular</code>)</strong></td>
+                  <td><strong>Landing Angular 21 (<code>frontend/landing</code>)</strong></td>
                   <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code></td>
                   <td><span class="badge badge-success">PASS · 11/11 tests</span></td>
                 </tr>
@@ -590,7 +590,7 @@
                 </tr>
                 <tr>
                   <td><strong>Stack completo Docker (<code>compose.demo.yaml</code>)</strong></td>
-                  <td><code>python flowkron-deploy/bootstrap/smoke.py flowkron-demo</code></td>
+                  <td><code>python deploy/bootstrap/smoke.py kronflow-demo</code></td>
                   <td><span class="badge badge-success">PASS · 9/9 servicios</span></td>
                 </tr>
               </tbody>
@@ -619,7 +619,7 @@ cd KronFlow
 docker compose -f compose.demo.yaml up --build --wait
 
 # 2. Verificar flujos extremo a extremo
-python flowkron-deploy/bootstrap/smoke.py flowkron-demo</pre>
+python deploy/bootstrap/smoke.py kronflow-demo</pre>
           </div>
         </div>
       </section>

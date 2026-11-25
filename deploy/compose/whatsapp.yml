@@ -1,0 +1,25 @@
+services:
+  baileys-services:
+    build:
+      context: ../../backend/baileys-services
+    environment:
+      BAILEYS_INTERNAL_TOKEN_FILE: /run/flowkron/internal_token
+      BAILEYS_INGEST_TENANT_CODE: ${BAILEYS_INGEST_TENANT_CODE:-}
+      BAILEYS_INGEST_KEY: ${BAILEYS_INGEST_KEY:-}
+      AGENT_CORE_URL: http://agent-core:8002
+      BAILEYS_SESSIONS_DIR: /app/sessions
+      OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://operational-service:8001}
+    volumes:
+      - baileys-lab-sessions:/app/sessions
+      - kronflow-channel-config:/run/flowkron:ro
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      operational-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - kronflow-network
+
+volumes:
+  baileys-lab-sessions:

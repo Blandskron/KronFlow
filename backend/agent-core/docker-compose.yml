@@ -1,0 +1,23 @@
+services:
+  agent-core:
+    build: .
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      PERSISTENCE_MODE: operational
+      ALLOW_LOCAL_DB_BOOTSTRAP: "false"
+      OPERATIONAL_SERVICE_URL: ${OPERATIONAL_SERVICE_URL:-http://operational-service:8001}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN must be configured}
+      JWT_PUBLIC_KEY_PATH: ${AGENT_CORE_JWT_PUBLIC_KEY_PATH:-/keys/jwt_public.pem}
+      ALLOW_INSECURE_TENANT_HEADER: ${AGENT_CORE_ALLOW_INSECURE_TENANT_HEADER:-false}
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-auto}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      CHAT_COMPLETION_MAX_TOKENS: ${CHAT_COMPLETION_MAX_TOKENS:-2000}
+      CHAT_COMPLETION_TEMPERATURE: ${CHAT_COMPLETION_TEMPERATURE:-0.3}
+      CHAT_COMPLETION_TIMEOUT_SECONDS: ${CHAT_COMPLETION_TIMEOUT_SECONDS:-60}
+    ports:
+      - "8002:8002"
+    volumes:
+      - ${AGENT_CORE_JWT_PUBLIC_MOUNT:-../../deploy/data/jwt-public}:/keys:ro

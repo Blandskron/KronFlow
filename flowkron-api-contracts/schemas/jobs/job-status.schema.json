@@ -1,7 +1,0 @@
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Blandskron/flowkron/refs/heads/main/flowkron-api-contracts/schemas/jobs/job-status.schema.json",
-  "title": "JobStatus",
-  "type": "string",
-  "enum": ["queued", "running", "succeeded", "failed", "cancelled", "expired"]
-}

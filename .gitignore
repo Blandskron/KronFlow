@@ -19,4 +19,4 @@ coverage/
 playwright-report/
 test-results/
 visual-test-results/
-flowkron-deploy/data/
+deploy/data/

@@ -1,9 +1,0 @@
-name: flowkron-stack
-
-include:
-  - ./compose/bootstrap.yml
-  - ./compose/infrastructure.yml
-  - ./compose/backend.yml
-  - ./compose/frontend.yml
-  - ./compose/email.yml
-  - ./compose/whatsapp.yml

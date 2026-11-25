@@ -1,0 +1,29 @@
+services:
+  init:
+    image: python:3.12-slim
+    network_mode: none
+    command: ["python", "/initialize.py"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-flowkron_admin}
+      POSTGRES_DB: ${POSTGRES_DB:-flowkron_auth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      DATABASE_URL: ${DATABASE_URL:-}
+      OPERATIONAL_DATABASE_URL: ${OPERATIONAL_DATABASE_URL:-}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+      SIGNING_KEY_ENCRYPTION_KEY: ${SIGNING_KEY_ENCRYPTION_KEY:-}
+      OPERATIONAL_INTERNAL_TOKEN: ${OPERATIONAL_INTERNAL_TOKEN:-}
+      BAILEYS_INTERNAL_TOKEN: ${BAILEYS_INTERNAL_TOKEN:-}
+    volumes:
+      - ../bootstrap/initialize.py:/initialize.py:ro
+      - kronflow-postgres-config:/bootstrap/postgres
+      - kronflow-iam-config:/bootstrap/iam
+      - kronflow-operational-config:/bootstrap/operational
+      - kronflow-agent-config:/bootstrap/agent
+      - kronflow-channel-config:/bootstrap/channel
+
+volumes:
+  kronflow-postgres-config:
+  kronflow-iam-config:
+  kronflow-operational-config:
+  kronflow-agent-config:
+  kronflow-channel-config:

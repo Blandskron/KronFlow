@@ -44,10 +44,10 @@ describe('ThemeService (landing)', () => {
     doc.head.appendChild(meta);
 
     service.initialize();
-    expect(meta.getAttribute('content')).toBe('#100d16');
+    expect(meta.getAttribute('content')).toBe('#060d10');
 
     service.toggle();
-    expect(meta.getAttribute('content')).toBe('#f8f6fb');
+    expect(meta.getAttribute('content')).toBe('#f1f8f7');
     meta.remove();
   });
 });

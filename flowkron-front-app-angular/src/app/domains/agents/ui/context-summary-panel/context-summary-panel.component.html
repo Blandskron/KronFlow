@@ -1,15 +1,15 @@
 <div class="summary-grid">
   @if (loading()) {
     <div class="col-span-2">
-      <flowkron-alert tone="info">
+      <kronflow-alert tone="info">
         <span class="inline-icon"><svg lucideInfo size="16" aria-hidden="true"></svg> Cargando el contexto empresarial…</span>
-      </flowkron-alert>
+      </kronflow-alert>
     </div>
   } @else if (error()) {
     <div class="col-span-2">
-      <flowkron-alert tone="danger">
+      <kronflow-alert tone="danger">
         <span class="inline-icon"><svg lucideAlertTriangle size="16" aria-hidden="true"></svg> {{ error() }}</span>
-      </flowkron-alert>
+      </kronflow-alert>
     </div>
   }
 
@@ -60,14 +60,14 @@
     </div>
 
     @if (documents().length === 0) {
-      <flowkron-empty-state
+      <kronflow-empty-state
         title="Sin documentos cargados"
         description="No hay documentos cargados en este inquilino."
       >
         <button class="btn btn-primary btn-sm" type="button" (click)="goToUpload.emit()">
           <svg lucideFileText size="16" aria-hidden="true"></svg> Cargar documento
         </button>
-      </flowkron-empty-state>
+      </kronflow-empty-state>
     } @else {
       <div class="table-container">
         <table class="table">
@@ -90,9 +90,9 @@
                 <td>{{ documentType(doc) }}</td>
                 <td>v{{ doc.version }}</td>
                 <td>
-                  <flowkron-badge [tone]="documentTone(doc)">
+                  <kronflow-badge [tone]="documentTone(doc)">
                     {{ documentStatusLabel(doc.status) }}
-                  </flowkron-badge>
+                  </kronflow-badge>
                 </td>
                 <td>{{ formatDateTime(doc.updated_at || doc.created_at) }}</td>
                 <td>

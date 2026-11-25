@@ -3,149 +3,120 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flowkron · CRM Inteligente Multi-tenant para WhatsApp e IA</title>
+    <title>KronFlow — Intelligent CRM · Smart conversations. Seamless automation.</title>
     <meta
       name="description"
-      content="Flowkron by BLANDSKRON: plataforma open-source multi-tenant de CRM conversacional para WhatsApp, agentes de IA con RAG, gobernanza HITL, campañas y privacidad."
+      content="KronFlow — Intelligent CRM open source by BLANDSKRON. Smart conversations. Seamless automation. WhatsApp multi-tenant, agentes IA con RAG, gobernanza HITL y pipeline comercial."
     />
-    <meta name="theme-color" content="#100d16" />
+    <meta name="theme-color" content="#060d10" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Flowkron · CRM Inteligente Multi-tenant para WhatsApp e IA" />
+    <meta property="og:title" content="KronFlow — Intelligent CRM" />
     <meta
       property="og:description"
-      content="Arquitectura de microservicios (Django, FastAPI, PostgreSQL 18, Angular 21 Zoneless) con bandeja HITL, contexto empresarial RAG, pipeline comercial y auditoría."
+      content="Smart conversations. Seamless automation. Open Source · By BLANDSKRON."
     />
-    <meta property="og:image" content="docs/screenshots/01-landing-dark.png" />
-    <link rel="icon" type="image/svg+xml" href="flowkron-front-landing-angular/public/flowkron-icon.svg" />
+    <meta property="og:image" content="assets/brand/kronflow-og-card.svg" />
+    <link rel="icon" type="image/svg+xml" href="assets/brand/kronflow-icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Sora:wght@500;600;700;800&display=swap"
     />
     <style>
       :root {
-        --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        --background: #f8f6fb;
-        --foreground: #241b2e;
+        --font-display: 'Sora', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --background: #f1f8f7;
+        --foreground: #091e24;
         --card: #ffffff;
-        --ambient-violet: #c09aff60;
-        --ambient-blue: #a2c8ff4a;
-        --glass-tint: #ffffffbb;
-        --glass-edge: #ffffffd4;
-        --glass-highlight: #ffffff55;
-        --glass-shadow: 0 16px 40px #3d225317;
-        --glass-filter: blur(18px) saturate(140%);
-        --muted: #f3f4f6;
-        --muted-foreground: #635a70;
-        --accent: #f9fafb;
-        --border: #ded6e8;
-        --brand-purple: #4a148c;
-        --brand-deep: #2e0b59;
-        --primary: #6526a4;
-        --primary-button: var(--brand-purple);
-        --selected: #f3eafa;
+        --grid-ink: rgba(15, 118, 110, 0.055);
+        --ambient-teal: rgba(20, 184, 166, 0.16);
+        --ambient-cyan: rgba(6, 182, 212, 0.14);
+        --glass-tint: rgba(255, 255, 255, 0.82);
+        --glass-edge: rgba(15, 118, 110, 0.18);
+        --glass-highlight: rgba(255, 255, 255, 0.72);
+        --glass-shadow: 0 16px 38px rgba(6, 46, 52, 0.08);
+        --glass-filter: blur(18px) saturate(145%);
+        --backdrop-scrim: rgba(6, 20, 24, 0.68);
+        --muted: #e6f2f0;
+        --muted-foreground: #3b5860;
+        --accent: #eef7f5;
+        --border: #c5ddda;
+        --primary: #0f766e;
+        --primary-strong: #115e59;
+        --primary-button: #0f766e;
+        --primary-button-end: #047857;
+        --primary-glow: rgba(15, 118, 110, 0.22);
+        --selected: #dcf4f0;
         --success-100: #d1fae5;
-        --success-text: #086344;
-        --info-100: #dbeafe;
-        --info-text: #194f9e;
+        --success-text: #065f46;
+        --info-100: #e0f2fe;
+        --info-text: #075985;
         --warning-100: #fef3c7;
-        --warning-text: #79470c;
+        --warning-text: #92400e;
       }
 
       .dark {
         color-scheme: dark;
-        --background: #100d16;
-        --foreground: #f5f5f5;
-        --card: #18141e;
-        --ambient-violet: #8549c64a;
-        --ambient-blue: #426bac2e;
-        --glass-tint: #21172ccc;
-        --glass-edge: #e0b6ff26;
-        --glass-highlight: #e0b6ff10;
-        --glass-shadow: 0 18px 42px #07030d65;
-        --muted: #231c2d;
-        --muted-foreground: #a8a0b5;
-        --accent: #282032;
-        --border: #382c43;
-        --selected: #352449;
-        --primary: #d0a8ff;
-        --primary-button: #6730a8;
-        --success-100: #143c31;
-        --success-text: #83e7b9;
-        --info-100: #1b3051;
-        --info-text: #b1d0ff;
-        --warning-100: #452d13;
-        --warning-text: #ffdc9c;
+        --background: #060d10;
+        --foreground: #eef7f6;
+        --card: #0b161b;
+        --grid-ink: rgba(45, 212, 191, 0.045);
+        --ambient-teal: rgba(13, 148, 136, 0.28);
+        --ambient-cyan: rgba(6, 182, 212, 0.22);
+        --glass-tint: rgba(11, 22, 27, 0.78);
+        --glass-edge: rgba(45, 212, 191, 0.20);
+        --glass-highlight: rgba(153, 246, 228, 0.09);
+        --glass-shadow: 0 18px 44px rgba(2, 8, 10, 0.65);
+        --backdrop-scrim: rgba(3, 10, 13, 0.78);
+        --muted: #112229;
+        --muted-foreground: #94b4bc;
+        --accent: #142a32;
+        --border: #1d3942;
+        --selected: #0f2f32;
+        --primary: #2dd4bf;
+        --primary-strong: #5eead4;
+        --primary-button: #0f766e;
+        --primary-button-end: #047857;
+        --primary-glow: rgba(13, 148, 136, 0.30);
+        --success-100: #0c352a;
+        --success-text: #6ee7b7;
+        --info-100: #0c2c3d;
+        --info-text: #7dd3fc;
+        --warning-100: #3d2809;
+        --warning-text: #fde68a;
       }
 
-      * {
-        box-sizing: border-box;
-      }
-
-      html {
-        scroll-behavior: smooth;
-      }
-
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
       body {
         margin: 0;
         background-color: var(--background);
         background-image:
-          radial-gradient(ellipse at 86% 0, var(--ambient-violet), transparent 55%),
-          radial-gradient(ellipse at 0 40%, var(--ambient-blue), transparent 55%);
-        background-repeat: no-repeat;
-        background-size: 100% 980px;
+          radial-gradient(ellipse at 86% 0%, var(--ambient-teal), transparent 52%),
+          radial-gradient(ellipse at 8% 36%, var(--ambient-cyan), transparent 50%),
+          linear-gradient(var(--grid-ink) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px);
+        background-repeat: no-repeat, no-repeat, repeat, repeat;
+        background-size: 100% 960px, 100% 960px, 86px 86px, 86px 86px;
         color: var(--foreground);
         font-family: var(--font-sans);
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
-
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
-
-      button {
-        font: inherit;
-        cursor: pointer;
-      }
-
-      :focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 3px;
-      }
-
+      h1, h2, h3 { font-family: var(--font-display); }
+      a { color: inherit; text-decoration: none; }
+      button { font: inherit; cursor: pointer; }
+      :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
       .skip-link {
-        position: fixed;
-        top: 12px;
-        left: 12px;
-        z-index: 100;
-        transform: translateY(-160%);
-        padding: 10px 14px;
-        border-radius: 8px;
-        background: var(--card);
-        color: var(--foreground);
-        border: 1px solid var(--border);
+        position: fixed; top: 12px; left: 12px; z-index: 100; transform: translateY(-160%);
+        padding: 10px 14px; border-radius: 8px; background: var(--card); color: var(--foreground); border: 1px solid var(--border);
       }
-
-      .skip-link:focus {
-        transform: none;
-      }
-
-      .container {
-        width: min(1180px, calc(100% - 40px));
-        margin: 0 auto;
-      }
-
-      .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
-      }
-
+      .skip-link:focus { transform: none; }
+      .container { width: min(1200px, calc(100% - 40px)); margin: 0 auto; }
+      .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--glass-shadow); }
       @supports (backdrop-filter: blur(1px)) {
         .glass {
           background: linear-gradient(145deg, var(--glass-highlight), transparent 68%), var(--glass-tint);
@@ -154,519 +125,101 @@
           backdrop-filter: var(--glass-filter);
         }
       }
-
       .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        border-radius: 12px;
-        padding: 11px 18px;
-        font-weight: 700;
-        font-size: 0.9375rem;
-        border: 1px solid transparent;
-        transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        border-radius: 12px; padding: 11px 18px; font-weight: 700; font-size: 0.9375rem;
+        border: 1px solid transparent; transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
       }
-
-      .btn:hover {
-        transform: translateY(-1px);
-      }
-
+      .btn:hover { transform: translateY(-1px); }
       .btn-primary {
-        background: linear-gradient(135deg, var(--primary-button), var(--brand-deep));
-        color: #ffffff;
-        box-shadow: 0 14px 30px rgba(126, 65, 188, 0.28);
+        background: linear-gradient(135deg, var(--primary-button), var(--primary-button-end));
+        color: #ffffff; box-shadow: 0 12px 28px var(--primary-glow);
       }
-
-      .btn-secondary {
-        background: var(--accent);
-        color: var(--foreground);
-        border-color: var(--border);
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 999px;
-        padding: 4px 11px;
-        font-size: 0.75rem;
-        font-weight: 700;
-      }
-
-      .badge-primary {
-        background: var(--selected);
-        color: var(--primary);
-      }
-
-      .badge-success {
-        background: var(--success-100);
-        color: var(--success-text);
-      }
-
-      .badge-info {
-        background: var(--info-100);
-        color: var(--info-text);
-      }
-
-      .badge-warning {
-        background: var(--warning-100);
-        color: var(--warning-text);
-      }
-
-      .muted {
-        color: var(--muted-foreground);
-      }
-
+      .btn-secondary { background: var(--accent); color: var(--foreground); border-color: var(--border); }
+      .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 11px; font-size: 0.75rem; font-weight: 700; }
+      .badge-primary { background: var(--selected); color: var(--primary-strong); }
+      .dark .badge-primary { color: var(--primary); }
+      .badge-success { background: var(--success-100); color: var(--success-text); }
+      .badge-info { background: var(--info-100); color: var(--info-text); }
+      .badge-warning { background: var(--warning-100); color: var(--warning-text); }
+      .muted { color: var(--muted-foreground); }
       .eyebrow {
-        display: inline-block;
-        color: var(--primary);
-        font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 8px;
+        display: inline-block; font-family: var(--font-mono); color: var(--primary);
+        font-size: 0.76rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
       }
-
-      /* Header */
-      .site-header {
-        position: sticky;
-        top: 12px;
-        z-index: 40;
-        width: min(1220px, calc(100% - 24px));
-        margin: 12px auto 0;
-        border-radius: 20px;
-      }
-
-      .header-inner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 12px 20px;
-        flex-wrap: wrap;
-      }
-
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .brand img {
-        width: 36px;
-        height: 36px;
-      }
-
-      .brand strong {
-        display: block;
-        font-size: 1.05rem;
-        line-height: 1.1;
-      }
-
-      .brand small {
-        display: block;
-        color: var(--muted-foreground);
-        font-size: 0.7rem;
-        letter-spacing: 0.08em;
-      }
-
-      .nav-links {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        flex-wrap: wrap;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--muted-foreground);
-      }
-
-      .nav-links a:hover {
-        color: var(--primary);
-      }
-
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      /* Hero */
-      .hero {
-        padding: clamp(56px, 8vw, 108px) 0 48px;
-      }
-
-      .hero-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-        gap: clamp(28px, 5vw, 60px);
-        align-items: center;
-      }
-
-      .hero h1 {
-        margin: 10px 0 18px;
-        font-size: clamp(2.25rem, 5vw, 3.75rem);
-        line-height: 1.05;
-        letter-spacing: -0.04em;
-      }
-
-      .hero h1 span {
-        color: var(--primary);
-      }
-
-      .hero-copy {
-        font-size: 1.08rem;
-        color: var(--muted-foreground);
-        max-width: 56ch;
-        margin: 0 0 24px;
-      }
-
-      .hero-badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 14px;
-      }
-
-      .hero-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-
-      .hero-shot {
-        padding: 12px;
-        border-radius: 20px;
-      }
-
-      .hero-shot img {
-        width: 100%;
-        display: block;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-      }
-
-      .hero-shot figcaption {
-        margin-top: 10px;
-        font-size: 0.82rem;
-        color: var(--muted-foreground);
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      /* Sections */
-      section.block {
-        padding: clamp(44px, 6vw, 76px) 0;
-      }
-
-      .section-head {
-        max-width: 68ch;
-        margin-bottom: 28px;
-      }
-
-      .section-head h2 {
-        margin: 0 0 10px;
-        font-size: clamp(1.6rem, 3vw, 2.3rem);
-        letter-spacing: -0.03em;
-        line-height: 1.15;
-      }
-
-      .section-head p {
-        margin: 0;
-        color: var(--muted-foreground);
-      }
-
-      /* Metrics strip */
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
-      }
-
-      .stat-card {
-        padding: 20px;
-      }
-
-      .stat-card small {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--muted-foreground);
-      }
-
-      .stat-card strong {
-        display: block;
-        font-size: clamp(1.5rem, 2.8vw, 2rem);
-        margin: 6px 0 4px;
-        color: var(--primary);
-        letter-spacing: -0.03em;
-      }
-
-      /* Architecture grid */
-      .arch-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 16px;
-      }
-
-      .service-card {
-        padding: 20px;
-        display: grid;
-        gap: 10px;
-        align-content: start;
-      }
-
-      .service-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-
-      .service-card h3 {
-        margin: 0;
-        font-size: 1.05rem;
-      }
-
-      .service-card p {
-        margin: 0;
-        font-size: 0.88rem;
-        color: var(--muted-foreground);
-      }
-
-      .service-card code {
-        font-family: var(--font-mono);
-        font-size: 0.78rem;
-        color: var(--primary);
-      }
-
-      /* Gallery */
-      .filter-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 20px;
-      }
-
-      .filter-btn {
-        padding: 8px 14px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--muted-foreground);
-        font-weight: 700;
-        font-size: 0.85rem;
-      }
-
-      .filter-btn[aria-pressed='true'] {
-        background: var(--selected);
-        color: var(--primary);
-        border-color: var(--primary);
-      }
-
-      .gallery-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px;
-      }
-
-      .shot-card {
-        overflow: hidden;
-        display: grid;
-        align-content: start;
-      }
-
-      .shot-card.hidden {
-        display: none;
-      }
-
-      .shot-trigger {
-        border: 0;
-        padding: 0;
-        background: transparent;
-        display: block;
-        width: 100%;
-        text-align: left;
-      }
-
-      .shot-trigger img {
-        width: 100%;
-        aspect-ratio: 16 / 10;
-        object-fit: cover;
-        object-position: top center;
-        display: block;
-        border-bottom: 1px solid var(--border);
-        transition: transform 220ms ease;
-      }
-
-      .shot-card:hover .shot-trigger img {
-        transform: scale(1.015);
-      }
-
-      .shot-body {
-        padding: 16px 18px 18px;
-        display: grid;
-        gap: 6px;
-      }
-
-      .shot-meta {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-
-      .shot-body h3 {
-        margin: 0;
-        font-size: 1.02rem;
-      }
-
-      .shot-body p {
-        margin: 0;
-        font-size: 0.87rem;
-        color: var(--muted-foreground);
-      }
-
-      /* Validation table */
-      .table-wrap {
-        overflow-x: auto;
-        padding: 8px 16px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.88rem;
-      }
-
-      th,
-      td {
-        text-align: left;
-        padding: 12px 10px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      th {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--muted-foreground);
-      }
-
-      /* Quickstart */
-      .code-card {
-        padding: 20px;
-        display: grid;
-        gap: 14px;
-      }
-
-      .code-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-
-      pre {
-        margin: 0;
-        padding: 16px;
-        border-radius: 12px;
-        background: var(--muted);
-        border: 1px solid var(--border);
-        font-family: var(--font-mono);
-        font-size: 0.85rem;
-        overflow-x: auto;
-        line-height: 1.65;
-      }
-
-      /* Lightbox dialog */
-      dialog.lightbox {
-        width: min(1160px, calc(100% - 28px));
-        max-height: 92vh;
-        padding: 18px;
-        color: var(--foreground);
-        border-radius: 20px;
-      }
-
-      dialog.lightbox::backdrop {
-        background: rgba(10, 6, 18, 0.8);
-      }
-
-      .lightbox-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
-
-      .lightbox-head h3 {
-        margin: 0;
-      }
-
-      .lightbox img {
-        width: 100%;
-        max-height: 74vh;
-        object-fit: contain;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: var(--background);
-      }
-
-      footer {
-        border-top: 1px solid var(--border);
-        padding: 28px 0 44px;
-        color: var(--muted-foreground);
-        font-size: 0.88rem;
-      }
-
-      .footer-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-      }
-
-      .footer-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 18px;
-      }
-
-      .footer-links a:hover {
-        color: var(--primary);
-      }
-
+      .site-header { position: sticky; top: 12px; z-index: 40; width: min(1220px, calc(100% - 24px)); margin: 12px auto 0; border-radius: 22px; }
+      .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 10px; }
+      .brand img { width: 38px; height: 38px; }
+      .brand strong { display: block; font-size: 1.05rem; line-height: 1.1; }
+      .brand small { display: block; font-family: var(--font-mono); color: var(--muted-foreground); font-size: 0.68rem; letter-spacing: 0.08em; }
+      .nav-links { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; font-size: 0.9rem; font-weight: 600; color: var(--muted-foreground); }
+      .nav-links a:hover { color: var(--primary); }
+      .header-actions { display: flex; align-items: center; gap: 10px; }
+      .hero { padding: clamp(56px, 8vw, 104px) 0 48px; }
+      .hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: clamp(28px, 5vw, 60px); align-items: center; }
+      .hero h1 { margin: 10px 0 14px; font-size: clamp(2.25rem, 5vw, 3.75rem); line-height: 1.04; letter-spacing: -0.04em; }
+      .hero h1 span { color: var(--primary); display: block; }
+      .hero-copy { font-size: 1.05rem; color: var(--muted-foreground); max-width: 56ch; margin: 0 0 24px; }
+      .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+      .hero-shot { padding: 14px; border-radius: 22px; }
+      .hero-shot img { width: 100%; display: block; border-radius: 14px; border: 1px solid var(--border); }
+      .hero-shot figcaption { margin-top: 10px; font-size: 0.82rem; color: var(--muted-foreground); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+      section.block { padding: clamp(44px, 6vw, 76px) 0; }
+      .section-head { max-width: 68ch; margin-bottom: 28px; }
+      .section-head h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 3vw, 2.3rem); letter-spacing: -0.03em; line-height: 1.15; }
+      .section-head p { margin: 0; color: var(--muted-foreground); }
+      .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+      .stat-card { padding: 20px; }
+      .stat-card small { display: block; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); }
+      .stat-card strong { display: block; font-family: var(--font-display); font-size: clamp(1.5rem, 2.8vw, 2rem); margin: 6px 0 4px; color: var(--primary); letter-spacing: -0.03em; }
+      .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+      .service-card { padding: 20px; display: grid; gap: 10px; align-content: start; }
+      .service-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .service-card h3 { margin: 0; font-size: 1.05rem; }
+      .service-card p { margin: 0; font-size: 0.88rem; color: var(--muted-foreground); }
+      .service-card code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--primary); }
+      .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+      .filter-btn { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted-foreground); font-weight: 700; font-size: 0.85rem; }
+      .filter-btn[aria-pressed='true'] { background: var(--selected); color: var(--primary-strong); border-color: var(--primary); }
+      .dark .filter-btn[aria-pressed='true'] { color: var(--primary); }
+      .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+      .shot-card { overflow: hidden; display: grid; align-content: start; }
+      .shot-card.hidden { display: none; }
+      .shot-trigger { border: 0; padding: 0; background: transparent; display: block; width: 100%; text-align: left; }
+      .shot-trigger img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center; display: block; border-bottom: 1px solid var(--border); transition: transform 220ms ease; }
+      .shot-card:hover .shot-trigger img { transform: scale(1.015); }
+      .shot-body { padding: 16px 18px 18px; display: grid; gap: 6px; }
+      .shot-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .shot-body h3 { margin: 0; font-size: 1.02rem; }
+      .shot-body p { margin: 0; font-size: 0.87rem; color: var(--muted-foreground); }
+      .table-wrap { overflow-x: auto; padding: 8px 16px; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+      th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); }
+      th { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); }
+      .code-card { padding: 20px; display: grid; gap: 14px; }
+      .code-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+      pre { margin: 0; padding: 16px; border-radius: 12px; background: var(--muted); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.85rem; overflow-x: auto; line-height: 1.65; }
+      dialog.lightbox { width: min(1160px, calc(100% - 28px)); max-height: 92vh; padding: 18px; color: var(--foreground); border-radius: 20px; }
+      dialog.lightbox::backdrop { background: var(--backdrop-scrim); backdrop-filter: blur(4px); }
+      .lightbox-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .lightbox-head h3 { margin: 0; }
+      .lightbox img { width: 100%; max-height: 74vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--border); background: var(--background); }
+      footer { border-top: 1px solid var(--border); padding: 28px 0 44px; color: var(--muted-foreground); font-size: 0.88rem; }
+      .footer-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+      .footer-links { display: flex; flex-wrap: wrap; gap: 18px; }
+      .footer-links a:hover { color: var(--primary); }
       @media (max-width: 920px) {
-        .hero-grid,
-        .gallery-grid {
-          grid-template-columns: 1fr;
-        }
-        .stats-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
+        .hero-grid, .gallery-grid { grid-template-columns: 1fr; }
+        .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
-
-      @media (max-width: 560px) {
-        .stats-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-
+      @media (max-width: 560px) { .stats-grid { grid-template-columns: 1fr; } }
       @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
-          animation-duration: 0.01ms !important;
-          transition-duration: 0.01ms !important;
-          scroll-behavior: auto !important;
-        }
+        *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+      }
+      @media (prefers-reduced-transparency: reduce) {
+        :root, .dark { --glass-filter: none; --glass-tint: var(--card); --glass-highlight: transparent; --glass-edge: var(--border); --grid-ink: transparent; }
       }
     </style>
   </head>
@@ -676,10 +229,10 @@
     <header class="site-header card glass">
       <div class="header-inner">
         <a class="brand" href="#top">
-          <img src="flowkron-front-landing-angular/public/flowkron-icon.svg" alt="" width="36" height="36" />
+          <img src="assets/brand/kronflow-icon.svg" alt="" width="38" height="38" />
           <span>
-            <strong>Flowkron</strong>
-            <small>by BLANDSKRON</small>
+            <strong>KronFlow</strong>
+            <small>INTELLIGENT CRM · BY BLANDSKRON</small>
           </span>
         </a>
 
@@ -706,15 +259,15 @@
         <div class="container hero-grid">
           <div>
             <div class="hero-badges">
-              <span class="badge badge-primary">Angular 21 Zoneless</span>
+              <span class="badge badge-primary">Open Source · By BLANDSKRON</span>
               <span class="badge badge-success">PostgreSQL 18 Multi-tenant</span>
-              <span class="badge badge-info">RAG + HITL + Privacidad</span>
+              <span class="badge badge-info">RAG + HITL + Angular 21</span>
             </div>
-            <h1>CRM conversacional <span>multi-tenant</span> para WhatsApp e IA</h1>
+            <h1>Smart conversations. <span>Seamless automation.</span></h1>
             <p class="hero-copy">
-              <strong>Flowkron</strong> es una plataforma modular de código abierto para centralizar conversaciones de
-              WhatsApp, gestionar contactos y pipeline comercial, entrenar agentes de IA con contexto empresarial
-              verificable (RAG) y operar campañas con gobernanza Human-in-the-Loop y cumplimiento de privacidad.
+              <strong>KronFlow — Intelligent CRM</strong> es una plataforma modular de código abierto para centralizar
+              conversaciones de WhatsApp, gestionar contactos y pipeline comercial, entrenar agentes de IA con contexto
+              empresarial verificable (RAG) y operar campañas con gobernanza Human-in-the-Loop.
             </p>
             <div class="hero-actions">
               <a class="btn btn-primary" href="#flujos">Explorar capturas en vivo</a>
@@ -725,12 +278,12 @@
           <figure class="card glass hero-shot">
             <img
               src="docs/screenshots/04-crm-home.png"
-              alt="Panel principal del CRM Flowkron mostrando el workspace autenticado de BLANDSKRON"
+              alt="Panel principal de KronFlow — Intelligent CRM mostrando el workspace autenticado de BLANDSKRON"
               width="1440"
               height="900"
             />
             <figcaption>
-              <span>Captura real · Flowkron CRM (`http://localhost:8081/app/home`)</span>
+              <span>Captura real · KronFlow CRM (<code>http://localhost:8081/app/home</code>)</span>
               <span class="badge badge-success">100% OnPush · Zoneless</span>
             </figcaption>
           </figure>
@@ -747,12 +300,12 @@
           <article class="card glass stat-card">
             <small>Pruebas automatizadas</small>
             <strong>157+ checks</strong>
-            <span class="muted">118 tests PG18 en Operational + 39 tests Vitest Zoneless + CI completo.</span>
+            <span class="muted">Tests PG18 en Operational, Vitest Zoneless, ESLint y auditoría WCAG 2.2 AA.</span>
           </article>
           <article class="card glass stat-card">
             <small>Frontend Angular 21</small>
             <strong>0 kB zone.js</strong>
-            <span class="muted">47/47 componentes en OnPush, 0 errores ESLint y Design System unificado.</span>
+            <span class="muted">100% OnPush, Design System Teal/Emerald/Cyan unificado con Sora e Inter.</span>
           </article>
           <article class="card glass stat-card">
             <small>Aislamiento de datos</small>
@@ -765,7 +318,7 @@
       <section id="arquitectura" class="block">
         <div class="container">
           <div class="section-head">
-            <span class="eyebrow">Arquitectura del ecosistema</span>
+            <span class="eyebrow">01 / Arquitectura del ecosistema</span>
             <h2>Microservicios desacoplados con contratos explícitos</h2>
             <p>
               Cada dominio opera en su propio servicio con contratos JSON Schema / OpenAPI en
@@ -813,7 +366,7 @@
 
             <article class="card glass service-card">
               <div class="service-top">
-                <h3>CRM Web App</h3>
+                <h3>KronFlow CRM Web App</h3>
                 <span class="badge badge-primary">Angular 21</span>
               </div>
               <code>flowkron-front-app-angular · :8081</code>
@@ -825,13 +378,13 @@
 
             <article class="card glass service-card">
               <div class="service-top">
-                <h3>Landing Pública</h3>
+                <h3>KronFlow Landing</h3>
                 <span class="badge badge-primary">Angular 21</span>
               </div>
               <code>flowkron-front-landing-angular · :8080</code>
               <p>
-                Portal público con identidad glassmorphism claro/oscuro, formulario de contacto protegido por CSRF y
-                modales legales con <code>&lt;dialog&gt;</code> nativo.
+                Portal público con Floating Glassmorphism, tipografía Sora e Inter, formulario de contacto protegido por
+                CSRF y modales legales con <code>&lt;dialog&gt;</code> nativo.
               </p>
             </article>
 
@@ -853,11 +406,11 @@
       <section id="flujos" class="block">
         <div class="container">
           <div class="section-head">
-            <span class="eyebrow">Evidencia visual en vivo</span>
-            <h2>Capturas reales de los flujos validados</h2>
+            <span class="eyebrow">02 / Evidencia visual en vivo</span>
+            <h2>Capturas reales de KronFlow</h2>
             <p>
-              Todas las imágenes fueron capturadas directamente sobre el stack real levantado con
-              <code>compose.demo.yaml</code> a resolución 1440×900. Haz clic en cualquier captura para ampliarla.
+              Vistas reales del portal público y del CRM con el Design System KronFlow validado con Playwright,
+              axe-core WCAG 2.2 AA y Lighthouse. Haz clic en cualquier captura para ampliarla.
             </p>
           </div>
 
@@ -871,131 +424,131 @@
           <div class="gallery-grid" id="gallery">
             <article class="card glass shot-card" data-category="landing">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/01-landing-dark.png" data-title="Landing Pública · Modo Oscuro">
-                <img src="docs/screenshots/01-landing-dark.png" alt="Landing de Flowkron en modo oscuro con hero y vista previa de bandeja" loading="lazy" />
+                <img src="docs/screenshots/01-landing-dark.png" alt="Landing de KronFlow en modo oscuro con hero y vista previa inteligente" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>01 · Landing Pública (Modo Oscuro)</h3>
                   <span class="badge badge-primary">Landing</span>
                 </div>
-                <p>Hero principal con identidad glassmorphism, vista previa de conversación y navegación accesible.</p>
+                <p>Hero principal con Floating Glassmorphism, Bento Grid y navegación accesible.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="landing">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/02-landing-light.png" data-title="Landing Pública · Modo Claro">
-                <img src="docs/screenshots/02-landing-light.png" alt="Landing de Flowkron en modo claro tras pulsar el selector de tema" loading="lazy" />
+                <img src="docs/screenshots/02-landing-light.png" alt="Landing de KronFlow en modo claro tras pulsar el selector de tema" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>02 · Cambio de Tema (Modo Claro)</h3>
                   <span class="badge badge-primary">Design System</span>
                 </div>
-                <p>Alternancia instantánea claro/oscuro con sincronización de tokens CSS y <code>meta[name="theme-color"]</code>.</p>
+                <p>Alternancia instantánea claro/oscuro con sincronización de tokens Teal/Emerald y <code>theme-color</code>.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="crm">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/03-crm-login.png" data-title="Acceso al CRM · Login">
-                <img src="docs/screenshots/03-crm-login.png" alt="Pantalla de inicio de sesión del CRM Flowkron" loading="lazy" />
+                <img src="docs/screenshots/03-crm-login.png" alt="Pantalla de inicio de sesión de KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>03 · Inicio de Sesión (Auth IAM)</h3>
                   <span class="badge badge-info">Auth</span>
                 </div>
-                <p>Autenticación JWT RS256 contra <code>flowkron-auth-service</code> con soporte de Google Sign-In y recuperación.</p>
+                <p>Autenticación JWT RS256 contra IAM con soporte de Google Sign-In, MFA y recuperación.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="crm">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/04-crm-home.png" data-title="CRM · Inicio del Workspace">
-                <img src="docs/screenshots/04-crm-home.png" alt="Inicio del workspace BLANDSKRON en Flowkron CRM" loading="lazy" />
+                <img src="docs/screenshots/04-crm-home.png" alt="Inicio del workspace BLANDSKRON en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>04 · Workspace Home</h3>
                   <span class="badge badge-success">CRM</span>
                 </div>
-                <p>Shell multi-tenant con navegación completa (Bandeja, Contactos, WhatsApp, Contexto, Pipeline, Campañas, Propuestas IA y Métricas).</p>
+                <p>Shell multi-tenant con navegación completa, íconos diferenciados y dock móvil deslizable.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="crm">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/05-crm-contacts.png" data-title="CRM · Gestión de Contactos">
-                <img src="docs/screenshots/05-crm-contacts.png" alt="Listado de contactos con Camila Rojas y Martín Vega" loading="lazy" />
+                <img src="docs/screenshots/05-crm-contacts.png" alt="Listado de contactos en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>05 · Directorio de Contactos</h3>
                   <span class="badge badge-success">CRM</span>
                 </div>
-                <p>Alta idempotente, búsqueda, filtros por origen y ficha de consentimiento/privacidad por contacto.</p>
+                <p>Alta idempotente, búsqueda, filtros por origen y ficha de consentimiento/privacidad.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="crm">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/06-crm-pipeline.png" data-title="CRM · Pipeline de Oportunidades">
-                <img src="docs/screenshots/06-crm-pipeline.png" alt="Vista de pipeline de oportunidades con formulario reactivo y filtros de resultado" loading="lazy" />
+                <img src="docs/screenshots/06-crm-pipeline.png" alt="Vista de pipeline de oportunidades en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>06 · Pipeline de Oportunidades</h3>
                   <span class="badge badge-success">Pipeline</span>
                 </div>
-                <p>Creación tipada con Reactive Forms, etapas comerciales, control de versión optimista y cierres ganados/perdidos.</p>
+                <p>Creación tipada con Reactive Forms, etapas comerciales y control optimista.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="ai">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/07-crm-business-context.png" data-title="IA · Contexto Empresarial">
-                <img src="docs/screenshots/07-crm-business-context.png" alt="Panel de contexto empresarial con progreso al 40 por ciento y tabla de documentos" loading="lazy" />
+                <img src="docs/screenshots/07-crm-business-context.png" alt="Panel de contexto empresarial en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>07 · Contexto Empresarial (RAG)</h3>
                   <span class="badge badge-info">Agent Core</span>
                 </div>
-                <p>Progreso real de entrenamiento, estado del agente, carga de documentos, plantillas Word/PDF y asistente IA.</p>
+                <p>Progreso real de entrenamiento, documentos empresariales, plantillas y asistente IA.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="ai">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/08-crm-ai-simulator.png" data-title="IA · Simulador de Respuestas y Trazas RAG">
-                <img src="docs/screenshots/08-crm-ai-simulator.png" alt="Simulador de respuestas de IA mostrando confianza, aviso requiere humano y detalles RAG" loading="lazy" />
+                <img src="docs/screenshots/08-crm-ai-simulator.png" alt="Simulador de respuestas de IA en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>08 · Simulador IA + Inspector RAG</h3>
                   <span class="badge badge-info">Simulador</span>
                 </div>
-                <p>Prueba en vivo contra <code>/agent/simulate</code> con score de confianza, fuentes consultadas y creación de reglas de corrección.</p>
+                <p>Prueba en vivo con score de confianza, fuentes consultadas y reglas de corrección.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="ai">
-              <button class="shot-trigger" type="button" data-full="docs/screenshots/09-crm-campaigns.png" data-title="Campañas · Conexiones de Correo y Envío Stub">
-                <img src="docs/screenshots/09-crm-campaigns.png" alt="Módulo de campañas con conexión de correo delegada activa y formulario de campaña rápida" loading="lazy" />
+              <button class="shot-trigger" type="button" data-full="docs/screenshots/09-crm-campaigns.png" data-title="Campañas · Conexiones y Envío">
+                <img src="docs/screenshots/09-crm-campaigns.png" alt="Módulo de campañas en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>09 · Campañas y Canales</h3>
                   <span class="badge badge-warning">Campañas</span>
                 </div>
-                <p>Conexiones de correo delegadas, plantillas versionadas, aprobación de snapshot y worker stub/sandbox.</p>
+                <p>Conexiones de correo delegadas, plantillas versionadas y worker sandbox.</p>
               </div>
             </article>
 
             <article class="card glass shot-card" data-category="crm">
               <button class="shot-trigger" type="button" data-full="docs/screenshots/10-crm-analytics.png" data-title="CRM · Métricas Comerciales y KPIs Consolidados">
-                <img src="docs/screenshots/10-crm-analytics.png" alt="Panel de métricas comerciales con resumen de leads, actividad diaria y KPIs consolidados" loading="lazy" />
+                <img src="docs/screenshots/10-crm-analytics.png" alt="Panel de métricas comerciales en KronFlow CRM" loading="lazy" />
               </button>
               <div class="shot-body">
                 <div class="shot-meta">
                   <h3>10 · Métricas y KPIs Consolidados</h3>
                   <span class="badge badge-success">Analytics</span>
                 </div>
-                <p>Resumen de bandeja, leads por temperatura, actividad diaria por zona horaria e indicadores de pipeline, campañas y gobernanza.</p>
+                <p>Resumen de bandeja, leads por temperatura, actividad diaria e indicadores consolidados.</p>
               </div>
             </article>
           </div>
@@ -1005,9 +558,9 @@
       <section id="validacion" class="block">
         <div class="container">
           <div class="section-head">
-            <span class="eyebrow">Calidad verificada</span>
+            <span class="eyebrow">03 / Calidad verificada</span>
             <h2>Matriz de validación completa del proyecto</h2>
-            <p>Resultados reales ejecutados contra el stack Docker y los pipelines de CI en <code>main</code>.</p>
+            <p>Resultados reales ejecutados contra los frontends Angular 21 y el stack de microservicios.</p>
           </div>
 
           <div class="card glass table-wrap">
@@ -1021,34 +574,24 @@
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>Stack completo Docker (`compose.demo.yaml`)</strong></td>
+                  <td><strong>CRM Angular 21 (<code>flowkron-front-app-angular</code>)</strong></td>
+                  <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code></td>
+                  <td><span class="badge badge-success">PASS · 28/28 tests</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Landing Angular 21 (<code>flowkron-front-landing-angular</code>)</strong></td>
+                  <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code></td>
+                  <td><span class="badge badge-success">PASS · 11/11 tests</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Accesibilidad &amp; Auditoría</strong></td>
+                  <td>Playwright + axe-core WCAG 2.2 AA + Lighthouse (Performance, A11y, Best Practices, SEO)</td>
+                  <td><span class="badge badge-success">PASS · 0 critical/serious</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Stack completo Docker (<code>compose.demo.yaml</code>)</strong></td>
                   <td><code>python flowkron-deploy/bootstrap/smoke.py flowkron-demo</code></td>
-                  <td><span class="badge badge-success">PASS · 9/9 servicios Healthy</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Operational Service (`PG18`)</strong></td>
-                  <td><code>unittest</code> (118 tests, esquema v3–v16, HITL, campañas, privacidad, KPIs)</td>
-                  <td><span class="badge badge-success">PASS · 118 tests</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Auth, Agent Core, Mail &amp; Baileys</strong></td>
-                  <td>Django checks/tests + pytest + Node tests + JSON Schema contracts</td>
-                  <td><span class="badge badge-success">PASS · CI verde</span></td>
-                </tr>
-                <tr>
-                  <td><strong>CRM Angular 21 (`flowkron-front-app-angular`)</strong></td>
-                  <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code> + <code>audit</code></td>
-                  <td><span class="badge badge-success">PASS · 28/28 tests · 301.5 kB</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Landing Angular 21 (`flowkron-front-landing-angular`)</strong></td>
-                  <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code> + <code>audit</code></td>
-                  <td><span class="badge badge-success">PASS · 11/11 tests · 259.9 kB</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Seguridad &amp; Secretos</strong></td>
-                  <td><code>gitleaks</code> + <code>pip-audit</code> + <code>npm audit --omit=dev</code> + headers Nginx</td>
-                  <td><span class="badge badge-success">PASS · 0 vulnerabilidades</span></td>
+                  <td><span class="badge badge-success">PASS · 9/9 servicios</span></td>
                 </tr>
               </tbody>
             </table>
@@ -1059,8 +602,8 @@
       <section id="despliegue" class="block">
         <div class="container">
           <div class="section-head">
-            <span class="eyebrow">Inicio rápido</span>
-            <h2>Ejecuta Flowkron en local en menos de 2 minutos</h2>
+            <span class="eyebrow">04 / Inicio rápido</span>
+            <h2>Ejecuta KronFlow en local en menos de 2 minutos</h2>
             <p>Levanta la pila demo completa con datos iniciales o el modo estándar limpio sin superusuario.</p>
           </div>
 
@@ -1084,11 +627,11 @@ python flowkron-deploy/bootstrap/smoke.py flowkron-demo</pre>
 
     <footer>
       <div class="container footer-row">
-        <span><strong>Flowkron</strong> by BLANDSKRON · Proyecto independiente, sin afiliación con Meta ni WhatsApp.</span>
+        <span><strong>KronFlow — Intelligent CRM</strong> · Open Source · By BLANDSKRON · Sin afiliación con Meta ni WhatsApp.</span>
         <div class="footer-links">
           <a href="https://github.com/Blandskron/flowkron" target="_blank" rel="noopener">Repositorio</a>
           <a href="https://github.com/Blandskron/flowkron/blob/main/README.md" target="_blank" rel="noopener">README</a>
-          <a href="https://github.com/Blandskron/flowkron/blob/main/ANGULAR_IMPROVEMENT_ROADMAP.md" target="_blank" rel="noopener">Roadmap Angular 21</a>
+          <a href="https://github.com/Blandskron/flowkron/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap KronFlow</a>
           <a href="https://github.com/Blandskron/flowkron/blob/main/docs/IMPLEMENTATION_STATUS.md" target="_blank" rel="noopener">Estado de implementación</a>
         </div>
       </div>
@@ -1112,14 +655,14 @@ python flowkron-deploy/bootstrap/smoke.py flowkron-demo</pre>
       function applyTheme(dark) {
         root.classList.toggle('dark', dark);
         themeBtn.textContent = dark ? 'Modo claro' : 'Modo oscuro';
-        if (themeMeta) themeMeta.setAttribute('content', dark ? '#100d16' : '#f8f6fb');
+        if (themeMeta) themeMeta.setAttribute('content', dark ? '#060d10' : '#f1f8f7');
         try {
-          localStorage.setItem('flowkron-pages-theme', dark ? 'dark' : 'light');
+          localStorage.setItem('kronflow-pages-theme', dark ? 'dark' : 'light');
         } catch {}
       }
 
       try {
-        const saved = localStorage.getItem('flowkron-pages-theme');
+        const saved = localStorage.getItem('kronflow-pages-theme');
         applyTheme(saved !== 'light');
       } catch {
         applyTheme(true);

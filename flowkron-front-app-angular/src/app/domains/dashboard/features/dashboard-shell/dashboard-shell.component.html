@@ -3,7 +3,7 @@
   <aside class="sidebar glass-surface">
     <a class="brand product-brand" routerLink="/app/home">
       <span class="app-logo" aria-hidden="true"></span>
-      <span><strong>Flowkron</strong><small>by BLANDSKRON</small></span>
+      <span><strong>KronFlow</strong><small>by BLANDSKRON</small></span>
     </a>
     <nav aria-label="Navegación del CRM">
       @for (item of navItems; track item.path) {
@@ -23,17 +23,20 @@
             @case ('users') {
               <span class="nav-icon"><svg lucideUsers size="20" aria-hidden="true"></svg></span>
             }
-            @case ('workflow') {
-              <span class="nav-icon"><svg lucideWorkflow size="20" aria-hidden="true"></svg></span>
-            }
-            @case ('link') {
-              <span class="nav-icon"><svg lucideLink size="20" aria-hidden="true"></svg></span>
+            @case ('smartphone') {
+              <span class="nav-icon"><svg lucideSmartphone size="20" aria-hidden="true"></svg></span>
             }
             @case ('book-open') {
               <span class="nav-icon"><svg lucideBookOpen size="20" aria-hidden="true"></svg></span>
             }
-            @case ('bell') {
-              <span class="nav-icon"><svg lucideBell size="20" aria-hidden="true"></svg></span>
+            @case ('workflow') {
+              <span class="nav-icon"><svg lucideWorkflow size="20" aria-hidden="true"></svg></span>
+            }
+            @case ('megaphone') {
+              <span class="nav-icon"><svg lucideMegaphone size="20" aria-hidden="true"></svg></span>
+            }
+            @case ('sparkles') {
+              <span class="nav-icon"><svg lucideSparkles size="20" aria-hidden="true"></svg></span>
             }
             @case ('bar-chart-3') {
               <span class="nav-icon"><svg lucideBarChart3 size="20" aria-hidden="true"></svg></span>
@@ -43,7 +46,7 @@
         </a>
       }
     </nav>
-    <flowkron-theme-toggle />
+    <kronflow-theme-toggle />
   </aside>
 
   <section class="workspace">
@@ -56,11 +59,11 @@
         </span>
         <span class="workspace-brand">
           <strong>{{ brandName() }}</strong>
-          <small>Flowkron by BLANDSKRON</small>
+          <small>KronFlow · by BLANDSKRON</small>
         </span>
       </div>
       <div class="actions">
-        <flowkron-theme-toggle class="mobile-theme" />
+        <kronflow-theme-toggle class="mobile-theme" />
         <a class="notify" routerLink="/app/notifications" routerLinkActive="active" ariaCurrentWhenActive="page" aria-label="Notificaciones">
           <svg lucideBell size="20" aria-hidden="true"></svg>
           @if (notificationCount() > 0) {
@@ -70,7 +73,7 @@
         <a class="user" routerLink="/app/settings" [queryParams]="{ tab: 'profile' }" routerLinkActive="active" ariaCurrentWhenActive="page" aria-label="Configuración">
           <svg lucideUser size="18" aria-hidden="true"></svg>
         </a>
-        <button class="btn btn-ghost logout" type="button" aria-label="Cerrar sesión" (click)="logout()">
+        <button class="btn btn-ghost logout" type="button" title="Cerrar sesión" aria-label="Salir — Cerrar sesión" (click)="logout()">
           <svg lucideLogOut size="18" aria-hidden="true"></svg>
           <span>Salir</span>
         </button>
@@ -81,5 +84,5 @@
       <router-outlet />
     </main>
   </section>
-  <flowkron-toast-container />
+  <kronflow-toast-container />
 </div>

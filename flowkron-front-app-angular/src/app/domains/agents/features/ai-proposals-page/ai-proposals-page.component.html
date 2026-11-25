@@ -1,12 +1,12 @@
 <section class="page-section">
-  <flowkron-page-header
+  <kronflow-page-header
     title="Revisión de propuestas IA"
     subtitle="Aprueba, rechaza o ejecuta acciones tipadas propuestas por el agente."
   >
     <button class="btn btn-secondary" type="button" [disabled]="loading()" (click)="reload()">
       {{ loading() ? 'Actualizando…' : 'Actualizar' }}
     </button>
-  </flowkron-page-header>
+  </kronflow-page-header>
 
   <div class="filter-bar" role="group" aria-label="Filtrar por estado">
     @for (st of statuses; track st.id) {
@@ -24,20 +24,20 @@
 
   @if (notice(); as msg) {
     <div class="section-spacer">
-      <flowkron-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
+      <kronflow-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
         {{ msg.text }}
-      </flowkron-alert>
+      </kronflow-alert>
     </div>
   }
 
   @if (loading() && !items().length) {
     <div class="cards-stack" role="status" aria-label="Cargando propuestas">
       <span class="sr-only">Cargando propuestas…</span>
-      <flowkron-skeleton height="112px" />
-      <flowkron-skeleton height="112px" />
+      <kronflow-skeleton height="112px" />
+      <kronflow-skeleton height="112px" />
     </div>
   } @else if (!items().length) {
-    <flowkron-empty-state
+    <kronflow-empty-state
       title="Sin propuestas"
       description="No hay propuestas en este estado."
     />
@@ -47,9 +47,9 @@
         <article class="card glass-surface proposal-card">
           <div class="proposal-header">
             <strong>#{{ item.id }} · {{ item.action_type }}</strong>
-            <flowkron-badge [tone]="statusTones[item.status] || 'info'">
+            <kronflow-badge [tone]="statusTones[item.status] || 'info'">
               {{ item.status }} · v{{ item.proposal_version }}
-            </flowkron-badge>
+            </kronflow-badge>
           </div>
           <small class="muted">
             Recurso: {{ item.resource_type }} #{{ item.resource_id }} · Propuesto por {{ item.proposed_by }}

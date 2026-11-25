@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" fill="none" role="img" aria-label="KronFlow conversational intelligence architecture">
+  <defs>
+    <radialGradient id="kf-hf-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.32"/>
+      <stop offset="55%" stop-color="#06B6D4" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#060D10" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="kf-hf-core" x1="210" y1="150" x2="350" y2="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#102C34"/>
+      <stop offset="100%" stop-color="#08171C"/>
+    </linearGradient>
+    <linearGradient id="kf-hf-line" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2DD4BF"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="280" cy="220" r="200" fill="url(#kf-hf-glow)"/>
+  <circle cx="280" cy="220" r="188" stroke="#2DD4BF" stroke-opacity="0.14" stroke-dasharray="4 6"/>
+  <circle cx="280" cy="220" r="134" stroke="#06B6D4" stroke-opacity="0.22"/>
+  <circle cx="280" cy="220" r="84" stroke="#10B981" stroke-opacity="0.28"/>
+
+  <!-- Connectors -->
+  <path d="M170 98L234 174" stroke="url(#kf-hf-line)" stroke-opacity="0.55" stroke-width="1.5"/>
+  <path d="M390 98L326 174" stroke="url(#kf-hf-line)" stroke-opacity="0.55" stroke-width="1.5"/>
+  <path d="M170 342L234 266" stroke="url(#kf-hf-line)" stroke-opacity="0.55" stroke-width="1.5"/>
+  <path d="M390 342L326 266" stroke="url(#kf-hf-line)" stroke-opacity="0.55" stroke-width="1.5"/>
+
+  <!-- Central Core -->
+  <rect x="218" y="158" width="124" height="124" rx="26" fill="url(#kf-hf-core)" stroke="#2DD4BF" stroke-opacity="0.5" stroke-width="1.5"/>
+  <path d="M262 192V232" stroke="#5EEAD4" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M294 193C283 197 277 205 267 212C277 219 284 225 295 231" stroke="#10B981" stroke-width="4.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="294" cy="193" r="3.5" fill="#22D3EE"/>
+  <circle cx="295" cy="231" r="3.5" fill="#34D399"/>
+  <text x="280" y="260" text-anchor="middle" fill="#94B4BC" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.14em">KRONFLOW CORE</text>
+
+  <!-- Node 01 -->
+  <rect x="24" y="46" width="176" height="58" rx="14" fill="#0B161B" stroke="#1D3942"/>
+  <circle cx="44" cy="66" r="4" fill="#22D3EE"/>
+  <text x="56" y="69" fill="#5EEAD4" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.08em">01 / INGEST</text>
+  <text x="40" y="89" fill="#EEF7F6" font-family="Inter, sans-serif" font-size="13" font-weight="600">WhatsApp &amp; Channels</text>
+
+  <!-- Node 02 -->
+  <rect x="360" y="46" width="176" height="58" rx="14" fill="#0B161B" stroke="#1D3942"/>
+  <circle cx="380" cy="66" r="4" fill="#2DD4BF"/>
+  <text x="392" y="69" fill="#5EEAD4" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.08em">02 / MEMORY</text>
+  <text x="376" y="89" fill="#EEF7F6" font-family="Inter, sans-serif" font-size="13" font-weight="600">RAG Business Context</text>
+
+  <!-- Node 03 -->
+  <rect x="24" y="336" width="176" height="58" rx="14" fill="#0B161B" stroke="#1D3942"/>
+  <circle cx="44" cy="356" r="4" fill="#34D399"/>
+  <text x="56" y="359" fill="#5EEAD4" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.08em">03 / CONTROL</text>
+  <text x="40" y="379" fill="#EEF7F6" font-family="Inter, sans-serif" font-size="13" font-weight="600">HITL Governance</text>
+
+  <!-- Node 04 -->
+  <rect x="360" y="336" width="176" height="58" rx="14" fill="#0B161B" stroke="#1D3942"/>
+  <circle cx="380" cy="356" r="4" fill="#10B981"/>
+  <text x="392" y="359" fill="#5EEAD4" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.08em">04 / EXECUTE</text>
+  <text x="376" y="379" fill="#EEF7F6" font-family="Inter, sans-serif" font-size="13" font-weight="600">Pipeline Automation</text>
+</svg>

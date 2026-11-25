@@ -10,7 +10,7 @@ import { Subject, catchError, combineLatest, map, of, shareReplay, startWith, sw
 type AuditState = { status: 'loading' } | { status: 'error'; statusCode: number } | { status: 'ready'; page: AuditEventPage };
 
 @Component({
-  selector: 'flowkron-audit-events-page',
+  selector: 'kronflow-audit-events-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './audit-events-page.component.html',

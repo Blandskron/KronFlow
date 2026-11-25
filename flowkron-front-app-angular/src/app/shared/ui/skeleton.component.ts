@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-  selector: 'flowkron-skeleton',
+  selector: 'kronflow-skeleton',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="fk-skeleton" [style.height]="height()" [style.width]="width()" aria-hidden="true"></div>
+    <div class="kf-skeleton" [style.height]="height()" [style.width]="width()" aria-hidden="true"></div>
   `,
   styles: `
-    .fk-skeleton {
+    .kf-skeleton {
       border-radius: var(--radius-md);
       background: linear-gradient(
         90deg,
@@ -16,10 +16,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         var(--muted) 75%
       );
       background-size: 200% 100%;
-      animation: fk-shimmer 1.4s ease-in-out infinite;
+      animation: kf-shimmer 1.4s ease-in-out infinite;
     }
 
-    @keyframes fk-shimmer {
+    @keyframes kf-shimmer {
       0% {
         background-position: 200% 0;
       }

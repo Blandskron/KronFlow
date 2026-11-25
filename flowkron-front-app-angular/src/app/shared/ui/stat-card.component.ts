@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export type StatTone = 'default' | 'primary' | 'success' | 'warning' | 'danger';
 
 @Component({
-  selector: 'flowkron-stat-card',
+  selector: 'kronflow-stat-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article [class]="cardClass()">
@@ -22,13 +22,16 @@ export type StatTone = 'default' | 'primary' | 'success' | 'warning' | 'danger';
     }
 
     .stat-label {
+      font-family: var(--font-mono);
       font-size: var(--text-xs);
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
     }
 
     .stat-value {
+      font-family: var(--font-display);
+      font-variant-numeric: tabular-nums;
       font-size: clamp(1.5rem, 3vw, 2rem);
       line-height: 1.15;
       letter-spacing: -0.03em;

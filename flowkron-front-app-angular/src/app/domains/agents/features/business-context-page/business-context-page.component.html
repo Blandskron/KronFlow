@@ -1,11 +1,11 @@
 <section class="context-container">
-  <flowkron-page-header
+  <kronflow-page-header
     title="Contexto empresarial"
     subtitle="Administra los conocimientos, documentos y reglas del agente conversacional de IA."
   />
 
   <div class="tabs-bar">
-    <flowkron-tabs
+    <kronflow-tabs
       [tabs]="tabs"
       [activeId]="activeTab()"
       ariaLabel="Secciones de contexto empresarial"
@@ -15,15 +15,15 @@
 
   @if (errorMsg()) {
     <div class="section-spacer">
-      <flowkron-alert tone="danger" title="Error de integración" [dismissible]="true" (dismissed)="errorMsg.set('')">
+      <kronflow-alert tone="danger" title="Error de integración" [dismissible]="true" (dismissed)="errorMsg.set('')">
         {{ errorMsg() }}
-      </flowkron-alert>
+      </kronflow-alert>
     </div>
   }
 
   @switch (activeTab()) {
     @case ('summary') {
-      <flowkron-context-summary-panel
+      <kronflow-context-summary-panel
         [contextStatus]="contextStatus()"
         [documents]="documents()"
         [loading]="statusLoading()"
@@ -33,7 +33,7 @@
       />
     }
     @case ('upload') {
-      <flowkron-context-upload-panel
+      <kronflow-context-upload-panel
         [templates]="templates()"
         [templatesLoading]="templatesLoading()"
         [templatesError]="templatesError()"
@@ -42,7 +42,7 @@
       />
     }
     @case ('simulator') {
-      <flowkron-agent-simulator-panel
+      <kronflow-agent-simulator-panel
         [hasDraftDocuments]="hasDraftDocuments()"
         (publishDrafts)="publishChanges()"
         (errorOccurred)="errorMsg.set($event)"

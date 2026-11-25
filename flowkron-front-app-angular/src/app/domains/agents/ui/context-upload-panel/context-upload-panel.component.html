@@ -82,9 +82,9 @@
       @if (templatesLoading()) {
         <p class="muted" role="status">Cargando plantillas disponibles…</p>
       } @else if (templatesError()) {
-        <flowkron-alert tone="danger">{{ templatesError() }}</flowkron-alert>
+        <kronflow-alert tone="danger">{{ templatesError() }}</kronflow-alert>
       } @else if (templates().length === 0) {
-        <flowkron-empty-state title="Sin plantillas" description="No hay plantillas disponibles para descargar." />
+        <kronflow-empty-state title="Sin plantillas" description="No hay plantillas disponibles para descargar." />
       } @else {
         <div class="templates-list">
           @for (template of templates(); track template.id) {

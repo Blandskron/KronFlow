@@ -1,6 +1,6 @@
-# flowkron-front-landing-angular
+# KronFlow Landing (`flowkron-front-landing-angular`)
 
-Landing publica de Flowkron construida con Angular 21 standalone. Presenta contenido comercial, enlaces hacia la aplicacion privada, contacto por WhatsApp, tema claro/oscuro y formulario de contacto conectado a Django IAM.
+Landing pública de **KronFlow — Intelligent CRM** (*Smart conversations. Seamless automation.* · Open Source · By **BLANDSKRON**) construida con Angular 21 standalone Zoneless (`OnPush`), Floating Glassmorphism Teal/Esmeralda/Cyan, enlaces hacia la aplicación privada, contacto por WhatsApp, tema claro/oscuro y formulario de contacto conectado a Django IAM.
 
 ## Alcance real
 

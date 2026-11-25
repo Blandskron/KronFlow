@@ -28,7 +28,7 @@ describe('ContactService', () => {
       email: 'ada@example.com',
       company: 'Analytical Engine',
       phone: '+56 9 1234 5678',
-      message: 'Me interesa conocer Flowkron.',
+      message: 'Me interesa conocer KronFlow.',
       accept_terms: true
     };
 

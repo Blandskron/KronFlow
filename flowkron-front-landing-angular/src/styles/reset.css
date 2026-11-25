@@ -7,17 +7,30 @@ body {
   height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background-color: var(--background);
   background-image:
-    radial-gradient(ellipse at 86% 0, var(--ambient-violet), transparent 55%),
-    radial-gradient(ellipse at 0 40%, var(--ambient-blue), transparent 55%);
-  background-repeat: no-repeat;
-  background-size: 100% 950px;
+    radial-gradient(ellipse at 86% 0%, var(--ambient-teal), transparent 52%),
+    radial-gradient(ellipse at 8% 36%, var(--ambient-cyan), transparent 50%),
+    linear-gradient(var(--grid-ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px);
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+  background-size: 100% 960px, 100% 960px, 86px 86px, 86px 86px;
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
 }
 
 button,

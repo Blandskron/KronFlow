@@ -5,7 +5,7 @@
 - **Pruebas unitarias (Angular 21 + Vitest):** Configuradas mediante `@angular/build:unit-test` (`runner: "vitest"` y `tsconfig.spec.json`). Cobertura base activa en `ThemeService`, `ContactService`, `LegalModalComponent` y `LandingComponent`.
 - **Linting:** Configurado con `eslint` + `angular-eslint` (TypeScript + templates + accesibilidad) vía `npm run lint`.
 
-Existe un spec Playwright en `tests/visual/flowkron-landing.visual.spec.ts`. Verifica:
+Existe un spec Playwright en `tests/visual/kronflow-landing.visual.spec.ts`. Verifica:
 
 - heading principal visible;
 - href de login y registro;

@@ -1,18 +1,18 @@
 <section class="page-section">
-  <flowkron-page-header
+  <kronflow-page-header
     title="Campañas y canales"
     subtitle="Administra conexiones de correo delegadas, plantillas aprobadas y campañas con envío stub/sandbox."
   >
     <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="loadConnections()">
       Actualizar
     </button>
-  </flowkron-page-header>
+  </kronflow-page-header>
 
   @if (notice(); as msg) {
     <div class="section-spacer">
-      <flowkron-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
+      <kronflow-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
         {{ msg.text }}
-      </flowkron-alert>
+      </kronflow-alert>
     </div>
   }
 
@@ -46,9 +46,9 @@
         <div class="connection-meta">
           <strong>#{{ conn.id }} · {{ conn.display_name }}</strong>
           <small class="muted"> · {{ conn.sender_address }} · {{ conn.provider }} (v{{ conn.credential_version }})</small>
-          <flowkron-badge [tone]="conn.status === 'active' ? 'success' : 'neutral'">
+          <kronflow-badge [tone]="conn.status === 'active' ? 'success' : 'neutral'">
             {{ conn.status }}
-          </flowkron-badge>
+          </kronflow-badge>
         </div>
         @if (canManage() && conn.status !== 'revoked') {
           <button class="btn btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="revoke(conn.id)">
@@ -57,7 +57,7 @@
         }
       </div>
     } @empty {
-      <flowkron-empty-state
+      <kronflow-empty-state
         title="Sin conexiones configuradas"
         description="Crea una conexión de correo delegada para habilitar envíos."
       />
@@ -102,9 +102,9 @@
       </form>
 
       @if (lastCampaign(); as camp) {
-        <flowkron-alert tone="info">
+        <kronflow-alert tone="info">
           Última campaña #{{ camp.id }} ({{ camp.name }}): estado <strong>{{ camp.status }}</strong> · v{{ camp.version }}
-        </flowkron-alert>
+        </kronflow-alert>
       }
     </section>
   }

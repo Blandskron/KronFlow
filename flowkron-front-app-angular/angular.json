@@ -13,7 +13,7 @@
       },
       "root": "",
       "sourceRoot": "src",
-      "prefix": "flowkron",
+      "prefix": "kronflow",
       "architect": {
         "build": {
           "builder": "@angular/build:application",

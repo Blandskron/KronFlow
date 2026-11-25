@@ -5,7 +5,7 @@ import { AgentsApiService } from '@domains/agents/data-access/agents-api.service
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 
 @Component({
-  selector: 'flowkron-create-agent',
+  selector: 'kronflow-create-agent',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule],
   templateUrl: './create-agent-page.component.html',

@@ -31,8 +31,8 @@
       }
 
       .status.success {
-        background: rgba(34, 197, 94, 0.12);
-        color: #15803d;
+        background: var(--success-100);
+        color: var(--success-text);
       }
 
       .form-error {

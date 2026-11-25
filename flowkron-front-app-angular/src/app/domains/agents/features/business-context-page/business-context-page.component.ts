@@ -10,7 +10,7 @@ import { AlertComponent, PageHeaderComponent, TabItem, TabsComponent } from '@sh
 type ContextTab = 'summary' | 'upload' | 'simulator';
 
 @Component({
-  selector: 'flowkron-business-context-page',
+  selector: 'kronflow-business-context-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     PageHeaderComponent,
@@ -74,7 +74,7 @@ export class BusinessContextPageComponent implements OnInit {
           this.contextStatus.set(null);
           this.documents.set([]);
           this.statusLoading.set(false);
-          const msg = 'No se pudo obtener el estado real del contexto empresarial desde flowkron-agent-core.';
+          const msg = 'No se pudo obtener el estado real del contexto empresarial desde KronFlow Agent Core.';
           this.statusError.set(msg);
           this.errorMsg.set(msg);
         }
@@ -93,7 +93,7 @@ export class BusinessContextPageComponent implements OnInit {
         error: () => {
           this.templates.set([]);
           this.templatesLoading.set(false);
-          const msg = 'No se pudieron cargar las plantillas desde flowkron-agent-core. Revisa que el core esté activo.';
+          const msg = 'No se pudieron cargar las plantillas desde KronFlow Agent Core. Revisa que el core esté activo.';
           this.templatesError.set(msg);
           this.errorMsg.set(msg);
         }

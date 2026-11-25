@@ -23,7 +23,9 @@ describe('LandingComponent', () => {
     const fixture = TestBed.createComponent(LandingComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('CRM inteligente');
+    const heading = fixture.nativeElement.querySelector('h1')?.textContent ?? '';
+    expect(heading).toContain('Smart conversations');
+    expect(heading).toContain('Seamless automation');
 
     fixture.componentInstance.submitContact();
     expect(contactStub.send).not.toHaveBeenCalled();
@@ -50,7 +52,7 @@ describe('LandingComponent', () => {
     comp.contactForm.setValue({
       name: '  Grace Hopper  ',
       email: 'GRACE@EXAMPLE.COM',
-      company: 'Flowkron',
+      company: 'KronFlow',
       phone: '+56 9 1111 2222',
       message: 'Consulta de prueba',
       acceptTerms: true
@@ -61,7 +63,7 @@ describe('LandingComponent', () => {
     expect(contactStub.send).toHaveBeenCalledWith({
       name: 'Grace Hopper',
       email: 'grace@example.com',
-      company: 'Flowkron',
+      company: 'KronFlow',
       phone: '+56 9 1111 2222',
       message: 'Consulta de prueba',
       accept_terms: true

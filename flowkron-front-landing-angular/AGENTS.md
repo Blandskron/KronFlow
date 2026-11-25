@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Fuente unica de contexto e instrucciones agenticas para `flowkron-front-landing-angular`. Los adaptadores `CLAUDE.md` y `GEMINI.md` solo remiten aqui.
+Fuente unica de contexto e instrucciones agenticas para `flowkron-front-landing-angular` (Landing pública de **KronFlow — Intelligent CRM**). Los adaptadores `CLAUDE.md` y `GEMINI.md` solo remiten aqui.
 
 ## Proposito y limites
 
@@ -42,7 +42,7 @@ No asumas capacidades inexistentes:
 
 ## Configuracion y seguridad
 
-`APP_PUBLIC_URL`, `CONTACT_API_BASE_URL` y `SALES_WHATSAPP_NUMBER` son build args publicos, no secretos. Validar su formato/origen en el pipeline: `href`, `HttpClient` y `window.open` confian en valores compilados. La landing carga Manrope desde Google Fonts, creando una dependencia externa y consideraciones de CSP/privacidad.
+`APP_PUBLIC_URL`, `CONTACT_API_BASE_URL` y `SALES_WHATSAPP_NUMBER` son build args publicos, no secretos. Validar su formato/origen en el pipeline: `href`, `HttpClient` y `window.open` confian en valores compilados. La landing carga `Sora`, `Inter` y `JetBrains Mono` desde Google Fonts, creando una dependencia externa y consideraciones de CSP/privacidad.
 
 ThemeService accede a `localStorage` y `document`; la app es CSR. Si se agrega SSR, debe proteger acceso a browser globals.
 

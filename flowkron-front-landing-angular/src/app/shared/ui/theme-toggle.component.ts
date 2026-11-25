@@ -3,7 +3,7 @@ import { LucideMoon, LucideSun } from '@lucide/angular';
 import { ThemeService } from '@core/services/theme.service';
 
 @Component({
-  selector: 'flowkron-theme-toggle',
+  selector: 'kronflow-theme-toggle',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideMoon, LucideSun],
   template: `

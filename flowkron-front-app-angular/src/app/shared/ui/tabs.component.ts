@@ -7,15 +7,15 @@ export interface TabItem {
 }
 
 @Component({
-  selector: 'flowkron-tabs',
+  selector: 'kronflow-tabs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="fk-tabs" role="tablist" [attr.aria-label]="ariaLabel()">
+    <div class="kf-tabs" role="tablist" [attr.aria-label]="ariaLabel()">
       @for (tab of tabs(); track tab.id; let idx = $index) {
         <button
           type="button"
           role="tab"
-          class="fk-tab"
+          class="kf-tab"
           [class.active]="activeId() === tab.id"
           [attr.aria-selected]="activeId() === tab.id"
           [attr.tabindex]="activeId() === tab.id ? 0 : -1"
@@ -31,7 +31,7 @@ export interface TabItem {
     </div>
   `,
   styles: `
-    .fk-tabs {
+    .kf-tabs {
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-2);
@@ -39,7 +39,7 @@ export interface TabItem {
       padding-bottom: var(--space-2);
     }
 
-    .fk-tab {
+    .kf-tab {
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
@@ -54,15 +54,15 @@ export interface TabItem {
       transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
     }
 
-    .fk-tab:hover {
+    .kf-tab:hover {
       background: var(--accent);
       color: var(--foreground);
     }
 
-    .fk-tab.active {
+    .kf-tab.active {
       background: var(--selected);
-      color: var(--primary);
-      border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+      color: var(--badge-primary-ink);
+      border-color: color-mix(in srgb, var(--primary) 34%, transparent);
     }
   `
 })

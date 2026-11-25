@@ -16,7 +16,7 @@ interface AlertState {
 }
 
 @Component({
-  selector: 'flowkron-settings-page',
+  selector: 'kronflow-settings-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideCopy, LucideRefreshCw, LucideSave, LucideSend, LucideTrash2, LucideUpload],
   templateUrl: './settings-page.component.html',

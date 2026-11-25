@@ -1,19 +1,19 @@
 import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
 
 @Component({
-  selector: 'flowkron-legal-modal',
+  selector: 'kronflow-legal-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog #modal class="modal card" aria-labelledby="legal-title">
+    <dialog #modal class="modal card glass-surface" aria-labelledby="legal-title">
       <header>
         <h2 id="legal-title">{{ title() }}</h2>
         <form method="dialog">
-          <button class="btn btn-secondary" type="submit" autofocus>Cerrar</button>
+          <button class="btn btn-secondary btn-sm" type="submit" autofocus>Cerrar</button>
         </form>
       </header>
       <p>{{ body() }}</p>
       <p>
-        Flowkron opera con principios de trazabilidad, control de acceso y protección de
+        KronFlow opera con principios de trazabilidad, control de acceso y protección de
         datos para entornos empresariales. Esta versión mantiene textos base para reemplazo
         legal formal.
       </p>
@@ -28,7 +28,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from
     }
 
     .modal::backdrop {
-      background: rgba(15, 7, 23, 0.68);
+      background: var(--backdrop-scrim);
+      backdrop-filter: blur(4px);
     }
 
     header {
@@ -38,8 +39,13 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from
       gap: 16px;
     }
 
-    h2 { margin: 0; }
-    p { color: var(--muted-foreground); }
+    h2 {
+      margin: 0;
+    }
+
+    p {
+      color: var(--muted-foreground);
+    }
   `
 })
 export class LegalModalComponent {

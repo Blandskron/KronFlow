@@ -1,25 +1,30 @@
 ---
 name: frontend-design-system
-description: Estándares de Design System, tokens CSS, componentes atómicos Angular 21 y accesibilidad WCAG 2.2 AA para Flowkron (app y landing).
+description: Estándares de Design System, tokens CSS Teal/Esmeralda/Cyan, tipografía Sora/Inter/JetBrains Mono, Floating Glassmorphism, componentes atómicos Angular 21 y accesibilidad WCAG 2.2 AA para KronFlow (app y landing).
 ---
 
-# Flowkron Frontend Design System
+# KronFlow Frontend Design System
+
+**KronFlow — Intelligent CRM** · *Smart conversations. Seamless automation.* · Open Source · By **BLANDSKRON**
 
 ## 1. Capas de Estilos y Tokens
-- Todos los colores, tipografías, espaciados, radios, capas `z-index` y duraciones provienen de `src/styles/tokens.css` (sincronizado entre `flowkron-front-app-angular` y `flowkron-front-landing-angular`).
-- Prohibido usar atributos `style="..."` inline en templates HTML y colores hexadecimales hardcodeados en componentes cuando exista un token semántico (`--primary`, `--foreground`, `--muted-foreground`, `--card`, `--border`, `--success-text`, `--error-text`, `--warning-text`, `--info-text`).
-- Preservar soporte simultáneo de `:root` (claro) y `.dark` (oscuro), así como `@media (prefers-reduced-transparency: reduce)` y `@media (prefers-reduced-motion: reduce)`.
+- Todos los colores, tipografías, espaciados, radios, capas `z-index`, retícula (`--grid-ink`) y duraciones provienen de `src/styles/tokens.css` (idéntico entre `flowkron-front-app-angular` y `flowkron-front-landing-angular`).
+- Tipografía oficial: `--font-display` (`Sora`) para encabezados (`h1–h4`), `--font-sans` (`Inter`) para interfaz y cuerpo, `--font-mono` (`JetBrains Mono`) para `.eyebrow`, métricas y código.
+- Prohibido usar atributos `style="..."` inline en templates HTML y colores hexadecimales/rgba hardcodeados en componentes cuando exista un token semántico (`--primary`, `--primary-strong`, `--foreground`, `--muted-foreground`, `--card`, `--border`, `--backdrop-scrim`, `--primary-glow`, `--focus-ring`, `--success-text`, `--error-text`, `--warning-text`, `--info-text`).
+- Preservar soporte simultáneo de `.dark` (oscuro por defecto `#060d10`) y `:root` (claro `#f1f8f7`), así como `@media (prefers-reduced-transparency: reduce)` y `@media (prefers-reduced-motion: reduce)`.
 
 ## 2. Componentes Atómicos (`src/app/shared/ui/`)
 - Todos los primitivos UI deben usar `ChangeDetectionStrategy.OnPush`, `input()` / `input.required()`, `output()` y control flow nativo (`@if`, `@for`, `@switch`).
+- Prefijo oficial de selectores: `kronflow-*`.
 - Reutilizar los componentes de `shared/ui/` antes de crear marcado repetitivo:
-  - `flowkron-page-header` (cabecera de página con eyebrow, título, subtítulo y slot de acciones)
-  - `flowkron-stat-card` (KPI card con etiqueta, valor, detalle y tono semántico)
-  - `flowkron-badge` (variantes `primary`, `success`, `info`, `warning`, `danger`, `neutral`)
-  - `flowkron-empty-state` (estado vacío accesible con título, descripción y slot de acción)
-  - `flowkron-alert` (banner `role="alert"` o `role="status"` con tono semántico)
-  - `flowkron-dialog` (wrapper accesible sobre `<dialog>` nativo)
-  - `flowkron-tabs` (`role="tablist"`, `aria-selected`, navegación con flechas)
+  - `kronflow-page-header` (cabecera de página con eyebrow monospace, título, subtítulo y slot de acciones)
+  - `kronflow-stat-card` (KPI card con etiqueta, valor `tabular-nums`, detalle y tono semántico)
+  - `kronflow-badge` (variantes `primary`, `success`, `info`, `warning`, `danger`, `neutral`)
+  - `kronflow-empty-state` (estado vacío accesible con título, descripción y slot de acción)
+  - `kronflow-alert` (banner `role="alert"` o `role="status"` con tono semántico)
+  - `kronflow-dialog` (wrapper accesible sobre `<dialog>` nativo con `--backdrop-scrim`)
+  - `kronflow-tabs` (`role="tablist"`, `aria-selected`, navegación con flechas)
+  - `kronflow-skeleton` y `kronflow-toast-container`
 
 ## 3. Checklist WCAG 2.2 AA
 1. Toda acción clickeable usa `<button type="button">` o `<a>`, nunca `<div (click)>` ni `<span (click)>`.

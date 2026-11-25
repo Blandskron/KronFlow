@@ -37,7 +37,7 @@ interface TicketColumn {
 }
 
 @Component({
-  selector: 'flowkron-workflows-page',
+  selector: 'kronflow-workflows-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,

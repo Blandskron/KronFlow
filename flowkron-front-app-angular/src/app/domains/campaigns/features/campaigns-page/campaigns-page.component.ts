@@ -11,7 +11,7 @@ import {
 import { AlertComponent, BadgeComponent, EmptyStateComponent, PageHeaderComponent } from '@shared/ui';
 
 @Component({
-  selector: 'flowkron-campaigns-page',
+  selector: 'kronflow-campaigns-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, PageHeaderComponent, AlertComponent, BadgeComponent, EmptyStateComponent],
   templateUrl: './campaigns-page.component.html',

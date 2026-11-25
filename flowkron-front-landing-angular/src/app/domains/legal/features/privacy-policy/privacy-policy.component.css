@@ -1,6 +1,51 @@
-.site-header { width: min(1240px, calc(100% - 24px)); margin: 12px auto 0; border: 1px solid var(--glass-edge); border-radius: 24px; }
-.header-shell, .brand, .header-actions { display: flex; align-items: center; gap: 12px; }
-.header-shell { min-height: 76px; justify-content: space-between; flex-wrap: wrap; padding-block: 12px; }
-.brand small { display: block; color: var(--muted-foreground); }
-.privacy { max-width: 70ch; padding-block: 64px; }
-p { color: var(--muted-foreground); line-height: 1.7; }
+.site-header {
+  width: min(1240px, calc(100% - 24px));
+  margin: 12px auto 0;
+  border: 1px solid var(--glass-edge);
+  border-radius: 22px;
+}
+
+.header-shell,
+.brand,
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-shell {
+  min-height: 72px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding-block: 10px;
+}
+
+.brand strong,
+.brand small {
+  display: block;
+}
+
+.brand small {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
+.privacy {
+  max-width: 70ch;
+  padding-block: 64px;
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+h1 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}

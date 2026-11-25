@@ -6,7 +6,7 @@ import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { AuthLayoutComponent } from '../auth-layout/auth-layout.component';
 
 @Component({
-  selector: 'flowkron-forgot-password',
+  selector: 'kronflow-forgot-password',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, AuthLayoutComponent],
   templateUrl: './forgot-password-page.component.html',

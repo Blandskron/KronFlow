@@ -12,7 +12,7 @@ type CaseList = { status: 'loading' } | { status: 'error'; forbidden: boolean }
   | { status: 'ready'; page: PaginatedResponse<PrivacyCase> };
 
 @Component({
-  selector: 'flowkron-privacy-cases-page',
+  selector: 'kronflow-privacy-cases-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './privacy-cases-page.component.html',

@@ -14,11 +14,11 @@ export default tseslint.config(
     rules: {
       '@angular-eslint/directive-selector': [
         'error',
-        { type: 'attribute', prefix: 'flowkron', style: 'camelCase' }
+        { type: 'attribute', prefix: 'kronflow', style: 'camelCase' }
       ],
       '@angular-eslint/component-selector': [
         'error',
-        { type: 'element', prefix: 'flowkron', style: 'kebab-case' }
+        { type: 'element', prefix: 'kronflow', style: 'kebab-case' }
       ],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [

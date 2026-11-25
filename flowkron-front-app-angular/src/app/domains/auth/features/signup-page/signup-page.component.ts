@@ -8,14 +8,14 @@ import { AuthError } from '@domains/auth/domain/auth.model';
 import { AuthLayoutComponent } from '../auth-layout/auth-layout.component';
 
 @Component({
-  selector: 'flowkron-signup-page',
+  selector: 'kronflow-signup-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AuthLayoutComponent, ReactiveFormsModule, RouterLink],
   template: `
-    <flowkron-auth-layout>
+    <kronflow-auth-layout>
       <section class="auth-card">
         <a class="back" routerLink="/login">Volver a iniciar sesión</a>
-        <h1>{{ token() ? 'Elige tu contraseña' : 'Crea tu cuenta de Flowkron' }}</h1>
+        <h1>{{ token() ? 'Elige tu contraseña' : 'Crea tu cuenta de KronFlow' }}</h1>
         @if (completed()) {
           <p class="muted" role="status">Tu cuenta está lista. Inicia sesión para crear tu espacio de trabajo.</p>
           <a class="btn btn-primary" routerLink="/login">Iniciar sesión</a>
@@ -46,7 +46,7 @@ import { AuthLayoutComponent } from '../auth-layout/auth-layout.component';
           </form>
         }
       </section>
-    </flowkron-auth-layout>
+    </kronflow-auth-layout>
   `,
   styles: `
     h1 { margin: 16px 0 8px; }

@@ -14,7 +14,7 @@ type DirectoryState =
   | { status: 'ready'; page: PaginatedResponse<Contact> };
 
 @Component({
-  selector: 'flowkron-contacts-page',
+  selector: 'kronflow-contacts-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './contacts-page.component.html',

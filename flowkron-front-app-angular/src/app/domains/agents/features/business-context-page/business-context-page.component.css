@@ -1,6 +1,7 @@
 .context-container {
   display: grid;
   gap: var(--space-4);
+  padding: clamp(18px, 3.5vw, 32px);
 }
 
 .tabs-bar {

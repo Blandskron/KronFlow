@@ -28,7 +28,7 @@ interface AiChatMessage {
 }
 
 @Component({
-  selector: 'flowkron-context-upload-panel',
+  selector: 'kronflow-context-upload-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, LucideUpload, LucideDownload, LucideBot, LucideSend, AlertComponent, EmptyStateComponent],
   templateUrl: './context-upload-panel.component.html',
@@ -134,7 +134,7 @@ export class ContextUploadPanelComponent implements OnDestroy {
 
     this.uploadState.set('uploading');
     this.uploadProgress.set(12);
-    this.uploadMessage.set('Enviando documento a flowkron-agent-core.');
+    this.uploadMessage.set('Enviando documento a KronFlow Agent Core.');
     this.startUploadProgressFallback();
 
     this.agentService
@@ -211,7 +211,7 @@ export class ContextUploadPanelComponent implements OnDestroy {
         next: (session) => {
           this.aiSessionId.set(session.session_id);
           this.aiMessages.set([
-            { id: '1', sender: 'bot', text: `¡Hola! Soy tu asistente de configuración de Flowkron para ${companyName.trim()}.` },
+            { id: '1', sender: 'bot', text: `¡Hola! Soy tu asistente de configuración de KronFlow para ${companyName.trim()}.` },
             { id: '2', sender: 'bot', text: session.next_question }
           ]);
           this.aiLoading.set(false);

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Fuente única de contexto e instrucciones agenticas para `flowkron-front-app-angular`. `CLAUDE.md` y `GEMINI.md` son adaptadores mínimos.
+Fuente única de contexto e instrucciones agenticas para `flowkron-front-app-angular` (CRM privado de **KronFlow — Intelligent CRM**). `CLAUDE.md` y `GEMINI.md` son adaptadores mínimos.
 
 ## Propósito y límites
 

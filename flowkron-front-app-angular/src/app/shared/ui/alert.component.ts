@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 export type AlertTone = 'info' | 'success' | 'warning' | 'danger';
 
 @Component({
-  selector: 'flowkron-alert',
+  selector: 'kronflow-alert',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div [class]="alertClass()" [attr.role]="role()">
@@ -26,7 +26,7 @@ export type AlertTone = 'info' | 'success' | 'warning' | 'danger';
     </div>
   `,
   styles: `
-    .fk-alert {
+    .kf-alert {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -43,25 +43,25 @@ export type AlertTone = 'info' | 'success' | 'warning' | 'danger';
       gap: var(--space-1);
     }
 
-    .fk-alert-info {
+    .kf-alert-info {
       background: var(--info-100);
       color: var(--info-text);
       border-color: color-mix(in srgb, var(--info-text) 22%, transparent);
     }
 
-    .fk-alert-success {
+    .kf-alert-success {
       background: var(--success-100);
       color: var(--success-text);
       border-color: color-mix(in srgb, var(--success-text) 22%, transparent);
     }
 
-    .fk-alert-warning {
+    .kf-alert-warning {
       background: var(--warning-100);
       color: var(--warning-text);
       border-color: color-mix(in srgb, var(--warning-text) 22%, transparent);
     }
 
-    .fk-alert-danger {
+    .kf-alert-danger {
       background: var(--error-100);
       color: var(--error-text);
       border-color: color-mix(in srgb, var(--error-text) 22%, transparent);
@@ -84,6 +84,6 @@ export class AlertComponent {
   readonly dismissible = input<boolean>(false);
   readonly dismissed = output<void>();
 
-  readonly alertClass = computed(() => `fk-alert fk-alert-${this.tone()}`);
+  readonly alertClass = computed(() => `kf-alert kf-alert-${this.tone()}`);
   readonly role = computed(() => (this.tone() === 'danger' || this.tone() === 'warning' ? 'alert' : 'status'));
 }

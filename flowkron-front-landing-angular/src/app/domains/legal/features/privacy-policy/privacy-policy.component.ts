@@ -4,7 +4,7 @@ import { ThemeToggleComponent } from '@shared/ui/theme-toggle.component';
 import { environment } from '@env/environment';
 
 @Component({
-  selector: 'flowkron-privacy-policy',
+  selector: 'kronflow-privacy-policy',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, ThemeToggleComponent],
   templateUrl: './privacy-policy.component.html',

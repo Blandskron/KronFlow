@@ -165,13 +165,13 @@
         min-height: 620px;
         border-radius: 18px;
         padding: 16px;
-        border: 1px solid rgba(126, 65, 188, 0.18);
+        border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
         background: linear-gradient(135deg, var(--primary-50), var(--info-50));
       }
 
       :host-context(.dark) .column {
-        border-color: rgba(126, 65, 188, 0.28);
-        background: linear-gradient(135deg, rgba(126, 65, 188, 0.16), rgba(59, 130, 246, 0.1));
+        border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+        background: linear-gradient(135deg, var(--primary-50), var(--info-50));
       }
 
       .column.warning {
@@ -179,8 +179,8 @@
       }
 
       :host-context(.dark) .column.warning {
-        border-color: rgba(245, 158, 11, 0.34);
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(126, 65, 188, 0.1));
+        border-color: color-mix(in srgb, var(--warning) 34%, var(--border));
+        background: linear-gradient(135deg, var(--warning-50), var(--primary-50));
       }
 
       .column header {
@@ -224,8 +224,8 @@
       }
 
       :host-context(.dark) .ticket {
-        background: #1a1a1a;
-        border-color: #2d2d2d;
+        background: var(--card-elevated);
+        border-color: var(--border);
       }
 
       .ticket-head {
@@ -241,8 +241,8 @@
         border-radius: 999px;
         display: grid;
         place-items: center;
-        background: linear-gradient(135deg, var(--primary-button), var(--brand-deep));
-        color: white;
+        background: linear-gradient(135deg, var(--primary-button), var(--primary-button-end));
+        color: var(--primary-button-ink);
         font-size: 12px;
       }
 

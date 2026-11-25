@@ -10,7 +10,7 @@ import { environment } from '@env/environment';
 import { AuthLayoutComponent } from '../auth-layout/auth-layout.component';
 
 @Component({
-  selector: 'flowkron-login',
+  selector: 'kronflow-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, AuthLayoutComponent, LucideEye, LucideEyeOff],
   templateUrl: './login-page.component.html',

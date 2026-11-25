@@ -10,7 +10,7 @@ La landing no procesa autenticacion. El formulario de contacto llama al endpoint
 
 - `appUrl` controla `href` de login/registro; restringir el build arg a `https` y dominio aprobado.
 - WhatsApp usa `wa.me` y `noopener`; el numero debe contener solo digitos.
-- Google Fonts recibe una solicitud del navegador. Evaluar self-host/CSP/consentimiento segun politica de privacidad.
+- Google Fonts (`Sora`, `Inter`, `JetBrains Mono`) recibe una solicitud del navegador. Evaluar self-host/CSP/consentimiento segun politica de privacidad.
 - Nginx no agrega security headers especificos; deben configurarse en Nginx o borde antes de produccion.
 
 ## Formulario y privacidad

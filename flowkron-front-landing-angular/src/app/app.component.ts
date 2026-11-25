@@ -3,7 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { ThemeService } from './core/services/theme.service';
 
 @Component({
-  selector: 'flowkron-root',
+  selector: 'kronflow-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet],
   template: '<router-outlet />'

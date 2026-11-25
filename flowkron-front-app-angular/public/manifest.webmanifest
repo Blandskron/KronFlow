@@ -1,14 +1,14 @@
 {
-  "name": "Flowkron — CRM inteligente para WhatsApp",
-  "short_name": "Flowkron",
+  "name": "KronFlow — Intelligent CRM",
+  "short_name": "KronFlow",
   "lang": "es",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#090909",
-  "theme_color": "#4A148C",
+  "background_color": "#060d10",
+  "theme_color": "#0f766e",
   "icons": [
     {
-      "src": "flowkron-icon.svg",
+      "src": "kronflow-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }

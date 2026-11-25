@@ -1,6 +1,6 @@
-# flowkron-front-app-angular
+# KronFlow CRM (`flowkron-front-app-angular`)
 
-SPA privada de Flowkron construida con Angular 21 standalone. Implementa autenticacion manual, administracion de tenant y consumo de Auth, Operational y Agent Core.
+SPA privada de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) construida con Angular 21 standalone Zoneless (`OnPush`), Design System Teal/Esmeralda/Cyan con `Sora` + `Inter` + `JetBrains Mono`, autenticación JWT RS256 + Google Sign-In, administración de tenant y consumo de Auth, Operational y Agent Core.
 
 ## Alcance real
 

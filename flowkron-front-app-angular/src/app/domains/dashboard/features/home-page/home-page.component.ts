@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideLink, LucideMessageSquare } from '@lucide/angular';
+import { LucideBookOpen, LucideLink, LucideMessageSquare, LucideSettings } from '@lucide/angular';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 
 @Component({
-  selector: 'flowkron-home-page',
+  selector: 'kronflow-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideLink, LucideMessageSquare],
+  imports: [RouterLink, LucideLink, LucideMessageSquare, LucideBookOpen, LucideSettings],
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.css'
 })

@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export type BadgeTone = 'primary' | 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 
 @Component({
-  selector: 'flowkron-badge',
+  selector: 'kronflow-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<span [class]="badgeClass()"><ng-content /></span>`
 })

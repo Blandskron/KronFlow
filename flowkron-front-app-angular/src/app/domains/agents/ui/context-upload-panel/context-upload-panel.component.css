@@ -171,8 +171,8 @@ h3 {
 
 .chat-bubble.user {
   justify-self: end;
-  background: var(--primary-button);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary-button), var(--primary-button-end));
+  color: var(--primary-button-ink);
 }
 
 .chat-input-area {

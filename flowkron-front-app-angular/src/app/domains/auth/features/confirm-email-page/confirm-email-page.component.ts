@@ -7,7 +7,7 @@ import { AuthLayoutComponent } from '../auth-layout/auth-layout.component';
 type ConfirmationState = 'idle' | 'submitting' | 'success' | 'error';
 
 @Component({
-  selector: 'flowkron-confirm-email',
+  selector: 'kronflow-confirm-email',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, AuthLayoutComponent],
   templateUrl: './confirm-email-page.component.html',

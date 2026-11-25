@@ -106,8 +106,8 @@
         display: grid;
         place-items: center;
         overflow: hidden;
-        background: linear-gradient(135deg, var(--primary-button), var(--brand-deep));
-        color: white;
+        background: linear-gradient(135deg, var(--primary-button), var(--primary-button-end));
+        color: var(--primary-button-ink);
         font-weight: 800;
       }
 
@@ -115,7 +115,7 @@
         width: 132px;
         height: 132px;
         border-radius: 18px;
-        box-shadow: 0 16px 34px rgba(126, 65, 188, 0.18);
+        box-shadow: 0 16px 34px var(--primary-glow);
       }
 
       .logo-preview.avatar {

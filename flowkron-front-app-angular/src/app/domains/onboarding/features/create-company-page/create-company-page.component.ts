@@ -7,7 +7,7 @@ import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import { AuthLayoutComponent } from '@domains/auth/features/auth-layout/auth-layout.component';
 
 @Component({
-  selector: 'flowkron-create-company-page',
+  selector: 'kronflow-create-company-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, AuthLayoutComponent],
   templateUrl: './create-company-page.component.html',

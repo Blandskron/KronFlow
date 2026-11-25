@@ -19,7 +19,7 @@ import {
 } from '@shared/ui';
 
 @Component({
-  selector: 'flowkron-opportunities-page',
+  selector: 'kronflow-opportunities-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,

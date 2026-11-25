@@ -58,7 +58,7 @@ const deliveryFailures = {
 };
 
 @Component({
-  selector: 'flowkron-chats-page',
+  selector: 'kronflow-chats-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     LucideArrowLeft,

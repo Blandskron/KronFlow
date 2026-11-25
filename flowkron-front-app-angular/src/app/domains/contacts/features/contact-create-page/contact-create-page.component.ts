@@ -8,7 +8,7 @@ import { ContactDraft, ContactsApiService } from '@domains/contacts/data-access/
 import { finalize } from 'rxjs';
 
 @Component({
-  selector: 'flowkron-contact-create-page',
+  selector: 'kronflow-contact-create-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   template: `

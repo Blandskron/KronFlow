@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Describe a use case for Flowkron
+about: Describe a use case for KronFlow
 ---
 
 ## Use case

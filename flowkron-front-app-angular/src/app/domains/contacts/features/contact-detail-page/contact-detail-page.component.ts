@@ -17,7 +17,7 @@ type DetailState =
   | { status: 'ready'; contact: ContactDetail };
 
 @Component({
-  selector: 'flowkron-contact-detail-page',
+  selector: 'kronflow-contact-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, DatePipe, ContactConsentComponent],
   template: `
@@ -75,7 +75,7 @@ type DetailState =
               </section>
             }
             @if (auth.hasPermission('audit.read')) {
-              <flowkron-contact-consent [contactId]="contact.id" />
+              <kronflow-contact-consent [contactId]="contact.id" />
             }
             <section aria-labelledby="contact-leads">
               <h2 id="contact-leads">Leads de este contacto</h2>

@@ -24,31 +24,31 @@ import {
     TabsComponent
   ],
   template: `
-    <flowkron-page-header eyebrow="CRM" title="Oportunidades" subtitle="Pipeline activo">
+    <kronflow-page-header eyebrow="CRM" title="Oportunidades" subtitle="Pipeline activo">
       <button type="button" class="btn btn-primary">Nueva</button>
-    </flowkron-page-header>
+    </kronflow-page-header>
 
-    <flowkron-stat-card label="Abiertas" [value]="12" hint="Este mes" tone="primary" />
-    <flowkron-badge tone="success">Activa</flowkron-badge>
+    <kronflow-stat-card label="Abiertas" [value]="12" hint="Este mes" tone="primary" />
+    <kronflow-badge tone="success">Activa</kronflow-badge>
 
-    <flowkron-alert tone="danger" title="Error" [dismissible]="true" (dismissed)="dismissed.set(true)">
+    <kronflow-alert tone="danger" title="Error" [dismissible]="true" (dismissed)="dismissed.set(true)">
       No se pudo guardar.
-    </flowkron-alert>
+    </kronflow-alert>
 
-    <flowkron-empty-state title="Sin resultados" description="Prueba otro filtro.">
+    <kronflow-empty-state title="Sin resultados" description="Prueba otro filtro.">
       <button type="button">Limpiar</button>
-    </flowkron-empty-state>
+    </kronflow-empty-state>
 
-    <flowkron-tabs
+    <kronflow-tabs
       [tabs]="tabs"
       [activeId]="activeTab()"
       ariaLabel="Secciones de prueba"
       (selected)="activeTab.set($event)"
     />
 
-    <flowkron-dialog #dlg title="Confirmar">
+    <kronflow-dialog #dlg title="Confirmar">
       <p>Contenido del diálogo</p>
-    </flowkron-dialog>
+    </kronflow-dialog>
   `
 })
 class DesignSystemHostComponent {
@@ -89,7 +89,7 @@ describe('Design System shared/ui primitives', () => {
     expect(el.querySelector('.empty-state h3')?.textContent).toContain('Sin resultados');
   });
 
-  it('supports keyboard navigation (ArrowRight, ArrowLeft, Home, End) in flowkron-tabs', () => {
+  it('supports keyboard navigation (ArrowRight, ArrowLeft, Home, End) in kronflow-tabs', () => {
     const fixture = TestBed.createComponent(DesignSystemHostComponent);
     fixture.detectChanges();
     const tabButtons = Array.from(

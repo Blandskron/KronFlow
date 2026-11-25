@@ -4,7 +4,7 @@ import { BusinessContextStatus, DocumentRead } from '@domains/agents/domain';
 import { AlertComponent, BadgeComponent, BadgeTone, EmptyStateComponent } from '@shared/ui';
 
 @Component({
-  selector: 'flowkron-context-summary-panel',
+  selector: 'kronflow-context-summary-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     LucideAlertTriangle,

@@ -11,7 +11,7 @@ import { Subject, catchError, combineLatest, distinctUntilChanged, filter, final
 type DetailState = { status: 'loading' } | { status: 'error'; message: string; retryable: boolean } | { status: 'ready'; lead: Lead };
 
 @Component({
-  selector: 'flowkron-lead-detail-page',
+  selector: 'kronflow-lead-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './lead-detail-page.component.html',

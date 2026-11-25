@@ -32,7 +32,7 @@ function sameFilters(a: LeadFilters, b: LeadFilters): boolean {
 }
 
 @Component({
-  selector: 'flowkron-leads-page',
+  selector: 'kronflow-leads-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './leads-page.component.html',

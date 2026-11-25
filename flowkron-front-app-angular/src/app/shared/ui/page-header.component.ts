@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-  selector: 'flowkron-page-header',
+  selector: 'kronflow-page-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="page-header">

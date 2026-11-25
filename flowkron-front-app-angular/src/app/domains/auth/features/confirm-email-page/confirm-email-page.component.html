@@ -1,7 +1,7 @@
-<flowkron-auth-layout>
+<kronflow-auth-layout>
   <section class="auth-card">
     <a class="back" routerLink="/login">Volver a login</a>
-    <div class="brand"><span class="app-logo"></span><strong>Flowkron</strong></div>
+    <div class="brand"><span class="app-logo"></span><strong>KronFlow</strong></div>
 
     @if (isSuccess()) {
       <div class="status success">Correo confirmado</div>
@@ -11,7 +11,7 @@
     } @else {
       <div class="status">Verificacion de seguridad</div>
       <h1>Confirma tu correo</h1>
-      <p class="muted">Estas confirmando tu correo para activar el acceso a Flowkron.</p>
+      <p class="muted">Estas confirmando tu correo para activar el acceso a KronFlow.</p>
 
       @if (errorMessage()) {
         <p class="form-error">{{ errorMessage() }}</p>
@@ -22,4 +22,4 @@
       </button>
     }
   </section>
-</flowkron-auth-layout>
+</kronflow-auth-layout>

@@ -1,6 +1,6 @@
 # Third-party components
 
-The root Apache-2.0 license covers original Flowkron work. Dependencies and base images retain their own terms. This file identifies components to review for a distribution; it is not a complete notice bundle for a container image.
+The root Apache-2.0 license covers original KronFlow work. Dependencies and base images retain their own terms. This file identifies components to review for a distribution; it is not a complete notice bundle for a container image.
 
 | Component | Evidence | License recorded upstream or in the lockfile |
 | --- | --- | --- |

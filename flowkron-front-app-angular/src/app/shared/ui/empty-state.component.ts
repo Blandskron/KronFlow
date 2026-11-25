@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-  selector: 'flowkron-empty-state',
+  selector: 'kronflow-empty-state',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="empty-state card glass-surface" aria-live="polite">

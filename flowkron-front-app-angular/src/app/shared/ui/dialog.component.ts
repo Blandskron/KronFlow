@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, ElementRef, input, output, viewChild } from '@angular/core';
 
 @Component({
-  selector: 'flowkron-dialog',
+  selector: 'kronflow-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog
       #dialogEl
-      class="fk-dialog card"
+      class="kf-dialog card glass-surface"
       [attr.aria-labelledby]="titleId()"
       (close)="closed.emit()"
     >
-      <header class="fk-dialog-header">
+      <header class="kf-dialog-header">
         <h2 [id]="titleId()">{{ title() }}</h2>
         <button
           type="button"
@@ -21,24 +21,25 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, output, viewChil
           Cerrar
         </button>
       </header>
-      <div class="fk-dialog-body">
+      <div class="kf-dialog-body">
         <ng-content />
       </div>
     </dialog>
   `,
   styles: `
-    .fk-dialog {
+    .kf-dialog {
       width: min(640px, calc(100% - 32px));
       padding: clamp(16px, 4vw, 28px);
       color: var(--foreground);
       line-height: 1.6;
     }
 
-    .fk-dialog::backdrop {
-      background: rgba(15, 7, 23, 0.68);
+    .kf-dialog::backdrop {
+      background: var(--backdrop-scrim);
+      backdrop-filter: blur(4px);
     }
 
-    .fk-dialog-header {
+    .kf-dialog-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -54,7 +55,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, output, viewChil
 })
 export class DialogComponent {
   readonly title = input.required<string>();
-  readonly titleId = input<string>('flowkron-dialog-title');
+  readonly titleId = input<string>('kronflow-dialog-title');
   readonly closed = output<void>();
 
   private readonly dialogEl = viewChild.required<ElementRef<HTMLDialogElement>>('dialogEl');

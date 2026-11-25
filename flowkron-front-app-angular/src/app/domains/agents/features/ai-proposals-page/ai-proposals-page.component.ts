@@ -14,7 +14,7 @@ import {
 } from '@shared/ui';
 
 @Component({
-  selector: 'flowkron-ai-proposals-page',
+  selector: 'kronflow-ai-proposals-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, JsonPipe, PageHeaderComponent, AlertComponent, BadgeComponent, EmptyStateComponent, SkeletonComponent],
   templateUrl: './ai-proposals-page.component.html',

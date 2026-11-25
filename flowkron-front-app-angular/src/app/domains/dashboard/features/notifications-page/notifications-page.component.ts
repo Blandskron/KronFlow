@@ -20,7 +20,7 @@ function positiveInteger(value: string | null, max = Number.MAX_SAFE_INTEGER): n
 }
 
 @Component({
-  selector: 'flowkron-notifications-page',
+  selector: 'kronflow-notifications-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink, LucideMessageSquare],
   templateUrl: './notifications-page.component.html',

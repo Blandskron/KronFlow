@@ -2,7 +2,7 @@
   <a class="skip-link" href="#main-content">Ir al contenido</a>
   @if (salesWhatsAppNumber) {
     <button class="whatsapp" type="button" aria-label="Contactar por WhatsApp" (click)="openWhatsApp()">
-      <svg lucideMessageSquare size="26"></svg>
+      <svg lucideMessageSquare size="24" aria-hidden="true"></svg>
     </button>
   }
 
@@ -10,160 +10,236 @@
     <div class="container header-shell">
       <a class="brand" href="/">
         <span class="app-logo" aria-hidden="true"></span>
-        <span><strong>Flowkron</strong><small>by BLANDSKRON</small></span>
+        <span><strong>KronFlow</strong><small>by BLANDSKRON</small></span>
       </a>
       <nav aria-label="Navegación principal">
         <a href="#platform">Plataforma</a>
+        <a href="#architecture">Arquitectura</a>
         <a href="#contact">Contacto</a>
       </nav>
       <div class="header-actions">
-        <flowkron-theme-toggle />
+        <kronflow-theme-toggle />
         <a class="btn btn-secondary" [href]="loginUrl">Iniciar sesión</a>
       </div>
     </div>
   </header>
 
   <main id="main-content" tabindex="-1">
-  <section class="hero">
-    <div class="container hero-inner">
-      <div>
-        <h1>CRM inteligente para <span>WhatsApp</span></h1>
-        <p class="hero-copy">Consulta conversaciones y oportunidades en un solo lugar. Define el contexto de tu empresa y prueba cómo respondería un agente de IA.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" [href]="signupUrl">
-            Crear cuenta
-            <svg lucideArrowRight size="18" aria-hidden="true"></svg>
-          </a>
-          <a class="btn btn-secondary" href="#platform">Explorar funciones</a>
-        </div>
-      </div>
-      <div class="card glass-surface inbox-preview" aria-label="Conversación de ejemplo">
-        <div class="preview-heading">
-          <span class="preview-avatar"><svg lucideMessageSquare size="20" aria-hidden="true"></svg></span>
-          <div><strong>Bandeja de conversaciones</strong><small>Ejemplo</small></div>
-        </div>
-        <p class="preview-bubble">Hola, ¿dónde puedo revisar las opciones disponibles?</p>
-        <p class="preview-bubble reply">Puedo ayudarte a encontrarlas. ¿Qué estás buscando?</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="platform" class="section container">
-    <h2>Tu espacio de trabajo</h2>
-    <div class="feature-grid">
-      <article class="card glass-surface feature featured">
-        <h3>Conversaciones</h3>
-        <p>Vincula tu cuenta con un código QR y revisa los mensajes de tus clientes en una sola bandeja.</p>
-      </article>
-      <article class="card glass-surface feature">
-        <h3>Contexto empresarial</h3>
-        <p>Carga tus productos, servicios y políticas. Prueba qué responde el agente en el simulador.</p>
-      </article>
-      <article class="card glass-surface feature">
-        <h3>Seguimiento comercial</h3>
-        <p>Revisa oportunidades y métricas de actividad por empresa.</p>
-      </article>
-      <article class="card glass-surface feature">
-        <h3>Equipo y permisos</h3>
-        <p>Invita a tu equipo y administra su acceso a la instancia.</p>
-      </article>
-    </div>
-  </section>
-
-  <section id="contact" class="section contact">
-    <div class="container grid grid-2">
-      <div>
-        <h2>Hablemos de Flowkron</h2>
-        <p class="muted">Escríbenos si tienes preguntas sobre Flowkron o sobre cómo configurar tu instancia.</p>
-      </div>
-      <form #contactFields class="card glass-surface contact-form" [formGroup]="contactForm" (ngSubmit)="submitContact()" novalidate>
-        <p class="form-note muted">Los campos con * son obligatorios.</p>
-        <div class="form-field">
-          <label for="contact-name">Nombre completo *</label>
-          <input class="field" id="contact-name" formControlName="name" maxlength="120" type="text" autocomplete="name" required
-            [attr.aria-invalid]="isInvalid('name')"
-            [attr.aria-describedby]="isInvalid('name') ? 'contact-name-error' : null">
-          @if (isInvalid('name')) {
-            <small class="field-error" id="contact-name-error">Ingresa tu nombre completo.</small>
-          }
-        </div>
-        <div class="form-field">
-          <label for="contact-email">Correo empresarial *</label>
-          <input class="field" id="contact-email" formControlName="email" maxlength="254" type="email" autocomplete="email" required
-            [attr.aria-invalid]="isInvalid('email')"
-            [attr.aria-describedby]="isInvalid('email') ? 'contact-email-error' : null">
-          @if (isInvalid('email')) {
-            <small class="field-error" id="contact-email-error">Ingresa un correo válido.</small>
-          }
-        </div>
-        <div class="form-field">
-          <label for="contact-company">Empresa</label>
-          <input class="field" id="contact-company" formControlName="company" maxlength="120" type="text" autocomplete="organization"
-            [attr.aria-invalid]="isInvalid('company')"
-            [attr.aria-describedby]="isInvalid('company') ? 'contact-company-error' : null">
-          @if (isInvalid('company')) {
-            <small class="field-error" id="contact-company-error">Ingresa un nombre de empresa válido.</small>
-          }
-        </div>
-        <div class="form-field">
-          <label for="contact-phone">Teléfono</label>
-          <input class="field" id="contact-phone" formControlName="phone" maxlength="32" type="tel" autocomplete="tel"
-            [attr.aria-invalid]="isInvalid('phone')"
-            [attr.aria-describedby]="isInvalid('phone') ? 'contact-phone-error' : null">
-          @if (isInvalid('phone')) {
-            <small class="field-error" id="contact-phone-error">Usa números, espacios y símbolos telefónicos.</small>
-          }
-        </div>
-        <div class="form-field full">
-          <label for="contact-message">Mensaje *</label>
-          <textarea class="field" id="contact-message" formControlName="message" maxlength="2000" rows="4" required
-            [attr.aria-invalid]="isInvalid('message')"
-            [attr.aria-describedby]="isInvalid('message') ? 'contact-message-error' : null"></textarea>
-          @if (isInvalid('message')) {
-            <small class="field-error" id="contact-message-error">Escribe un mensaje válido.</small>
-          }
-        </div>
-        <div class="form-field full">
-          <div class="terms">
-            <input id="contact-accept" type="checkbox" formControlName="acceptTerms" required
-              [attr.aria-invalid]="isInvalid('acceptTerms')"
-              [attr.aria-describedby]="isInvalid('acceptTerms') ? 'contact-legal contact-accept-error' : 'contact-legal'">
-            <label for="contact-accept">Acepto los términos y la política de privacidad.</label>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div>
+          <span class="hero-pill">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            OPEN SOURCE · BY BLANDSKRON
+          </span>
+          <h1>Smart conversations. <span class="gradient-text">Seamless automation.</span></h1>
+          <p class="hero-kicker">KronFlow — Intelligent CRM</p>
+          <p class="hero-copy">
+            Centraliza conversaciones de WhatsApp en un entorno multi-tenant, entrena agentes de IA con contexto empresarial verificable (RAG) y opera tu pipeline comercial con gobernanza Human-in-the-Loop.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" [href]="signupUrl">
+              Crear cuenta
+              <svg lucideArrowRight size="18" aria-hidden="true"></svg>
+            </a>
+            <a class="btn btn-secondary" href="#platform">Explorar funciones</a>
           </div>
-          <div class="legal-links" id="contact-legal">
-            <button type="button" (click)="termsModal.show()">Términos de uso</button>
-            <a routerLink="/politica-privacidad">Política de privacidad</a>
-          </div>
-          @if (isInvalid('acceptTerms')) {
-            <small class="field-error" id="contact-accept-error">Confirma que aceptas los términos y la política de privacidad.</small>
-          }
+          <p class="hero-meta">WHATSAPP · RAG · HITL · POSTGRESQL 18</p>
         </div>
 
-        @if (contactStatus() === 'success') {
-          <p class="form-status success full" role="status">Mensaje enviado. Te responderemos pronto.</p>
-        }
-        @if (contactStatus() === 'error') {
-          <p class="form-status error full" role="alert">No pudimos enviar el mensaje. Revisa los datos e intenta nuevamente.</p>
-        }
+        <div class="card glass-surface inbox-preview" aria-label="Vista previa de conversación inteligente">
+          <div class="preview-heading">
+            <span class="preview-avatar"><svg lucideSparkles size="20" aria-hidden="true"></svg></span>
+            <div class="preview-title">
+              <strong>KronFlow Agent</strong>
+              <small>Bandeja inteligente · HITL activo</small>
+            </div>
+            <span class="badge badge-success">RAG 98%</span>
+          </div>
+          <p class="preview-bubble">Hola, ¿qué plan empresarial recomiendan para automatizar 3 líneas de WhatsApp?</p>
+          <p class="preview-bubble reply">
+            Te recomiendo nuestro despliegue Multi-tenant con aislamiento por esquema y revisión HITL. ¿Agendamos una demo técnica?
+          </p>
+          <div class="preview-footer">
+            <span class="badge badge-info">Propuesta IA lista</span>
+            <span class="preview-trace">Pipeline → Calificado</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        <button class="btn btn-primary full" type="submit" [disabled]="submitting()">
-          {{ submitting() ? 'Enviando…' : 'Enviar mensaje' }}
-        </button>
-      </form>
-    </div>
-  </section>
+    <section id="platform" class="section container">
+      <div class="section-head">
+        <span class="eyebrow">01 / PLATAFORMA</span>
+        <h2>Tu espacio de trabajo inteligente</h2>
+      </div>
+      <div class="feature-grid">
+        <article class="card glass-surface feature featured">
+          <div class="feature-head">
+            <span class="feature-code">01 / BANDEJA HITL</span>
+            <span class="feature-icon"><svg lucideMessageSquare size="20" aria-hidden="true"></svg></span>
+          </div>
+          <h3>Conversaciones</h3>
+          <p>Vincula tu cuenta de WhatsApp con un código QR, gestiona consentimientos y alterna entre respuesta autónoma e intervención humana en tiempo real.</p>
+        </article>
+        <article class="card glass-surface feature">
+          <div class="feature-head">
+            <span class="feature-code">02 / CONTEXTO RAG</span>
+            <span class="feature-icon"><svg lucideBookOpen size="20" aria-hidden="true"></svg></span>
+          </div>
+          <h3>Contexto empresarial</h3>
+          <p>Carga catálogos, políticas y preguntas frecuentes. Simula respuestas con trazabilidad exacta de fuentes antes de publicar.</p>
+        </article>
+        <article class="card glass-surface feature">
+          <div class="feature-head">
+            <span class="feature-code">03 / PIPELINE</span>
+            <span class="feature-icon"><svg lucideWorkflow size="20" aria-hidden="true"></svg></span>
+          </div>
+          <h3>Seguimiento comercial</h3>
+          <p>Convierte señales conversacionales en oportunidades, aprueba propuestas tipadas de IA y monitorea KPIs por workspace.</p>
+        </article>
+        <article class="card glass-surface feature">
+          <div class="feature-head">
+            <span class="feature-code">04 / GOBERNANZA</span>
+            <span class="feature-icon"><svg lucideUsers size="20" aria-hidden="true"></svg></span>
+          </div>
+          <h3>Equipo y permisos</h3>
+          <p>Administra roles multi-tenant, auditoría de eventos y solicitudes de privacidad con aislamiento por esquema PostgreSQL.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="architecture" class="section container">
+      <div class="section-head">
+        <span class="eyebrow">02 / ECOSISTEMA OPEN SOURCE</span>
+        <h2>Arquitectura modular diseñada para escalar</h2>
+      </div>
+      <div class="pillars-grid">
+        <article class="card glass-surface pillar">
+          <span class="feature-code">TENANT ISOLATION</span>
+          <strong>PostgreSQL Schema</strong>
+          <p class="muted">Cada empresa opera en su propio esquema aislado y auditable.</p>
+        </article>
+        <article class="card glass-surface pillar">
+          <span class="feature-code">VERIFIED AI</span>
+          <strong>RAG + HITL</strong>
+          <p class="muted">Respuestas trazables con aprobación humana para acciones críticas.</p>
+        </article>
+        <article class="card glass-surface pillar">
+          <span class="feature-code">APACHE 2.0</span>
+          <strong>Open Source</strong>
+          <p class="muted">Código abierto auditable, extensible y sin vendor lock-in.</p>
+        </article>
+        <article class="card glass-surface pillar">
+          <span class="feature-code">ENGINEERING</span>
+          <strong>By BLANDSKRON</strong>
+          <p class="muted">Microservicios desacoplados con Angular 21 Zoneless.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="contact" class="section contact">
+      <div class="container grid grid-2">
+        <div class="contact-copy">
+          <span class="eyebrow">03 / CONTACTO</span>
+          <h2>Hablemos de KronFlow</h2>
+          <p class="muted">Escríbenos si tienes preguntas sobre KronFlow, su arquitectura open source o cómo desplegar tu instancia.</p>
+          <div class="contact-badge">
+            <svg lucideShieldCheck size="18" aria-hidden="true"></svg>
+            <span>Protegido con validación CSRF y trazabilidad de instancia</span>
+          </div>
+        </div>
+        <form #contactFields class="card glass-surface contact-form" [formGroup]="contactForm" (ngSubmit)="submitContact()" novalidate>
+          <p class="form-note muted">Los campos con * son obligatorios.</p>
+          <div class="form-field">
+            <label for="contact-name">Nombre completo *</label>
+            <input class="field" id="contact-name" formControlName="name" maxlength="120" type="text" autocomplete="name" required
+              [attr.aria-invalid]="isInvalid('name')"
+              [attr.aria-describedby]="isInvalid('name') ? 'contact-name-error' : null">
+            @if (isInvalid('name')) {
+              <small class="field-error" id="contact-name-error">Ingresa tu nombre completo.</small>
+            }
+          </div>
+          <div class="form-field">
+            <label for="contact-email">Correo empresarial *</label>
+            <input class="field" id="contact-email" formControlName="email" maxlength="254" type="email" autocomplete="email" required
+              [attr.aria-invalid]="isInvalid('email')"
+              [attr.aria-describedby]="isInvalid('email') ? 'contact-email-error' : null">
+            @if (isInvalid('email')) {
+              <small class="field-error" id="contact-email-error">Ingresa un correo válido.</small>
+            }
+          </div>
+          <div class="form-field">
+            <label for="contact-company">Empresa</label>
+            <input class="field" id="contact-company" formControlName="company" maxlength="120" type="text" autocomplete="organization"
+              [attr.aria-invalid]="isInvalid('company')"
+              [attr.aria-describedby]="isInvalid('company') ? 'contact-company-error' : null">
+            @if (isInvalid('company')) {
+              <small class="field-error" id="contact-company-error">Ingresa un nombre de empresa válido.</small>
+            }
+          </div>
+          <div class="form-field">
+            <label for="contact-phone">Teléfono</label>
+            <input class="field" id="contact-phone" formControlName="phone" maxlength="32" type="tel" autocomplete="tel"
+              [attr.aria-invalid]="isInvalid('phone')"
+              [attr.aria-describedby]="isInvalid('phone') ? 'contact-phone-error' : null">
+            @if (isInvalid('phone')) {
+              <small class="field-error" id="contact-phone-error">Usa números, espacios y símbolos telefónicos.</small>
+            }
+          </div>
+          <div class="form-field full">
+            <label for="contact-message">Mensaje *</label>
+            <textarea class="field" id="contact-message" formControlName="message" maxlength="2000" rows="4" required
+              [attr.aria-invalid]="isInvalid('message')"
+              [attr.aria-describedby]="isInvalid('message') ? 'contact-message-error' : null"></textarea>
+            @if (isInvalid('message')) {
+              <small class="field-error" id="contact-message-error">Escribe un mensaje válido.</small>
+            }
+          </div>
+          <div class="form-field full">
+            <div class="terms">
+              <input id="contact-accept" type="checkbox" formControlName="acceptTerms" required
+                [attr.aria-invalid]="isInvalid('acceptTerms')"
+                [attr.aria-describedby]="isInvalid('acceptTerms') ? 'contact-legal contact-accept-error' : 'contact-legal'">
+              <label for="contact-accept">Acepto los términos y la política de privacidad.</label>
+            </div>
+            <div class="legal-links" id="contact-legal">
+              <button type="button" (click)="termsModal.show()">Términos de uso</button>
+              <a routerLink="/politica-privacidad">Política de privacidad</a>
+            </div>
+            @if (isInvalid('acceptTerms')) {
+              <small class="field-error" id="contact-accept-error">Confirma que aceptas los términos y la política de privacidad.</small>
+            }
+          </div>
+
+          @if (contactStatus() === 'success') {
+            <p class="form-status success full" role="status">Mensaje enviado. Te responderemos pronto.</p>
+          }
+          @if (contactStatus() === 'error') {
+            <p class="form-status error full" role="alert">No pudimos enviar el mensaje. Revisa los datos e intenta nuevamente.</p>
+          }
+
+          <button class="btn btn-primary full" type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Enviando…' : 'Enviar mensaje' }}
+          </button>
+        </form>
+      </div>
+    </section>
   </main>
+
   <footer>
     <div class="container footer-row">
-      <span><strong>Flowkron</strong> by BLANDSKRON</span>
+      <span><strong>KronFlow — Intelligent CRM</strong> · Open Source · By BLANDSKRON</span>
       <span>Proyecto independiente, sin afiliación ni respaldo de Meta o WhatsApp.</span>
-      <a routerLink="/politica-privacidad">Privacidad</a>
-      <button type="button" (click)="termsModal.show()">Términos</button>
+      <div class="footer-links">
+        <a routerLink="/politica-privacidad">Privacidad</a>
+        <button type="button" (click)="termsModal.show()">Términos</button>
+      </div>
     </div>
   </footer>
 
-  <flowkron-legal-modal #termsModal
+  <kronflow-legal-modal #termsModal
     title="Términos de uso"
-    body="Consulta las condiciones de uso con el operador de tu instancia de Flowkron antes de enviar datos."
+    body="Consulta las condiciones de uso con el operador de tu instancia de KronFlow antes de enviar datos."
   />
 </div>

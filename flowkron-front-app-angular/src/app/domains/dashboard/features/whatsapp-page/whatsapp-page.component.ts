@@ -20,7 +20,7 @@ const causeLabels = {
   temporary: 'La conexión con WhatsApp se interrumpió.',
   startup_failed: 'El conector no pudo iniciar la sesión.',
   workspace_unavailable: 'El espacio de trabajo todavía no está disponible para WhatsApp.',
-  manual: 'La cuenta se desconectó desde Flowkron.'
+  manual: 'La cuenta se desconectó desde KronFlow.'
 };
 
 interface WhatsAppSession {
@@ -49,7 +49,7 @@ const statusLabels: Record<ConnectionStatus, string> = {
 };
 
 @Component({
-  selector: 'flowkron-whatsapp-page',
+  selector: 'kronflow-whatsapp-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink],
   templateUrl: './whatsapp-page.component.html',

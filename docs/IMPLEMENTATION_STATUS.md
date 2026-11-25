@@ -1,7 +1,7 @@
-# Estado actual de implementación
+# Estado actual de implementación — KronFlow
 
-Versión: 1.5
-Última verificación técnica: 2026-11-23 (`tenant_schema_v16`, [Validate `45222208571`](https://github.com/Blandskron/flowkron/actions/runs/45222208571))
+Versión: 1.6
+Última verificación técnica: 2026-11-25 (Rebranding KronFlow + Angular 21 Zoneless + WCAG 2.2 AA)
 
 Esta es la vista transversal del sistema ejecutable. El código, la configuración y la documentación propia de cada microservicio prevalecen sobre este resumen.
 

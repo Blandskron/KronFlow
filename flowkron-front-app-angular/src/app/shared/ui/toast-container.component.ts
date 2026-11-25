@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ToastService } from '@core/services/toast.service';
 
 @Component({
-  selector: 'flowkron-toast-container',
+  selector: 'kronflow-toast-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="toast-region" aria-live="polite" aria-atomic="false">
@@ -46,7 +46,7 @@ import { ToastService } from '@core/services/toast.service';
       padding: var(--space-3) var(--space-4);
       font-size: var(--text-sm);
       font-weight: 600;
-      animation: fk-fade-in var(--duration-normal) var(--ease-standard);
+      animation: kf-fade-in var(--duration-normal) var(--ease-standard);
     }
 
     .toast-info {

@@ -18,7 +18,7 @@ export interface SimulatorMessage {
 }
 
 @Component({
-  selector: 'flowkron-agent-simulator-panel',
+  selector: 'kronflow-agent-simulator-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DecimalPipe,

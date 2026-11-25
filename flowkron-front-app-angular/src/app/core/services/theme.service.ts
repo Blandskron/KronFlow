@@ -1,8 +1,8 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 
-const DARK_THEME_COLOR = '#100d16';
-const LIGHT_THEME_COLOR = '#f8f6fb';
+const DARK_THEME_COLOR = '#060d10';
+const LIGHT_THEME_COLOR = '#f1f8f7';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {

@@ -1,26 +1,32 @@
 <section class="page-section">
   <header class="heading">
+    <span class="eyebrow">WORKSPACE · KRONFLOW</span>
     <h1>Hola, {{ displayName() }}</h1>
     <p class="muted">{{ tenantName() }}</p>
   </header>
 
   <div class="overview">
     <article class="card workspace glass-surface">
-      <span class="icon ready"><svg lucideLink size="26" aria-hidden="true"></svg></span>
+      <span class="icon ready"><svg lucideLink size="24" aria-hidden="true"></svg></span>
       <h2>Conecta tu WhatsApp</h2>
       <p class="muted">Vincula tu cuenta con un código QR para recibir conversaciones y responder con tu agente.</p>
       <a class="btn btn-primary" routerLink="/app/whatsapp">Conectar WhatsApp</a>
     </article>
+
     <a class="card shortcut glass-surface context" routerLink="/app/business-context">
+      <span class="icon"><svg lucideBookOpen size="22" aria-hidden="true"></svg></span>
       <strong>Configurar agente</strong>
       <span class="muted">Agrega tu catálogo, políticas y preguntas frecuentes. Prueba las respuestas antes de conectar el canal.</span>
     </a>
+
     <a class="card shortcut glass-surface" routerLink="/app/conversations">
       <span class="icon"><svg lucideMessageSquare size="22" aria-hidden="true"></svg></span>
       <strong>Conversaciones</strong>
       <span class="muted">Revisa los mensajes y las solicitudes de atención.</span>
     </a>
+
     <a class="card shortcut glass-surface" routerLink="/app/settings">
+      <span class="icon"><svg lucideSettings size="22" aria-hidden="true"></svg></span>
       <strong>Configuración</strong>
       <span class="muted">Administra tu empresa y el acceso de tu equipo.</span>
     </a>

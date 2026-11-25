@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Rebranding & Design System KronFlow — Intelligent CRM (`By BLANDSKRON`):**
+  - Renombrado integral de producto e interfaz de *Flowkron* a **KronFlow — Intelligent CRM** (`Smart conversations. Seamless automation.`), incorporando la skill auditada `ui-ux-pro-max` y un kit SVG original en `assets/brand/`.
+  - Evolución del Design System unificado (`tokens.css`, `reset.css`, `primitives.css`) con paleta Teal/Esmeralda/Cyan, tipografía `Sora` + `Inter` + `JetBrains Mono`, retícula arquitectónica y Floating Glassmorphism (dark mode por defecto).
+  - Selectores Angular migrados de `flowkron-*` a `kronflow-*`, corrección de íconos en sidebar, dock móvil deslizable y rediseño integral de Landing y `index.html`.
 - **Community v1.0 & POST-v1 backend (`tenant_schema_v9`–`v16`, repeatable upgrade `v3–v16`):**
   - Durable action outbox (`FK-03`) with transactional enqueue, payload-hash conflict detection, `SKIP LOCKED` claims, `unknown` lease recovery and effect verification.
   - Persistent channel/purpose consent ledger and transactional worker send authorization serialized with concurrent suppressions (`FK-04`).

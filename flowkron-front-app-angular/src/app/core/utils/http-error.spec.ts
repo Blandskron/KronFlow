@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { extractHttpErrorMessage } from './http-error';
 
 describe('extractHttpErrorMessage', () => {
-  it('extracts message from Flowkron error envelope', () => {
+  it('extracts message from KronFlow error envelope', () => {
     const err = new HttpErrorResponse({
       status: 400,
       error: { error: { code: 'INVALID', message: 'Campo inválido' } }

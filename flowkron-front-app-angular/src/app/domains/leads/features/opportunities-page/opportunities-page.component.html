@@ -1,18 +1,18 @@
 <section class="page-section">
-  <flowkron-page-header
+  <kronflow-page-header
     title="Pipeline de oportunidades"
     subtitle="Gestiona etapas comerciales, importes y cierres ganados o perdidos."
   >
     <button class="btn btn-secondary" type="button" [disabled]="loading()" (click)="reload()">
       {{ loading() ? 'Actualizando…' : 'Actualizar' }}
     </button>
-  </flowkron-page-header>
+  </kronflow-page-header>
 
   @if (notice(); as msg) {
     <div class="section-spacer">
-      <flowkron-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
+      <kronflow-alert [tone]="msg.error ? 'danger' : 'success'" [dismissible]="true" (dismissed)="notice.set(null)">
         {{ msg.text }}
-      </flowkron-alert>
+      </kronflow-alert>
     </div>
   }
 
@@ -57,12 +57,12 @@
   @if (loading() && !items().length) {
     <div class="cards-stack" role="status" aria-label="Cargando oportunidades">
       <span class="sr-only">Cargando oportunidades…</span>
-      <flowkron-skeleton height="88px" />
-      <flowkron-skeleton height="88px" />
-      <flowkron-skeleton height="88px" />
+      <kronflow-skeleton height="88px" />
+      <kronflow-skeleton height="88px" />
+      <kronflow-skeleton height="88px" />
     </div>
   } @else if (!items().length) {
-    <flowkron-empty-state
+    <kronflow-empty-state
       title="Sin oportunidades"
       description="No hay oportunidades registradas para este filtro."
     />
@@ -72,9 +72,9 @@
         <article class="card glass-surface item-card">
           <div class="item-header">
             <strong>#{{ opp.id }} · {{ opp.title }}</strong>
-            <flowkron-badge [tone]="outcomeTones[opp.outcome]">
+            <kronflow-badge [tone]="outcomeTones[opp.outcome]">
               {{ opp.stage_name }} ({{ outcomeLabels[opp.outcome] }})
-            </flowkron-badge>
+            </kronflow-badge>
           </div>
           <small class="muted">
             Contacto #{{ opp.contact_id }}

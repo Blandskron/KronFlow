@@ -25,7 +25,7 @@ function defaultDates(): ActivityFilters {
 }
 
 @Component({
-  selector: 'flowkron-analytics-page',
+  selector: 'kronflow-analytics-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,

@@ -1,6 +1,6 @@
 # Release readiness
 
-Flowkron Community v1.0 (`tenant_schema_v16`, Apache-2.0) has completed all functional implementation and passed full CI validation on `main` (`c821991`, [Validate run `45222208571`](https://github.com/Blandskron/flowkron/actions/runs/45222208571) — builds, PostgreSQL integration suites, repeatable `v3–v16` upgrade matrix, contract validators, security audits, and standard/demo Compose smoke tests).
+KronFlow (formerly Flowkron) Community v1.0 (`tenant_schema_v16`, Apache-2.0) has completed all functional implementation and passed full CI validation on `main` (`c821991`, [Validate run `45222208571`](https://github.com/Blandskron/flowkron/actions/runs/45222208571) — builds, PostgreSQL integration suites, repeatable `v3–v16` upgrade matrix, contract validators, security audits, and standard/demo Compose smoke tests).
 
 The [Community v1 release gates](docs/planning/v1/RELEASE_GATES.md) and [implementation traceability](docs/planning/v1/TRACEABILITY.md) define the evidence required for RC promotion and each enabled production channel.
 

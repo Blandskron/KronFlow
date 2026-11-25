@@ -48,8 +48,8 @@ def main(project, standard=False):
         else:
             raise AssertionError(f"Expected HTTP {code} for {url}")
 
-    assert "Flowkron" in fetch(landing)
-    assert "Flowkron" in fetch(crm + "/login")
+    assert "KronFlow" in fetch(landing)
+    assert "KronFlow" in fetch(crm + "/login")
     assert fetch(operational + "/readyz")["status"] == "ready"
     assert fetch(agent + "/ready")["status"] == "ready"
 

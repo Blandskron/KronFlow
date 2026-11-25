@@ -11,7 +11,7 @@ type ConsentPage =
   | { status: 'ready'; beforeId?: number; data: ContactConsent };
 
 @Component({
-  selector: 'flowkron-contact-consent',
+  selector: 'kronflow-contact-consent',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe],
   template: `

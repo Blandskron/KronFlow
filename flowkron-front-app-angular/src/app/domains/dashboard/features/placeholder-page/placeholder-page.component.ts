@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 @Component({
-  selector: 'flowkron-placeholder-page',
+  selector: 'kronflow-placeholder-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './placeholder-page.component.html',
   styleUrl: './placeholder-page.component.css'

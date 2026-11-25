@@ -4,9 +4,11 @@ import {
   LucideBell,
   LucideBookOpen,
   LucideHome,
-  LucideLink,
   LucideLogOut,
+  LucideMegaphone,
   LucideMessageSquare,
+  LucideSmartphone,
+  LucideSparkles,
   LucideUser,
   LucideUsers,
   LucideWorkflow
@@ -17,7 +19,7 @@ import { WorkspaceStateService } from '@core/services/workspace-state.service';
 import { ThemeToggleComponent, ToastContainerComponent } from '@shared/ui';
 
 @Component({
-  selector: 'flowkron-dashboard-shell',
+  selector: 'kronflow-dashboard-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterOutlet,
@@ -26,7 +28,7 @@ import { ThemeToggleComponent, ToastContainerComponent } from '@shared/ui';
     ThemeToggleComponent,
     ToastContainerComponent,
     LucideHome,
-  LucideLink,
+    LucideSmartphone,
     LucideMessageSquare,
     LucideWorkflow,
     LucideBarChart3,
@@ -34,7 +36,9 @@ import { ThemeToggleComponent, ToastContainerComponent } from '@shared/ui';
     LucideUser,
     LucideUsers,
     LucideLogOut,
-    LucideBookOpen
+    LucideBookOpen,
+    LucideMegaphone,
+    LucideSparkles
   ],
   templateUrl: './dashboard-shell.component.html',
   styleUrl: './dashboard-shell.component.css'
@@ -45,17 +49,17 @@ export class DashboardShellComponent implements OnInit {
   private readonly auth = inject(AuthService);
   readonly notificationCount = computed(() => 0);
   readonly tenantLogo = computed(() => this.auth.currentTenant()?.logo_url || '');
-  readonly brandName = computed(() => this.auth.currentTenant()?.name || 'Flowkron');
+  readonly brandName = computed(() => this.auth.currentTenant()?.name || 'KronFlow');
 
   readonly navItems = [
     { path: '/app/home', label: 'Inicio', icon: 'home' },
     { path: '/app/conversations', label: 'Bandeja', icon: 'message-square' },
     { path: '/app/contacts', label: 'Contactos', icon: 'users' },
-    { path: '/app/whatsapp', label: 'WhatsApp', icon: 'link' },
+    { path: '/app/whatsapp', label: 'WhatsApp', icon: 'smartphone' },
     { path: '/app/business-context', label: 'Contexto', icon: 'book-open' },
     { path: '/app/opportunities', label: 'Pipeline', icon: 'workflow' },
-    { path: '/app/campaigns', label: 'Campañas', icon: 'link' },
-    { path: '/app/ai-proposals', label: 'Propuestas IA', icon: 'bell' },
+    { path: '/app/campaigns', label: 'Campañas', icon: 'megaphone' },
+    { path: '/app/ai-proposals', label: 'Propuestas IA', icon: 'sparkles' },
     { path: '/app/analytics', label: 'Métricas', icon: 'bar-chart-3' }
   ];
 

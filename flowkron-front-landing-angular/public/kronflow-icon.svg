@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" fill="none" role="img" aria-label="KronFlow icon">
+  <defs>
+    <linearGradient id="kf-bg" x1="6" y1="4" x2="66" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#07161B"/>
+      <stop offset="55%" stop-color="#0A2229"/>
+      <stop offset="100%" stop-color="#0D2E33"/>
+    </linearGradient>
+    <radialGradient id="kf-glow" cx="0.65" cy="0.35" r="0.6">
+      <stop offset="0%" stop-color="#2DD4BF" stop-opacity="0.28"/>
+      <stop offset="60%" stop-color="#06B6D4" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#061318" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="kf-stroke" x1="18" y1="16" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="kf-spine" x1="21" y1="17" x2="21" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4"/>
+      <stop offset="100%" stop-color="#0D9488"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="70" height="70" rx="17" fill="url(#kf-bg)"/>
+  <rect x="1" y="1" width="70" height="70" rx="17" fill="url(#kf-glow)"/>
+  <rect x="1" y="1" width="70" height="70" rx="17" stroke="#2DD4BF" stroke-opacity="0.32" stroke-width="1.5"/>
+  <path d="M51 22A22 22 0 0 1 51 50" stroke="#2DD4BF" stroke-opacity="0.26" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2.5 4"/>
+  <path d="M21 19V53" stroke="url(#kf-spine)" stroke-width="5.2" stroke-linecap="round"/>
+  <path d="M49 20C39 24 33 31 25 36C33 41 40 46 50 52" stroke="url(#kf-stroke)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="21" cy="19" r="3" fill="#5EEAD4"/>
+  <circle cx="25" cy="36" r="4.2" fill="#07161B" stroke="#5EEAD4" stroke-width="2.4"/>
+  <circle cx="49" cy="20" r="4" fill="#22D3EE"/>
+  <circle cx="50" cy="52" r="4" fill="#34D399"/>
+</svg>

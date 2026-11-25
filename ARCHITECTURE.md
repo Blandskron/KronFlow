@@ -1,4 +1,8 @@
-# Flowkron architecture
+# KronFlow architecture
+
+> **KronFlow — Intelligent CRM** (*Smart conversations. Seamless automation.* · Open Source · By **BLANDSKRON**).
+>
+> Los directorios de microservicios conservan su slug histórico `flowkron-*` para estabilidad de despliegue y CI.
 
 See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [implementation traceability](docs/planning/v1/TRACEABILITY.md) and [release readiness](RELEASE_READINESS.md) for current Community v1.0 (`tenant_schema_v16`) boundaries and verification.
 

@@ -10,4 +10,4 @@ Use Python 3.12 and separate environments for the Python services. Install each 
 
 Run the three Python validators under [API Contracts scripts](flowkron-api-contracts/scripts) from the contract directory. Validate the integrated topology from the repository root with `docker compose --env-file .env.example config --quiet`.
 
-Follow the [code of conduct](CODE_OF_CONDUCT.md). Flowkron is distributed under [Apache License 2.0](LICENSE).
+Follow the [code of conduct](CODE_OF_CONDUCT.md). KronFlow (formerly Flowkron) is distributed under [Apache License 2.0](LICENSE).

@@ -4,7 +4,12 @@ import { finalize } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import {
   LucideArrowRight,
-  LucideMessageSquare
+  LucideBookOpen,
+  LucideMessageSquare,
+  LucideShieldCheck,
+  LucideSparkles,
+  LucideUsers,
+  LucideWorkflow
 } from '@lucide/angular';
 import { ContactPayload, ContactService } from '@domains/landing/data-access/contact.service';
 import { LegalModalComponent } from '@shared/ui/legal-modal.component';
@@ -32,7 +37,7 @@ function safeTextValidator(control: AbstractControl): ValidationErrors | null {
 }
 
 @Component({
-  selector: 'flowkron-landing',
+  selector: 'kronflow-landing',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
@@ -40,7 +45,12 @@ function safeTextValidator(control: AbstractControl): ValidationErrors | null {
     ThemeToggleComponent,
     LegalModalComponent,
     LucideArrowRight,
-    LucideMessageSquare
+    LucideMessageSquare,
+    LucideBookOpen,
+    LucideWorkflow,
+    LucideUsers,
+    LucideSparkles,
+    LucideShieldCheck
   ],
   templateUrl: './landing-page.component.html',
   styleUrl: './landing-page.component.css'
@@ -68,7 +78,7 @@ export class LandingComponent {
   readonly salesWhatsAppNumber = environment.salesWhatsAppNumber;
 
   openWhatsApp(): void {
-    const message = encodeURIComponent('Hola, me interesa conocer mas sobre Flowkron');
+    const message = encodeURIComponent('Hola, me interesa conocer más sobre KronFlow — Intelligent CRM');
     window.open(`https://wa.me/${this.salesWhatsAppNumber}?text=${message}`, '_blank', 'noopener');
   }
 

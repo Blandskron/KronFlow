@@ -220,6 +220,7 @@ class MergePreviewHandoffTests(PostgresCase):
                 granted=True,
                 source="form",
                 effective_at=T0,
+                recorded_at=T0,
             )
             record_consent_decision(
                 db,
@@ -231,6 +232,7 @@ class MergePreviewHandoffTests(PostgresCase):
                 granted=True,
                 source="form",
                 effective_at=T0,
+                recorded_at=T0,
             )
             record_suppression(
                 db,

@@ -256,6 +256,10 @@ El endpoint proyecta altas y cambios de contactos y leads, derivaciones y transi
 | `POST /api/v1/public/webhooks/commerce/shopify`, `.../mercadopago` | Público (HMAC-SHA256 `X-Shopify-Hmac-Sha256` / `x-signature`) | Reconciliación idempotente de pagos y reembolsos; discrepancias de monto o divisa se marcan sin sumar ingreso confirmado |
 | `GET/POST /api/v1/voice/calls`, `POST .../segments`, `.../transfer`, `.../complete` | JWT tenant / `crm.manage` | Sesiones de llamada, segmentos de transcripción idempotentes, conteo de *barge-in*, traspaso HITL y consentimiento de grabación |
 | `POST /api/v1/public/webhooks/voice/twilio` | Público (firma `X-Twilio-Signature-256`) | Ingestión firmada de eventos de llamada Twilio con duración facturable y estado terminal |
+| `WS /api/v1/voice/media-stream/{call_id}` | `api_key` / `X-Flowkron-Key` (`mcp:invoke`) | Puente bidireccional Twilio Media Streams: audio efímero fuera de SQL, evento `clear` ante *barge-in*, transcripción y cierre |
+| `POST /api/v1/connectors/whatsapp-cloud/send` | JWT (`crm.manage`) | Envío saliente por WhatsApp Cloud API verificando supresiones, ventana de 24h con plantilla obligatoria e idempotencia |
+| `POST /api/v1/connectors/google-calendar/appointments/{id}/push`, `.../sync` | JWT (`crm.manage`) | Sincronización bidireccional OAuth con Google Calendar, recuperación `410` sin perder citas locales confirmadas |
+| `POST /api/v1/connectors/hubspot/sync` | JWT (`crm.manage`) | Upsert por lotes (<= 50) de contactos y oportunidades en HubSpot con manejo de `429 Retry-After` y conflictos |
 
 ### Colecciones operacionales
 

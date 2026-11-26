@@ -9,6 +9,7 @@ import {
   ConversationCursor,
   ConversationMessage,
   HandoffHistoryPage,
+  AgentHandoffItem,
   HumanReplyResult,
   PendingReply
 } from '../domain/conversation.model';
@@ -93,6 +94,21 @@ export class ConversationsApiService {
         expected_version: expectedVersion,
         reason
       })
+      .pipe(map((response) => response.data));
+  }
+
+  listAgentHandoffs(conversationId: number): Observable<AgentHandoffItem[]> {
+    return this.http
+      .get<ApiResponse<AgentHandoffItem[]>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/agent-handoffs`)
+      .pipe(map((response) => response.data));
+  }
+
+  handoffToAgent(
+    conversationId: number,
+    payload: { target_agent_id: number; reason: string; shared_summary?: string }
+  ): Observable<AgentHandoffItem> {
+    return this.http
+      .post<ApiResponse<AgentHandoffItem>>(`${OPERATIONAL_API_BASE_URL}/conversations/${conversationId}/agent-handoff`, payload)
       .pipe(map((response) => response.data));
   }
 

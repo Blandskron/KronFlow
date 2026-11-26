@@ -68,6 +68,19 @@ export interface ConversationControl {
   cancelled_ai_turns?: number;
 }
 
+export interface AgentHandoffItem {
+  trace_id: number;
+  conversation_id: number;
+  from_agent_id: number | null;
+  to_agent_id: number | null;
+  to_agent_revision_id: number | null;
+  hop_number: number;
+  reason: string;
+  shared_summary: string;
+  actor_user_id: string | null;
+  created_at: string;
+}
+
 export interface HumanReplyResult {
   status: 'queued';
   duplicate: boolean;

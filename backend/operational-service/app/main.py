@@ -17,6 +17,7 @@ from app.api.v1.analytics import router as analytics_router
 from app.api.v1.campaigns import router as campaigns_router
 from app.api.v1.capture import router as capture_router
 from app.api.v1.commerce import router as commerce_router
+from app.api.v1.connectors import router as connectors_router
 from app.api.v1.contacts import router as contacts_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.domain_events import router as domain_events_router
@@ -79,6 +80,7 @@ app.include_router(integrations_router)
 app.include_router(mcp_router)
 app.include_router(mcp_clients_router)
 app.include_router(commerce_router)
+app.include_router(connectors_router)
 app.include_router(voice_router)
 app.include_router(tools_router)
 app.include_router(webchat_router)

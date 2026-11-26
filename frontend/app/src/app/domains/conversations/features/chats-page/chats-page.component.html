@@ -125,6 +125,26 @@
             </div>
           }
 
+          @if (canManageCrm() && publishedAgents().length) {
+            <form class="hitl-bar" (submit)="$event.preventDefault(); handoffToSpecialist(handoffAgent.value, handoffReason.value)">
+              <label for="handoff-agent-select" class="muted">Especialista</label>
+              <select #handoffAgent id="handoff-agent-select" class="field">
+                @for (ag of publishedAgents(); track ag.id) {
+                  <option [value]="ag.id">{{ ag.name }} ({{ ag.role }})</option>
+                }
+              </select>
+              <label for="handoff-agent-reason" class="muted">Motivo</label>
+              <input #handoffReason id="handoff-agent-reason" class="field" type="text" maxlength="240" placeholder="agenda / soporte" value="specialist_handoff" />
+              <button class="btn btn-secondary" type="submit" [disabled]="handoffBusy()">Traspasar</button>
+              @if (agentHandoffs().length) {
+                <span class="badge badge-info">{{ agentHandoffs().length }} traspasos</span>
+              }
+              @if (handoffNotice(); as hNotice) {
+                <small [attr.role]="hNotice.error ? 'alert' : 'status'" class="muted">{{ hNotice.text }}</small>
+              }
+            </form>
+          }
+
           <div class="messages">
             @if (threads()[selected.id]; as thread) {
                 @if (thread.error) {

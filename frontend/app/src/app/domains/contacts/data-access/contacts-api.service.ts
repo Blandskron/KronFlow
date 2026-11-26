@@ -42,6 +42,15 @@ export interface ContactConsent {
   next_before_id: number | null;
 }
 
+export interface ContactMergeResult {
+  source_contact_id: number;
+  target_contact_id: number;
+  leads_moved: number;
+  opportunities_moved: number;
+  contact_points_moved: number;
+  suppressions_moved: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ContactsApiService {
   private readonly http = inject(HttpClient);
@@ -75,6 +84,14 @@ export class ContactsApiService {
   updatePoints(contact: Contact, points: ContactPoints) {
     return this.http.patch<ApiResponse<ContactDetail>>(`${OPERATIONAL_API_BASE_URL}/contacts/${contact.id}/points`, {
       ...points, expected_email: contact.email, expected_phone: contact.phone
+    }).pipe(map(({ data }) => data));
+  }
+
+  merge(sourceId: number, targetContactId: number, reason: string, confirmed: boolean) {
+    return this.http.post<ApiResponse<ContactMergeResult>>(`${OPERATIONAL_API_BASE_URL}/contacts/${sourceId}/merge`, {
+      target_contact_id: targetContactId,
+      reason,
+      confirmed
     }).pipe(map(({ data }) => data));
   }
 

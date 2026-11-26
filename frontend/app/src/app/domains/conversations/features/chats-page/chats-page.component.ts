@@ -14,6 +14,9 @@ import {
 import { Conversation, ConversationControl, ConversationCursor, ConversationMessage, PendingReply } from '@domains/conversations/domain/conversation.model';
 import { ConversationsApiService } from '@domains/conversations/data-access/conversations-api.service';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
+import { AgentsApiService } from '@domains/agents/data-access';
+import { AgentProfile } from '@domains/agents/domain';
+import { AgentHandoffItem } from '@domains/conversations/domain/conversation.model';
 
 type ChatStatus = 'new' | 'active' | 'waiting' | 'closed';
 type LeadStatus = 'cold' | 'warm' | 'hot' | 'converted';
@@ -99,6 +102,12 @@ export class ChatsPageComponent implements OnInit {
   readonly controlBusy = signal(false);
   readonly controlNotice = signal<{ error: boolean; text: string } | null>(null);
   readonly replyDraft = signal('');
+  readonly agents = signal<AgentProfile[]>([]);
+  readonly publishedAgents = computed(() => this.agents().filter((a) => a.status === 'active' && a.active_revision_id !== null));
+  readonly agentHandoffs = signal<AgentHandoffItem[]>([]);
+  readonly handoffBusy = signal(false);
+  readonly handoffNotice = signal<{ error: boolean; text: string } | null>(null);
+  private readonly agentsApi = inject(AgentsApiService);
   readonly canManageCrm = computed(() => this.auth.hasPermission('crm.manage'));
   readonly controlModeLabels: Record<ConversationControl['mode'], string> = {
     ai_active: 'IA activa',
@@ -132,6 +141,7 @@ export class ChatsPageComponent implements OnInit {
     this.filtersChanged.pipe(debounceTime(250), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadConversations());
     this.loadConversations();
+    this.loadAgents();
     timer(10000, 10000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       if (document.hidden) return;
       if (!this.paged && !this.isLoading()) this.loadConversations();
@@ -142,6 +152,7 @@ export class ChatsPageComponent implements OnInit {
 
   refresh(): void {
     this.loadConversations();
+    this.loadAgents();
     const selected = this.selectedChatId();
     if (selected !== null) this.loadThread(selected);
   }
@@ -189,6 +200,7 @@ export class ChatsPageComponent implements OnInit {
     }
     this.loadThread(chatId);
     this.loadControl(chatId);
+    this.loadAgentHandoffs(chatId);
   }
 
   loadControl(chatId: number): void {
@@ -331,6 +343,50 @@ export class ChatsPageComponent implements OnInit {
       },
       error: () => {
         this.threads.update((threads) => ({ ...threads, [chatId]: { ...current, loading: false, error: true } }));
+      }
+    });
+  }
+
+  loadAgents(): void {
+    this.agentsApi.listAgents().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (list) => this.agents.set(list),
+      error: () => undefined
+    });
+  }
+
+  loadAgentHandoffs(chatId: number): void {
+    this.agentHandoffs.set([]);
+    this.handoffNotice.set(null);
+    this.operational.listAgentHandoffs(chatId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (items) => {
+        if (this.selectedChatId() === chatId) this.agentHandoffs.set(items);
+      },
+      error: () => undefined
+    });
+  }
+
+  handoffToSpecialist(agentIdRaw: string, reasonRaw: string): void {
+    const chatId = this.selectedChatId();
+    const targetId = Number(agentIdRaw);
+    const reason = reasonRaw.trim() || 'specialist_handoff';
+    if (!chatId || !Number.isSafeInteger(targetId) || targetId < 1 || this.handoffBusy()) return;
+    this.handoffBusy.set(true);
+    this.handoffNotice.set(null);
+    this.operational.handoffToAgent(chatId, { target_agent_id: targetId, reason }).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (hop) => {
+        this.handoffBusy.set(false);
+        this.agentHandoffs.update((items) => [...items, hop]);
+        this.handoffNotice.set({ error: false, text: `Traspaso #${hop.hop_number} registrado.` });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.handoffBusy.set(false);
+        const text = err.status === 409
+          ? 'Límite de saltos entre agentes alcanzado; escalado a revisión humana.'
+          : 'No pudimos registrar el traspaso de especialista.';
+        this.handoffNotice.set({ error: true, text });
+        if (err.status === 409) this.loadControl(chatId);
       }
     });
   }

@@ -56,6 +56,25 @@ type DetailState =
               <dt>Origen</dt><dd>{{ state.contact.source || 'Sin origen' }}</dd>
               <dt>Fecha de creación</dt><dd>{{ state.contact.created_at | date:'dd/MM/yyyy' }}</dd>
             </dl>
+            @if (auth.hasPermission('crm.manage')) {
+              <section class="points" aria-labelledby="contact-merge">
+                <h2 id="contact-merge">Conciliar y fusionar identidad</h2>
+                <form (submit)="$event.preventDefault(); mergeInto(contact.id, mergeTarget.value, mergeReason.value, mergeConfirm.checked)">
+                  <label for="merge-target-id">ID de contacto destino
+                    <input #mergeTarget class="field" id="merge-target-id" type="number" min="1" placeholder="Ej. 42" required />
+                  </label>
+                  <label for="merge-reason">Motivo
+                    <input #mergeReason class="field" id="merge-reason" type="text" maxlength="240" value="manual_reconciliation" required />
+                  </label>
+                  <label for="merge-confirm">
+                    <input #mergeConfirm id="merge-confirm" type="checkbox" required />
+                    Confirmar fusión irreversible (conserva historial y supresiones)
+                  </label>
+                  <button class="btn btn-secondary" type="submit" [disabled]="merging()">Fusionar en destino</button>
+                </form>
+                @if (mergeNotice(); as mNotice) { <p [attr.role]="mNotice.error ? 'alert' : 'status'">{{ mNotice.message }}</p> }
+              </section>
+            }
             @if (auth.hasPermission('crm.manage') && state.contact.source === 'crm_manual') {
               <section class="points" aria-labelledby="contact-points">
                 <h2 id="contact-points">Editar datos de contacto</h2>
@@ -156,6 +175,8 @@ export class ContactDetailPageComponent {
   readonly renameConflict = signal(false);
   readonly startingLead = signal(false);
   readonly startLeadError = signal('');
+  readonly merging = signal(false);
+  readonly mergeNotice = signal<{ error: boolean; message: string } | null>(null);
   readonly reloadDetail = new Subject<void>();
   readonly reloadLeads = new Subject<void>();
   readonly reloadConversations = new Subject<void>();
@@ -250,6 +271,25 @@ export class ContactDetailPageComponent {
         this.renameError.set(error.status === 409
           ? 'El nombre cambió en otra sesión. Recarga la ficha para ver el nombre actual.'
           : 'No pudimos guardar el nombre del contacto.');
+      }
+    });
+  }
+
+  mergeInto(sourceId: number, targetIdRaw: string, reason: string, confirmed: boolean): void {
+    const targetId = Number(targetIdRaw);
+    if (this.merging() || !confirmed || !Number.isSafeInteger(targetId) || targetId < 1 || targetId === sourceId) {
+      this.mergeNotice.set({ error: true, message: 'Indica un ID destino válido distinto al actual y confirma la fusión.' });
+      return;
+    }
+    this.merging.set(true);
+    this.mergeNotice.set(null);
+    this.contacts.merge(sourceId, targetId, reason.trim() || 'manual_reconciliation', true).pipe(
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.merging.set(false))
+    ).subscribe({
+      next: () => { void this.router.navigate(['/app/contacts', targetId]); },
+      error: (err: HttpErrorResponse) => {
+        const msg = typeof err.error?.detail === 'string' ? err.error.detail : 'No pudimos completar la fusión de contactos.';
+        this.mergeNotice.set({ error: true, message: msg });
       }
     });
   }

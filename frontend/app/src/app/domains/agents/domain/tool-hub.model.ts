@@ -79,3 +79,59 @@ export interface ExternalMappingItem {
   created_at: string;
   updated_at: string;
 }
+
+export interface RemoteMcpServerItem {
+  id: number;
+  server_key: string;
+  name: string;
+  base_url: string;
+  auth_header_name: string;
+  auth_fingerprint: string | null;
+  allowed_tools: string[];
+  discovered_tools: Record<string, unknown>[];
+  is_active: boolean;
+  revoked_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommerceOrderItem {
+  id: number;
+  provider: 'mercadopago' | 'shopify' | 'stub' | string;
+  external_order_id: string | null;
+  order_number: string;
+  client_id: number | null;
+  opportunity_id: number | null;
+  conversation_id: number | null;
+  currency: string;
+  expected_amount_minor: number;
+  confirmed_amount_minor: number;
+  refunded_amount_minor: number;
+  net_confirmed_minor: number;
+  status: string;
+  checkout_url: string | null;
+  discrepancy_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VoiceCallItem {
+  id: number;
+  provider: string;
+  external_call_id: string;
+  direction: 'inbound' | 'outbound' | string;
+  from_number: string;
+  to_number: string;
+  client_id: number | null;
+  conversation_id: number | null;
+  status: string;
+  billable_seconds: number;
+  estimated_cost_usd: string;
+  recording_consent: boolean;
+  barge_in_count: number;
+  close_reason: string | null;
+  started_at: string;
+  ended_at: string | null;
+}

@@ -7,10 +7,22 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
+from app.core.security import CurrentPrincipal, require_permission
 from app.core.tenant_resolver import TenantContext, resolve_audit_reader, resolve_crm_editor, resolve_tenant_from_jwt
-from app.schemas.contact import ContactCreateIn, ContactCreateOut, ContactDetailOut, ContactListResponse, ContactNameUpdate, ContactOut, ContactPointsUpdate
+from app.schemas.contact import (
+    ContactCreateIn,
+    ContactCreateOut,
+    ContactDetailOut,
+    ContactListResponse,
+    ContactMergeIn,
+    ContactMergeOut,
+    ContactNameUpdate,
+    ContactOut,
+    ContactPointsUpdate,
+)
 from app.schemas.contact_consent import ContactConsentOut
 from app.schemas.lead import InitialLeadOut
+from app.services.contact_merge_service import merge_contacts
 from app.services.contact_points import normalize_email, normalize_phone
 from app.services.contact_consent_service import read_contact_consent
 from app.services.lead_service import ensure_contact_lead
@@ -184,3 +196,14 @@ def start_contact_lead(
     tenant: TenantContext = Depends(resolve_crm_editor), db: Session = Depends(get_db),
 ):
     return ensure_contact_lead(db, tenant, contact_id)
+
+
+@router.post("/{contact_id}/merge", response_model=ContactMergeOut)
+def merge_contact_endpoint(
+    payload: ContactMergeIn,
+    contact_id: int = Path(ge=1, le=9223372036854775807),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return merge_contacts(db, tenant, contact_id, payload, actor_user_id=principal.user_id)

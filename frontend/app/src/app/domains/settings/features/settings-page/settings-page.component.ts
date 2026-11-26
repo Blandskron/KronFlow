@@ -44,6 +44,10 @@ export class SettingsPageComponent implements OnInit {
   readonly uploadingAvatar = signal(false);
   readonly inviting = signal(false);
   readonly pendingRoles = signal<Record<number, string>>({});
+  readonly mfaBusy = signal(false);
+  readonly mfaAlert = signal<AlertState | null>(null);
+  readonly mfaSetupData = signal<{ secret: string; otpauth_uri: string } | null>(null);
+  readonly mfaRecoveryCodes = signal<string[]>([]);
 
   readonly profileInitial = computed(() => this.auth.displayName().charAt(0).toUpperCase());
   readonly tenantInitial = computed(() => (this.auth.currentTenant()?.name || 'X').charAt(0).toUpperCase());
@@ -86,6 +90,10 @@ export class SettingsPageComponent implements OnInit {
   readonly inviteForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     roleCode: ['VENDEDOR', Validators.required]
+  });
+
+  readonly mfaConfirmForm = this.fb.nonNullable.group({
+    code: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
   });
 
   ngOnInit(): void {
@@ -361,6 +369,46 @@ export class SettingsPageComponent implements OnInit {
       timezone: user.profile.timezone || 'America/Santiago',
       locale: user.profile.locale || 'es-CL',
       avatar_url: user.profile.avatar_url || ''
+    });
+  }
+
+  startMfaSetup(): void {
+    if (this.mfaBusy()) return;
+    this.mfaBusy.set(true);
+    this.mfaAlert.set(null);
+    this.auth.setupMfa().subscribe({
+      next: (data) => {
+        this.mfaSetupData.set(data);
+        this.mfaRecoveryCodes.set([]);
+        this.mfaBusy.set(false);
+        this.mfaAlert.set({ kind: 'info', text: 'Escanea el secreto en tu app autenticadora y confirma el código.' });
+      },
+      error: () => {
+        this.mfaBusy.set(false);
+        this.mfaAlert.set({ kind: 'error', text: 'No pudimos iniciar la configuración MFA.' });
+      }
+    });
+  }
+
+  confirmMfaSetup(): void {
+    if (this.mfaBusy() || this.mfaConfirmForm.invalid) {
+      this.mfaConfirmForm.markAllAsTouched();
+      return;
+    }
+    this.mfaBusy.set(true);
+    this.mfaAlert.set(null);
+    this.auth.confirmMfa(this.mfaConfirmForm.getRawValue().code.trim()).subscribe({
+      next: (res) => {
+        this.mfaBusy.set(false);
+        this.mfaSetupData.set(null);
+        this.mfaRecoveryCodes.set(res.recovery_codes || []);
+        this.mfaConfirmForm.reset({ code: '' });
+        this.mfaAlert.set({ kind: 'success', text: 'MFA activado. Guarda tus códigos de recuperación en un lugar seguro.' });
+      },
+      error: () => {
+        this.mfaBusy.set(false);
+        this.mfaAlert.set({ kind: 'error', text: 'Código MFA inválido o expirado.' });
+      }
     });
   }
 

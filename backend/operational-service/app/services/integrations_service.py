@@ -33,6 +33,12 @@ META_PROVIDER_BY_CHANNEL = {
     "instagram": "meta_instagram",
     "messenger": "meta_messenger",
 }
+ROUTE_PROVIDER_BY_CHANNEL = {
+    **META_PROVIDER_BY_CHANNEL,
+    "shopify": "shopify",
+    "mercadopago": "mercadopago",
+    "voice_twilio": "twilio",
+}
 RECEIPT_RANK = {
     "unknown": 0,
     "received": 1,
@@ -128,7 +134,7 @@ def create_webhook_route(
     actor_user_id: str | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    provider = META_PROVIDER_BY_CHANNEL.get(payload.channel)
+    provider = ROUTE_PROVIDER_BY_CHANNEL.get(payload.channel)
     if provider is None:
         raise HTTPException(status_code=422, detail="Unsupported channel")
     clean_account = payload.external_account_id.strip()[:128]

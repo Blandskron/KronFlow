@@ -19,6 +19,7 @@ from app.tenant_models.operations import Cliente, Conversation, Lead, LogLimpiez
 from app.tenant_models.opportunity import Opportunity
 from app.tenant_models.phase4_hub import WebchatSession
 from app.tenant_models.phase5_integrations import ExternalEntityMapping
+from app.tenant_models.phase6_extensions import CommerceOrder, VoiceCallSegment, VoiceCallSession
 from app.tenant_models.post_v1 import PrivateAttachment
 from app.tenant_models.workflows import WorkflowRun
 
@@ -91,6 +92,8 @@ def export_privacy_case_data(db: Session, tenant: TenantContext, case_id: int, *
     webchat_sessions_count = 0
     external_mappings_count = 0
     workflow_runs_count = 0
+    voice_calls_count = 0
+    commerce_orders_count = 0
 
     if subject is not None:
         subject_dict = {
@@ -184,6 +187,20 @@ def export_privacy_case_data(db: Session, tenant: TenantContext, case_id: int, *
                 )
                 or 0
             )
+        if VoiceCallSession.__tablename__ in existing_tables:
+            voice_calls_count = int(
+                db.scalar(
+                    select(func.count()).select_from(VoiceCallSession).where(VoiceCallSession.client_id == subject.id)
+                )
+                or 0
+            )
+        if CommerceOrder.__tablename__ in existing_tables:
+            commerce_orders_count = int(
+                db.scalar(
+                    select(func.count()).select_from(CommerceOrder).where(CommerceOrder.client_id == subject.id)
+                )
+                or 0
+            )
 
     message_count = int(
         db.scalar(select(func.count()).select_from(Message).where(Message.whatsapp_id == case_row.whatsapp_id)) or 0
@@ -219,6 +236,8 @@ def export_privacy_case_data(db: Session, tenant: TenantContext, case_id: int, *
         "webchat_sessions_count": webchat_sessions_count,
         "external_mappings_count": external_mappings_count,
         "workflow_runs_count": workflow_runs_count,
+        "voice_calls_count": voice_calls_count,
+        "commerce_orders_count": commerce_orders_count,
     }
 
 
@@ -297,6 +316,31 @@ def execute_privacy_erasure(
     )
     messages_redacted = int(msg_res.rowcount or 0)
 
+    voice_segments_redacted = 0
+    if (
+        VoiceCallSession.__tablename__ in existing_tables
+        and VoiceCallSegment.__tablename__ in existing_tables
+        and (client_ids or conv_ids)
+    ):
+        vc_filters = []
+        if client_ids:
+            vc_filters.append(VoiceCallSession.client_id.in_(client_ids))
+        if conv_ids:
+            vc_filters.append(VoiceCallSession.conversation_id.in_(conv_ids))
+        call_ids = list(db.scalars(select(VoiceCallSession.id).where(or_(*vc_filters))).all())
+        if call_ids:
+            db.execute(
+                update(VoiceCallSession)
+                .where(VoiceCallSession.id.in_(call_ids))
+                .values(from_number="[REDACTED]", to_number="[REDACTED]")
+            )
+            seg_res = db.execute(
+                update(VoiceCallSegment)
+                .where(VoiceCallSegment.call_id.in_(call_ids))
+                .values(transcript="[REDACTED_PRIVACY]")
+            )
+            voice_segments_redacted = int(seg_res.rowcount or 0)
+
     workflow_runs_cancelled = 0
     for cid in client_ids:
         workflow_runs_cancelled += cancel_waiting_runs_in_tx(
@@ -342,6 +386,7 @@ def execute_privacy_erasure(
             "attachments_deleted": attachments_deleted,
             "webchat_sessions_anonymized": webchat_sessions_anonymized,
             "workflow_runs_cancelled": workflow_runs_cancelled,
+            "voice_segments_redacted": voice_segments_redacted,
         },
         notas=f"Ejecucion de borrado/anonimizacion caso #{case_id}",
     )
@@ -380,6 +425,7 @@ def execute_privacy_erasure(
         "attachments_deleted": attachments_deleted,
         "webchat_sessions_anonymized": webchat_sessions_anonymized,
         "workflow_runs_cancelled": workflow_runs_cancelled,
+        "voice_segments_redacted": voice_segments_redacted,
     }
 
 

@@ -98,6 +98,11 @@
           <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="dispatchStubBatch()">
             Ejecutar worker stub
           </button>
+          @if (lastCampaign()) {
+            <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="previewLastCampaign()">
+              Previsualizar audiencia
+            </button>
+          }
         </div>
       </form>
 
@@ -105,6 +110,21 @@
         <kronflow-alert tone="info">
           Última campaña #{{ camp.id }} ({{ camp.name }}): estado <strong>{{ camp.status }}</strong> · v{{ camp.version }}
         </kronflow-alert>
+      }
+      @if (audiencePreview(); as prev) {
+        <article class="card glass-surface panel" aria-label="Previsualización de audiencia">
+          <h3>Previsualización · {{ prev.channel }} ({{ prev.purpose }})</h3>
+          <p class="muted">
+            Candidatos {{ prev.total_candidates }} · Elegibles {{ prev.eligible_count }} · Excluidos {{ prev.excluded_count }}
+          </p>
+          @if (exclusionEntries(prev.excluded_by_reason).length) {
+            <ul>
+              @for (item of exclusionEntries(prev.excluded_by_reason); track item.reason) {
+                <li>{{ item.reason }}: {{ item.count }}</li>
+              }
+            </ul>
+          }
+        </article>
       }
     </section>
   }

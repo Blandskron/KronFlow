@@ -84,6 +84,24 @@ class WorkflowKpis(BaseModel):
     runs_cancelled: int = 0
 
 
+class CommerceKpis(BaseModel):
+    total_orders: int = 0
+    paid_orders: int = 0
+    discrepancy_orders: int = 0
+    confirmed_gross_by_currency: dict[str, int] = {}
+    refunded_by_currency: dict[str, int] = {}
+    confirmed_net_by_currency: dict[str, int] = {}
+
+
+class VoiceKpis(BaseModel):
+    total_calls: int = 0
+    completed_calls: int = 0
+    transferred_calls: int = 0
+    no_answer_calls: int = 0
+    total_billable_seconds: int = 0
+    total_estimated_cost_usd: str = "0"
+
+
 class AnalyticsKpisOut(BaseModel):
     as_of: datetime
     pipeline: PipelineKpis
@@ -92,5 +110,7 @@ class AnalyticsKpisOut(BaseModel):
     governance: GovernanceKpis
     ai_usage: AIUsageKpis = Field(default_factory=AIUsageKpis)
     workflows: WorkflowKpis = Field(default_factory=WorkflowKpis)
+    commerce: CommerceKpis = Field(default_factory=CommerceKpis)
+    voice: VoiceKpis = Field(default_factory=VoiceKpis)
 
 

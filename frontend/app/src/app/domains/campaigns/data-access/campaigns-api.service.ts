@@ -41,6 +41,17 @@ export interface DispatchStubResult {
   skipped_paused: number;
 }
 
+export interface CampaignAudiencePreview {
+  campaign_id: number;
+  channel: string;
+  purpose: string;
+  total_candidates: number;
+  eligible_count: number;
+  excluded_count: number;
+  excluded_by_reason: Record<string, number>;
+  sample_eligible: { contact_point_id: number; client_id: number; destination: string }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CampaignsApiService {
   private readonly http = inject(HttpClient);
@@ -100,6 +111,12 @@ export class CampaignsApiService {
       .post<ApiResponse<CampaignSummary>>(`${OPERATIONAL_API_BASE_URL}/campaigns/${campaignId}/approve`, {
         expected_version: expectedVersion
       })
+      .pipe(map((r) => r.data));
+  }
+
+  previewCampaign(campaignId: number): Observable<CampaignAudiencePreview> {
+    return this.http
+      .post<ApiResponse<CampaignAudiencePreview>>(`${OPERATIONAL_API_BASE_URL}/campaigns/${campaignId}/preview`, {})
       .pipe(map((r) => r.data));
   }
 

@@ -108,6 +108,11 @@ export class AnalyticsPageComponent implements OnInit {
     });
   }
 
+  currencyEntries(map: Record<string, number> | undefined): { currency: string; minor: number }[] {
+    if (!map) return [];
+    return Object.entries(map).map(([currency, minor]) => ({ currency, minor }));
+  }
+
   private percent(value: number, total: number): string | null {
     if (!total) {
       return null;

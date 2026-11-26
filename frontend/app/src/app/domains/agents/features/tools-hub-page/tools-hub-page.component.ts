@@ -7,10 +7,13 @@ import { forkJoin } from 'rxjs';
 import { ToolHubApiService } from '@domains/agents/data-access';
 import {
   ChannelWebhookRouteItem,
+  CommerceOrderItem,
   ExternalMappingItem,
+  RemoteMcpServerItem,
   ToolDefinitionItem,
   ToolEffectMode,
   ToolInvocationItem,
+  VoiceCallItem,
   WebchatWidgetItem
 } from '@domains/agents/domain';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
@@ -51,9 +54,10 @@ export class ToolsHubPageComponent implements OnInit {
   readonly tabs: readonly TabItem[] = [
     { id: 'tools', label: 'Herramientas' },
     { id: 'webchat', label: 'Webchat embebible' },
-    { id: 'integrations', label: 'Integraciones y MCP' }
+    { id: 'integrations', label: 'Integraciones y MCP' },
+    { id: 'commerce_voice', label: 'Comercio, Voz y MCP remoto' }
   ];
-  readonly activeTab = signal<'tools' | 'webchat' | 'integrations'>('tools');
+  readonly activeTab = signal<'tools' | 'webchat' | 'integrations' | 'commerce_voice'>('tools');
   readonly canManage = computed(() => this.auth.hasPermission('crm.manage'));
 
   readonly tools = signal<ToolDefinitionItem[]>([]);
@@ -61,6 +65,9 @@ export class ToolsHubPageComponent implements OnInit {
   readonly widgets = signal<WebchatWidgetItem[]>([]);
   readonly webhookRoutes = signal<ChannelWebhookRouteItem[]>([]);
   readonly mappings = signal<ExternalMappingItem[]>([]);
+  readonly remoteMcpServers = signal<RemoteMcpServerItem[]>([]);
+  readonly commerceOrders = signal<CommerceOrderItem[]>([]);
+  readonly voiceCalls = signal<VoiceCallItem[]>([]);
   readonly mcpToolsOutput = signal<Record<string, unknown> | null>(null);
   readonly selectedToolKey = signal<string>('crm.contact.lookup');
   readonly selectedWidgetId = signal<number | null>(null);
@@ -109,10 +116,27 @@ export class ToolsHubPageComponent implements OnInit {
   });
 
   readonly routeForm = this.fb.nonNullable.group({
-    channel: ['instagram' as 'whatsapp' | 'instagram' | 'messenger', [Validators.required]],
+    channel: [
+      'instagram' as 'whatsapp' | 'instagram' | 'messenger' | 'shopify' | 'mercadopago' | 'voice_twilio',
+      [Validators.required]
+    ],
     externalAccountId: ['', [Validators.required, Validators.maxLength(120)]],
     verifyToken: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(120)]],
     appSecret: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(160)]]
+  });
+
+  readonly remoteMcpForm = this.fb.nonNullable.group({
+    serverKey: ['', [Validators.required, Validators.maxLength(64)]],
+    name: ['', [Validators.required, Validators.maxLength(160)]],
+    baseUrl: ['https://', [Validators.required, Validators.maxLength(500)]],
+    allowedToolsText: ['crm.contact.lookup', [Validators.required]],
+    authToken: ['']
+  });
+
+  readonly commerceOrderForm = this.fb.nonNullable.group({
+    provider: ['mercadopago' as 'mercadopago' | 'shopify' | 'stub', [Validators.required]],
+    currency: ['CLP', [Validators.required, Validators.minLength(3), Validators.maxLength(3)]],
+    expectedAmountMinor: [19990, [Validators.required, Validators.min(1)]]
   });
 
   ngOnInit(): void {
@@ -120,7 +144,7 @@ export class ToolsHubPageComponent implements OnInit {
   }
 
   setTab(tab: string): void {
-    if (tab === 'tools' || tab === 'webchat' || tab === 'integrations') {
+    if (tab === 'tools' || tab === 'webchat' || tab === 'integrations' || tab === 'commerce_voice') {
       this.activeTab.set(tab);
     }
   }
@@ -132,16 +156,22 @@ export class ToolsHubPageComponent implements OnInit {
       invocations: this.api.listInvocations({ limit: 25 }),
       widgets: this.api.listWidgets(),
       webhookRoutes: this.api.listWebhookRoutes(),
-      mappings: this.api.listMappings()
+      mappings: this.api.listMappings(),
+      remoteMcpServers: this.api.listRemoteMcpServers(),
+      commerceOrders: this.api.listCommerceOrders(),
+      voiceCalls: this.api.listVoiceCalls()
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ tools, invocations, widgets, webhookRoutes, mappings }) => {
+        next: ({ tools, invocations, widgets, webhookRoutes, mappings, remoteMcpServers, commerceOrders, voiceCalls }) => {
           this.tools.set(tools);
           this.invocations.set(invocations);
           this.widgets.set(widgets);
           this.webhookRoutes.set(webhookRoutes);
           this.mappings.set(mappings);
+          this.remoteMcpServers.set(remoteMcpServers);
+          this.commerceOrders.set(commerceOrders);
+          this.voiceCalls.set(voiceCalls);
           this.loading.set(false);
           if (tools.length && !tools.some((t) => t.tool_key === this.selectedToolKey())) {
             this.selectTool(tools[0]);
@@ -423,6 +453,118 @@ export class ToolsHubPageComponent implements OnInit {
           this.notice.set({ tone: 'success', text: 'Catálogo MCP JSON-RPC 2.0 consultado correctamente.' });
         },
         error: (err: HttpErrorResponse) => this.handleError(err, 'No pudimos consultar el servidor MCP.')
+      });
+  }
+
+  registerRemoteMcp(): void {
+    if (!this.canManage() || this.busy()) return;
+    if (this.remoteMcpForm.invalid) {
+      this.remoteMcpForm.markAllAsTouched();
+      this.notice.set({ tone: 'danger', text: 'Completa server_key, nombre, URL HTTPS y herramientas permitidas.' });
+      return;
+    }
+    const raw = this.remoteMcpForm.getRawValue();
+    const allowed = raw.allowedToolsText
+      .split(/[\n,]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    this.busy.set(true);
+    this.api
+      .createRemoteMcpServer({
+        server_key: raw.serverKey.trim(),
+        name: raw.name.trim(),
+        base_url: raw.baseUrl.trim(),
+        allowed_tools: allowed,
+        auth_token: raw.authToken.trim() || undefined
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (created) => {
+          this.busy.set(false);
+          this.notice.set({ tone: 'success', text: `Servidor MCP remoto "${created.server_key}" registrado.` });
+          this.remoteMcpForm.reset({
+            serverKey: '',
+            name: '',
+            baseUrl: 'https://',
+            allowedToolsText: 'crm.contact.lookup',
+            authToken: ''
+          });
+          this.reloadAll();
+        },
+        error: (err: HttpErrorResponse) => this.handleError(err, 'No pudimos registrar el servidor MCP remoto.')
+      });
+  }
+
+  revokeRemoteMcp(server: RemoteMcpServerItem): void {
+    if (!this.canManage() || this.busy() || !server.is_active) return;
+    this.busy.set(true);
+    this.api
+      .revokeRemoteMcpServer(server.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.notice.set({ tone: 'info', text: `Servidor MCP "${server.server_key}" revocado.` });
+          this.reloadAll();
+        },
+        error: (err: HttpErrorResponse) => this.handleError(err, 'No pudimos revocar el servidor MCP remoto.')
+      });
+  }
+
+  createOrder(): void {
+    if (!this.canManage() || this.busy()) return;
+    if (this.commerceOrderForm.invalid) {
+      this.commerceOrderForm.markAllAsTouched();
+      return;
+    }
+    const raw = this.commerceOrderForm.getRawValue();
+    this.busy.set(true);
+    this.api
+      .createCommerceOrder({
+        provider: raw.provider,
+        currency: raw.currency.trim().toUpperCase(),
+        expected_amount_minor: Number(raw.expectedAmountMinor)
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (order) => {
+          this.busy.set(false);
+          this.notice.set({ tone: 'success', text: `Orden ${order.order_number} creada (${order.currency}).` });
+          this.reloadAll();
+        },
+        error: (err: HttpErrorResponse) => this.handleError(err, 'No pudimos crear la orden comercial.')
+      });
+  }
+
+  issueCheckoutLink(order: CommerceOrderItem): void {
+    if (!this.canManage() || this.busy()) return;
+    this.busy.set(true);
+    this.api
+      .createCheckoutLink(order.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.busy.set(false);
+          this.notice.set({ tone: 'success', text: `Enlace emitido para ${updated.order_number}.` });
+          this.reloadAll();
+        },
+        error: (err: HttpErrorResponse) => this.handleError(err, 'No pudimos emitir el enlace de pago.')
+      });
+  }
+
+  transferCall(call: VoiceCallItem): void {
+    if (!this.canManage() || this.busy()) return;
+    this.busy.set(true);
+    this.api
+      .transferVoiceCall(call.id, 'operator_requested_transfer')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.notice.set({ tone: 'info', text: `Llamada ${call.external_call_id} transferida a atención humana.` });
+          this.reloadAll();
+        },
+        error: (err: HttpErrorResponse) => this.handleError(err, 'No pudimos transferir la llamada.')
       });
   }
 

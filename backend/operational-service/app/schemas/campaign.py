@@ -99,6 +99,17 @@ class CampaignDispatchOut(BaseModel):
     skipped_paused: int
 
 
+class CampaignAudiencePreviewOut(BaseModel):
+    campaign_id: int
+    channel: str
+    purpose: str
+    total_candidates: int
+    eligible_count: int
+    excluded_count: int
+    excluded_by_reason: dict[str, int] = Field(default_factory=dict)
+    sample_eligible: list[dict] = Field(default_factory=list)
+
+
 class ChannelReceiptIn(BaseModel):
     provider_account_id: str = Field(min_length=1, max_length=80)
     provider_event_id: str = Field(min_length=1, max_length=180)

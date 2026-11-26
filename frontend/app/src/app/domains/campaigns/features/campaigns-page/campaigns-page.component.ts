@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { switchMap } from 'rxjs';
 import { AuthService } from '@domains/auth/data-access/auth-api.service';
 import {
+  CampaignAudiencePreview,
   CampaignSummary,
   CampaignsApiService,
   ChannelConnection
@@ -30,6 +31,7 @@ export class CampaignsPageComponent implements OnInit {
   readonly busy = signal(false);
   readonly notice = signal<{ error: boolean; text: string } | null>(null);
   readonly lastCampaign = signal<CampaignSummary | null>(null);
+  readonly audiencePreview = signal<CampaignAudiencePreview | null>(null);
   readonly canManage = computed(() => this.auth.hasPermission('crm.manage'));
 
   readonly connectionForm = this.fb.nonNullable.group({
@@ -146,6 +148,30 @@ export class CampaignsPageComponent implements OnInit {
           this.notice.set({ error: true, text: 'No pudimos crear y aprobar la campaña. Revisa la conexión y plantilla.' });
         }
       });
+  }
+
+  previewLastCampaign(): void {
+    const camp = this.lastCampaign();
+    if (!camp || this.busy()) return;
+    this.busy.set(true);
+    this.api.previewCampaign(camp.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        this.audiencePreview.set(res);
+        this.busy.set(false);
+        this.notice.set({
+          error: false,
+          text: `Previsualización campaña #${res.campaign_id}: ${res.eligible_count} elegibles, ${res.excluded_count} excluidos.`
+        });
+      },
+      error: () => {
+        this.busy.set(false);
+        this.notice.set({ error: true, text: 'No pudimos previsualizar la audiencia de la campaña.' });
+      }
+    });
+  }
+
+  exclusionEntries(map: Record<string, number>): { reason: string; count: number }[] {
+    return Object.entries(map).map(([reason, count]) => ({ reason, count }));
   }
 
   dispatchStubBatch(): void {

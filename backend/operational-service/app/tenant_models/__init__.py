@@ -50,6 +50,13 @@ from app.tenant_models.phase5_integrations import (
     ConnectorSyncCursor,
     ExternalEntityMapping,
 )
+from app.tenant_models.phase6_extensions import (
+    CommerceOrder,
+    CommercePaymentEvent,
+    RemoteMcpServer,
+    VoiceCallSegment,
+    VoiceCallSession,
+)
 from app.tenant_models.operations import (
     ACTIVE_TENANT_TABLE_NAMES,
     Cliente,
@@ -143,4 +150,9 @@ __all__ = [
     "WebchatSession",
     "ConnectorSyncCursor",
     "ExternalEntityMapping",
+    "CommerceOrder",
+    "CommercePaymentEvent",
+    "RemoteMcpServer",
+    "VoiceCallSegment",
+    "VoiceCallSession",
 ]

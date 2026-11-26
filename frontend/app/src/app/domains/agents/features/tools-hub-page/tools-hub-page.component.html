@@ -235,17 +235,20 @@
         }
       </div>
     </div>
-  } @else {
+  } @else if (activeTab() === 'integrations') {
     <div class="hub-grid">
       <div class="stack-list">
         <form class="card glass-surface panel-card" [formGroup]="routeForm" (ngSubmit)="createRoute()">
-          <h2>Rutas webhook Meta firmadas (HMAC-SHA256)</h2>
+          <h2>Rutas webhook firmadas (HMAC-SHA256)</h2>
           <div class="control-group">
-            <label for="meta-channel">Canal omnicanal</label>
+            <label for="meta-channel">Canal / proveedor</label>
             <select id="meta-channel" class="field" formControlName="channel">
               <option value="whatsapp">WhatsApp Cloud / Baileys</option>
               <option value="instagram">Instagram Direct</option>
               <option value="messenger">Facebook Messenger</option>
+              <option value="shopify">Shopify Commerce</option>
+              <option value="mercadopago">Mercado Pago</option>
+              <option value="voice_twilio">Twilio Voice</option>
             </select>
           </div>
           <div class="control-group">
@@ -348,6 +351,160 @@
           </p>
           @if (mcpToolsOutput(); as mcpRes) {
             <pre class="result-pre">{{ mcpRes | json }}</pre>
+          }
+        </section>
+      </div>
+    </div>
+  } @else {
+    <div class="hub-grid">
+      <div class="stack-list">
+        <form class="card glass-surface panel-card" [formGroup]="remoteMcpForm" (ngSubmit)="registerRemoteMcp()">
+          <h2>Cliente MCP remoto (HTTPS + allowlist)</h2>
+          <div class="form-row">
+            <div class="control-group">
+              <label for="rmcp-key">Identificador (server_key)</label>
+              <input id="rmcp-key" class="field" type="text" formControlName="serverKey" placeholder="erp-prod" />
+            </div>
+            <div class="control-group">
+              <label for="rmcp-name">Nombre visible</label>
+              <input id="rmcp-name" class="field" type="text" formControlName="name" placeholder="Servidor ERP" />
+            </div>
+          </div>
+          <div class="control-group">
+            <label for="rmcp-url">Endpoint HTTPS público</label>
+            <input id="rmcp-url" class="field" type="url" formControlName="baseUrl" />
+          </div>
+          <div class="control-group">
+            <label for="rmcp-tools">Herramientas permitidas (allowlist)</label>
+            <textarea id="rmcp-tools" class="field mono-area" rows="2" formControlName="allowedToolsText"></textarea>
+          </div>
+          <div class="control-group">
+            <label for="rmcp-token">Token Bearer / API Key (opcional, nunca expuesto)</label>
+            <input id="rmcp-token" class="field" type="password" formControlName="authToken" autocomplete="off" />
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="!canManage() || busy()">
+            Registrar servidor MCP remoto
+          </button>
+        </form>
+
+        <section class="card glass-surface panel-card" aria-label="Servidores MCP remotos">
+          <h3>Servidores remotos ({{ remoteMcpServers().length }})</h3>
+          @if (!remoteMcpServers().length) {
+            <kronflow-empty-state
+              title="Sin servidores MCP remotos"
+              description="Registra un servidor MCP externo HTTPS con herramientas autorizadas."
+            />
+          } @else {
+            <div class="stack-list">
+              @for (srv of remoteMcpServers(); track srv.id) {
+                <article class="row-card">
+                  <div class="row-top">
+                    <strong>{{ srv.name }} (<code>{{ srv.server_key }}</code>)</strong>
+                    <kronflow-badge [tone]="srv.is_active ? 'success' : 'danger'">
+                      {{ srv.is_active ? 'Activo' : 'Revocado' }}
+                    </kronflow-badge>
+                  </div>
+                  <small class="muted">{{ srv.base_url }} · allowlist: {{ srv.allowed_tools.join(', ') || 'ninguna' }}</small>
+                  @if (srv.is_active && canManage()) {
+                    <div class="row-actions">
+                      <button class="btn btn-ghost btn-sm" type="button" [disabled]="busy()" (click)="revokeRemoteMcp(srv)">
+                        Revocar
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </section>
+      </div>
+
+      <div class="right-column">
+        <form class="card glass-surface panel-card" [formGroup]="commerceOrderForm" (ngSubmit)="createOrder()">
+          <h2>Órdenes comerciales y checkout</h2>
+          <div class="form-row">
+            <div class="control-group">
+              <label for="ord-provider">Pasarela / Tienda</label>
+              <select id="ord-provider" class="field" formControlName="provider">
+                <option value="mercadopago">Mercado Pago</option>
+                <option value="shopify">Shopify</option>
+                <option value="stub">Prueba / Stub</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label for="ord-curr">Divisa ISO (3 letras)</label>
+              <input id="ord-curr" class="field" type="text" formControlName="currency" />
+            </div>
+          </div>
+          <div class="control-group">
+            <label for="ord-amount">Monto esperado (unidades menores)</label>
+            <input id="ord-amount" class="field" type="number" formControlName="expectedAmountMinor" />
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="!canManage() || busy()">
+            Crear orden comercial
+          </button>
+        </form>
+
+        <section class="card glass-surface panel-card" aria-label="Órdenes registradas">
+          <h3>Órdenes ({{ commerceOrders().length }})</h3>
+          @if (!commerceOrders().length) {
+            <kronflow-empty-state title="Sin órdenes" description="Emite órdenes de pago vinculadas a Mercado Pago o Shopify." />
+          } @else {
+            <div class="stack-list">
+              @for (ord of commerceOrders(); track ord.id) {
+                <article class="row-card">
+                  <div class="row-top">
+                    <strong>{{ ord.order_number }} · {{ ord.provider }}</strong>
+                    <kronflow-badge [tone]="ord.status === 'paid' ? 'success' : (ord.status === 'discrepancy' ? 'danger' : 'info')">
+                      {{ ord.status }}
+                    </kronflow-badge>
+                  </div>
+                  <small class="muted">
+                    {{ ord.currency }} esperado {{ ord.expected_amount_minor }} · confirmado neto {{ ord.net_confirmed_minor }}
+                  </small>
+                  @if (ord.checkout_url) {
+                    <small class="muted">Checkout: <code>{{ ord.checkout_url }}</code></small>
+                  }
+                  @if ((ord.status === 'draft' || ord.status === 'checkout_created') && canManage()) {
+                    <div class="row-actions">
+                      <button class="btn btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="issueCheckoutLink(ord)">
+                        Emitir enlace de pago
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="card glass-surface panel-card" aria-label="Sesiones de telefonía y voz">
+          <h3>Llamadas y transcripciones ({{ voiceCalls().length }})</h3>
+          @if (!voiceCalls().length) {
+            <kronflow-empty-state title="Sin llamadas" description="Las sesiones Twilio o de laboratorio aparecerán aquí con barge-in y handoff." />
+          } @else {
+            <div class="stack-list">
+              @for (call of voiceCalls(); track call.id) {
+                <article class="row-card">
+                  <div class="row-top">
+                    <strong>{{ call.provider }} · {{ call.direction }} ({{ call.external_call_id }})</strong>
+                    <kronflow-badge [tone]="call.status === 'completed' ? 'success' : (call.status === 'transferred' ? 'warning' : 'info')">
+                      {{ call.status }}
+                    </kronflow-badge>
+                  </div>
+                  <small class="muted">
+                    {{ call.billable_seconds }}s · barge-in {{ call.barge_in_count }} · coste ${{ call.estimated_cost_usd }} USD
+                  </small>
+                  @if ((call.status === 'in_progress' || call.status === 'ringing') && canManage()) {
+                    <div class="row-actions">
+                      <button class="btn btn-ghost btn-sm" type="button" [disabled]="busy()" (click)="transferCall(call)">
+                        Transferir a humano
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
           }
         </section>
       </div>

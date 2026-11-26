@@ -818,3 +818,80 @@ def promote_due_scheduled_campaigns(
         promoted += 1
     db.commit()
     return promoted
+
+
+def preview_campaign_audience(
+    db: Session,
+    tenant: TenantContext,
+    campaign_id: int,
+    *,
+    now: datetime | None = None,
+) -> dict:
+    """Read-only audience pre-flight counting eligible destinations and exclusions by reason."""
+    current = _now(now)
+    bind_tenant_session(db, tenant.schema_name)
+    _require_ready(db, tenant)
+
+    campaign = db.get(Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    points = list(
+        db.scalars(
+            select(ContactPoint)
+            .where(
+                ContactPoint.point_type == campaign.channel,
+                ContactPoint.status == "active",
+            )
+            .order_by(ContactPoint.id.asc())
+        ).all()
+    )
+
+    seen_destinations: set[str] = set()
+    excluded_by_reason: dict[str, int] = {}
+    sample_eligible: list[dict] = []
+    eligible_count = 0
+
+    for pt in points:
+        if not pt.verified:
+            excluded_by_reason["unverified_point"] = excluded_by_reason.get("unverified_point", 0) + 1
+            continue
+        if pt.normalized_value in seen_destinations:
+            excluded_by_reason["duplicate_destination"] = excluded_by_reason.get("duplicate_destination", 0) + 1
+            continue
+        reason = evaluate_persisted_consent(
+            db,
+            tenant,
+            client_id=pt.client_id,
+            channel=campaign.channel,
+            destination=pt.normalized_value,
+            purpose=campaign.purpose,
+            point_active=True,
+            point_verified=True,
+            now=current,
+        )
+        if reason != "eligible":
+            excluded_by_reason[reason] = excluded_by_reason.get(reason, 0) + 1
+            continue
+        seen_destinations.add(pt.normalized_value)
+        eligible_count += 1
+        if len(sample_eligible) < 10:
+            sample_eligible.append(
+                {
+                    "contact_point_id": pt.id,
+                    "client_id": pt.client_id,
+                    "destination": pt.normalized_value,
+                }
+            )
+
+    total_candidates = len(points)
+    return {
+        "campaign_id": campaign.id,
+        "channel": campaign.channel,
+        "purpose": campaign.purpose,
+        "total_candidates": total_candidates,
+        "eligible_count": eligible_count,
+        "excluded_count": total_candidates - eligible_count,
+        "excluded_by_reason": excluded_by_reason,
+        "sample_eligible": sample_eligible,
+    }

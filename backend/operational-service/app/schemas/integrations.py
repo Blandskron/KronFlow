@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class ChannelWebhookRouteCreateIn(BaseModel):
-    channel: Literal["whatsapp", "instagram", "messenger"]
+    channel: Literal["whatsapp", "instagram", "messenger", "shopify", "mercadopago", "voice_twilio"]
     external_account_id: str = Field(min_length=1, max_length=128)
     connection_id: int | None = Field(default=None, ge=1)
     verify_token: str = Field(min_length=8, max_length=255)

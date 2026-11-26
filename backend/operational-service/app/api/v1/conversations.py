@@ -9,6 +9,9 @@ from app.core.database import get_db
 from app.core.security import CurrentPrincipal, require_permission
 from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
 from app.schemas.conversation import (
+    AgentHandoffIn,
+    AgentHandoffItemOut,
+    AgentHandoffResultOut,
     ConversationClaimIn,
     ConversationControlOut,
     ConversationCursor,
@@ -24,6 +27,7 @@ from app.schemas.conversation import (
     HumanReplyOut,
     MessageListResponse,
 )
+from app.services.agent_handoff_service import handoff_conversation_to_agent, list_conversation_agent_handoffs
 from app.services.conversation_control_service import (
     claim_conversation,
     get_conversation_control,
@@ -219,6 +223,33 @@ def resolve(
         expected_version=payload.expected_version,
         reason=payload.reason,
         is_supervisor=_is_supervisor(principal),
+    )
+
+
+@router.get("/{conversation_id}/agent-handoffs", response_model=list[AgentHandoffItemOut])
+def conversation_agent_handoffs(
+    conversation_id: int,
+    _principal: CurrentPrincipal = Depends(require_permission("users.read")),
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    db: Session = Depends(get_db),
+):
+    return list_conversation_agent_handoffs(db, tenant, conversation_id)
+
+
+@router.post("/{conversation_id}/agent-handoff", response_model=AgentHandoffResultOut)
+def conversation_agent_handoff(
+    conversation_id: int,
+    payload: AgentHandoffIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    return handoff_conversation_to_agent(
+        db,
+        tenant,
+        conversation_id,
+        payload,
+        actor_user_id=principal.user_id,
     )
 
 

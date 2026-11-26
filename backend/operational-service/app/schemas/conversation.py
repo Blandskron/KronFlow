@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConversationOut(BaseModel):
@@ -134,5 +134,32 @@ class HumanReplyOut(BaseModel):
     message_id: int | None = None
     conversation_id: int
     control_version: int
+
+
+class AgentHandoffIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_agent_id: int = Field(ge=1)
+    from_agent_id: int | None = Field(default=None, ge=1)
+    reason: str = Field(min_length=2, max_length=240)
+    shared_summary: str = Field(default="", max_length=1000)
+    max_hops: int = Field(default=3, ge=1, le=5)
+
+
+class AgentHandoffItemOut(BaseModel):
+    trace_id: int
+    conversation_id: int
+    from_agent_id: int | None = None
+    to_agent_id: int | None = None
+    to_agent_revision_id: int | None = None
+    hop_number: int
+    reason: str
+    shared_summary: str
+    actor_user_id: str | None = None
+    created_at: datetime
+
+
+class AgentHandoffResultOut(AgentHandoffItemOut):
+    max_hops: int
 
 

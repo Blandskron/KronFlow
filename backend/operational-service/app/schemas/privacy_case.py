@@ -48,6 +48,8 @@ class PrivacyCaseExportOut(BaseModel):
     webchat_sessions_count: int = 0
     external_mappings_count: int = 0
     workflow_runs_count: int = 0
+    voice_calls_count: int = 0
+    commerce_orders_count: int = 0
 
 
 class PrivacyErasureIn(BaseModel):
@@ -68,6 +70,7 @@ class PrivacyErasureOut(BaseModel):
     attachments_deleted: int = 0
     webchat_sessions_anonymized: int = 0
     workflow_runs_cancelled: int = 0
+    voice_segments_redacted: int = 0
 
 
 class RetentionSweepIn(BaseModel):

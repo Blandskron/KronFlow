@@ -136,6 +136,21 @@
                 <strong>{{ wf.active_workflows }} / {{ wf.runs_completed }} / {{ wf.runs_waiting }}</strong>
               </article>
             }
+            @if (kpi.commerce; as comm) {
+              <article class="card glass-surface metric">
+                <small class="muted">Comercio (Pagadas / Discrepancias · Neto por divisa)</small>
+                <strong>{{ comm.paid_orders }} / {{ comm.discrepancy_orders }}</strong>
+                @for (item of currencyEntries(comm.confirmed_net_by_currency); track item.currency) {
+                  <small class="muted">{{ item.currency }}: {{ item.minor }} minor</small>
+                }
+              </article>
+            }
+            @if (kpi.voice; as vc) {
+              <article class="card glass-surface metric">
+                <small class="muted">Telefonía (Total / Completadas / Transferidas · {{ vc.total_billable_seconds }}s)</small>
+                <strong>{{ vc.total_calls }} / {{ vc.completed_calls }} / {{ vc.transferred_calls }}</strong>
+              </article>
+            }
           </div>
         </section>
       }

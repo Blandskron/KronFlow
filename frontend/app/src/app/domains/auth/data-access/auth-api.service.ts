@@ -195,6 +195,29 @@ export class AuthService {
     );
   }
 
+  setupMfa(): Observable<{ secret: string; otpauth_uri: string }> {
+    return this.http.post<ApiResponse<{ secret: string; otpauth_uri: string }>>(`${API_BASE_URL}/auth/mfa/setup/`, {}).pipe(
+      map((response) => response.data),
+      catchError((error) => throwError(() => this.toAuthError(error)))
+    );
+  }
+
+  confirmMfa(code: string): Observable<{ confirmed: boolean; recovery_codes: string[] }> {
+    return this.http
+      .post<ApiResponse<{ confirmed: boolean; recovery_codes: string[] }>>(`${API_BASE_URL}/auth/mfa/confirm/`, { code })
+      .pipe(
+        map((response) => response.data),
+        tap((res) => {
+          if (res.confirmed) {
+            this.currentUser.update((user) =>
+              user ? { ...user, profile: { ...user.profile, mfa_enabled: true, mfa_confirmed_at: new Date().toISOString() } } : user
+            );
+          }
+        }),
+        catchError((error) => throwError(() => this.toAuthError(error)))
+      );
+  }
+
   clearLocalSession(): void {
     clearTokens();
     this.accessToken.set(null);

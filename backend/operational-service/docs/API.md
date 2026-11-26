@@ -243,9 +243,19 @@ El endpoint proyecta altas y cambios de contactos y leads, derivaciones y transi
 | Método y ruta | Auth | Efecto |
 | --- | --- | --- |
 | `POST /api/v1/mcp` | `X-Flowkron-Key` (`mcp:read` / `mcp:invoke`) o JWT (`crm.manage`) | Servidor MCP JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`) sobre el Hub gobernado de herramientas |
-| `GET/POST /api/v1/integrations/webhook-routes`, `POST .../deactivate` | JWT (`crm.manage`) / tenant | Registra, lista y desactiva rutas firmadas para WhatsApp, Instagram Direct y Messenger (`verify_token` hashed + secreto) |
+| `GET/POST /api/v1/mcp-clients`, `POST .../discover`, `.../invoke`, `.../revoke` | JWT tenant / `crm.manage` | Cliente MCP remoto bidireccional con guarda SSRF, allowlist de herramientas, idempotencia y revocación |
+| `GET/POST /api/v1/integrations/webhook-routes`, `POST .../deactivate` | JWT (`crm.manage`) / tenant | Registra, lista y desactiva rutas firmadas para Meta (`whatsapp`, `instagram`, `messenger`), comercio (`shopify`, `mercadopago`) y telefonía (`voice_twilio`) |
 | `GET/POST /api/v1/public/webhooks/meta/{channel}` | Público (challenge `hub.verify_token` / firma `X-Hub-Signature-256`) | Valida reto Meta e ingiere mensajes entrantes aislados por canal/cuenta/remitente, recibos monotónicos y cancelación de esperas |
 | `GET/POST /api/v1/integrations/mappings`, `POST .../resolve`, `GET/POST /api/v1/integrations/cursors` | JWT tenant / `crm.manage` | Gestiona mapeos de entidades externas con detección/resolución de conflictos de versión y cursores de sincronización |
+
+### Comercio, webhooks de pago firmados y telefonía/voz
+
+| Método y ruta | Auth | Efecto |
+| --- | --- | --- |
+| `GET/POST /api/v1/commerce/orders`, `POST .../checkout-link`, `POST .../refund`, `GET .../events` | JWT tenant / `crm.manage` | Órdenes comerciales por divisa, emisión de enlace de checkout, reembolsos parciales/totales con asiento inverso y ledger de pagos |
+| `POST /api/v1/public/webhooks/commerce/shopify`, `.../mercadopago` | Público (HMAC-SHA256 `X-Shopify-Hmac-Sha256` / `x-signature`) | Reconciliación idempotente de pagos y reembolsos; discrepancias de monto o divisa se marcan sin sumar ingreso confirmado |
+| `GET/POST /api/v1/voice/calls`, `POST .../segments`, `.../transfer`, `.../complete` | JWT tenant / `crm.manage` | Sesiones de llamada, segmentos de transcripción idempotentes, conteo de *barge-in*, traspaso HITL y consentimiento de grabación |
+| `POST /api/v1/public/webhooks/voice/twilio` | Público (firma `X-Twilio-Signature-256`) | Ingestión firmada de eventos de llamada Twilio con duración facturable y estado terminal |
 
 ### Colecciones operacionales
 
@@ -257,6 +267,14 @@ Todos devuelven `data={items,total,limit,offset}` con columnas nativas:
 - `GET /api/v1/operational/conversaciones`
 - `GET /api/v1/operational/mensajes-dashboard?whatsapp_id=...`
 - `GET /api/v1/operational/solicitudes-derechos`
+
+### Conciliación de contactos, previsualización de campañas y handoff multi-agente
+
+| Método y ruta | Auth | Efecto |
+| --- | --- | --- |
+| `POST /api/v1/contacts/{contact_id}/merge` | JWT (`crm.manage`) | Fusión confirmada de identidad origen hacia destino conservando historial, alias, puntos y supresiones activas |
+| `POST /api/v1/campaigns/{campaign_id}/preview` | JWT (`crm.manage`) | Simulación *dry-run* de audiencia elegible y conteo de exclusiones por motivo sin crear envíos ni encolar trabajos |
+| `GET /api/v1/conversations/{id}/agent-handoffs`, `POST .../agent-handoff` | JWT tenant / `crm.manage` | Traspaso auditado entre agentes publicados con resumen compartido y escalación automática HITL al exceder `max_hops` |
 - `GET /api/v1/operational/ejecutivos`
 - `GET /api/v1/operational/log-limpiezas`
 

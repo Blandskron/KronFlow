@@ -19,7 +19,7 @@ Rutas hijas reales bajo `/app`:
 | `/app/home` | Resumen de sesion, tenant y plan |
 | `/app/business-context` | Contexto Empresarial integrado con Agent Core |
 | `/app/agents` | Catálogo multi-agente: edición de borradores, alcance documental, publicación de revisiones inmutables y rollback (`agents.create` para editar/publicar) |
-| `/app/tools` | Hub gobernado de herramientas (validación JSON Schema e invocación idempotente), widgets webchat embebibles e integraciones Meta/MCP (`crm.manage` para mutaciones) |
+| `/app/tools` | Hub gobernado de herramientas (JSON Schema e idempotencia), webchat embebible, rutas Meta/comercio/voz, cliente MCP remoto, órdenes comerciales y llamadas (`crm.manage` para mutaciones) |
 | `/app/conversations` | Bandeja con búsqueda, historial, marca de lectura y barra HITL (`Reclamar`, `Responder`, `Devolver a IA`, `Resolver`); `?status=waiting` abre las pendientes |
 | `/app/contacts` | Directorio de lectura con búsqueda, origen y paginación del servidor. La URL conserva origen y página; el término de búsqueda queda en el historial de navegación de esa pestaña. |
 | `/app/contacts/new` | Alta manual con `crm.manage`, nombre obligatorio y puntos de contacto opcionales. El reintento reutiliza la solicitud. |
@@ -34,7 +34,7 @@ Rutas hijas reales bajo `/app`:
 | `/app/analytics` | Resumen operacional, tabla de actividad por intervalo/zona e indicadores consolidados (`/analytics/kpis`). |
 | `/app/notifications` | Cola paginada de atención actual con enlaces a la Bandeja y vista `?view=history` para derivaciones registradas. |
 | `/app/pricing` | Redirige a `/app/home` |
-| `/app/settings` | Perfil, empresa, miembros e invitaciones |
+| `/app/settings` | Perfil (incluido enrolamiento/confirmación MFA TOTP), empresa, miembros e invitaciones |
 | `/app/settings/privacy` | Bandeja de privacidad con `audit.read`. `crm.manage` habilita revisión, cierre, exportación JSON (`/export`), borrado/anonimización (`/erase`) y barrido de retención (`/retention/sweep`). |
 | `/app/settings/audit-events` | Historial de auditoría con filtros por evento y UUID, paginación y enlaces al CRM. Requiere `audit.read`. |
 
@@ -76,11 +76,11 @@ Base: `environment.operationalApiUrl`, sin slash final.
 | GET | `/analytics/activity` | Actividad diaria y totales por fecha y zona (`users.read`) |
 | GET | `/analytics/kpis` | Indicadores consolidados de pipeline, campañas, eventos, gobernanza, uso/coste IA y automatizaciones (`users.read`) |
 | GET/POST/PATCH | `/workflows*`, `/workflow-runs*` | Plantillas, borradores, validación, simulación, publicación, ejecuciones y cancelación en `/app/workflows` (`crm.manage` para mutaciones) |
-| GET/POST/PATCH | `/tools*`, `/tool-invocations`, `/webchat/widgets*`, `/integrations/*`, `POST /mcp` | Catálogo/invocación gobernada de herramientas, widgets webchat, rutas Meta firmadas, mapeos/conflictos externos y consola MCP JSON-RPC 2.0 en `/app/tools` (`crm.manage` para mutaciones) |
+| GET/POST/PATCH | `/tools*`, `/tool-invocations`, `/webchat/widgets*`, `/integrations/*`, `POST /mcp`, `/mcp-clients*`, `/commerce/*`, `/voice/*` | Catálogo gobernado de herramientas, webchat, rutas firmadas HMAC, mapeos externos, consola/cliente MCP bidireccional, órdenes comerciales y llamadas en `/app/tools` (`crm.manage` para mutaciones) |
 | GET/POST | `/conversations/{id}/control`, `/claim`, `/messages`, `/return-to-ai`, `/resolve` | Control HITL de conversación y respuesta humana en outbox (`crm.manage`) |
 | GET/POST/PATCH | `/opportunities/stages`, `/opportunities`, `/opportunities/{id}` | Pipeline comercial con versión optimista y cierre `won`/`lost` (`crm.manage`) |
 | GET/POST | `/ai-proposals`, `/ai-proposals/{id}/approve`, `/reject`, `/execute` | Revisión y ejecución `at-most-once` de propuestas IA (`crm.manage`) |
-| GET/POST | `/channels/connections`, `/templates`, `/campaigns`, `/campaigns/{id}/approve`, `/campaigns/dispatch-stub` | Conexiones delegadas de correo y campañas con worker stub (`crm.manage`) |
+| GET/POST | `/channels/connections`, `/templates`, `/campaigns`, `/campaigns/{id}/preview`, `/campaigns/{id}/approve`, `/campaigns/dispatch-stub` | Conexiones delegadas de correo, previsualización *dry-run* de audiencia y campañas con worker stub (`crm.manage`) |
 | GET | `/operational/privacy-cases` | Seguimiento de solicitudes (`audit.read`) |
 | GET | `/operational/audit-events` | Consulta histórica filtrada por tipo y correlación (`audit.read`) |
 | PATCH | `/operational/privacy-cases/{id}` | Registrar transición confirmada (`audit.read` y `crm.manage`) |

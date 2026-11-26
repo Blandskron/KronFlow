@@ -8,6 +8,7 @@ from app.core.security import CurrentPrincipal, require_permission
 from app.core.tenant_resolver import TenantContext, resolve_crm_editor, resolve_tenant_from_jwt
 from app.schemas.campaign import (
     CampaignApproveIn,
+    CampaignAudiencePreviewOut,
     CampaignCreateIn,
     CampaignDispatchOut,
     CampaignOut,
@@ -32,6 +33,7 @@ from app.services.campaign_service import (
     create_template_with_version,
     ingest_channel_receipt,
     issue_unsubscribe_token,
+    preview_campaign_audience,
     process_campaign_stub_batch,
     record_public_unsubscribe,
     redeem_unsubscribe_token,
@@ -143,6 +145,16 @@ def campaigns_create(
         timezone_iana=payload.timezone_iana,
         actor_user_id=principal.user_id,
     )
+
+
+@router.post("/campaigns/{campaign_id}/preview", response_model=CampaignAudiencePreviewOut)
+def campaigns_preview(
+    campaign_id: int,
+    _principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    db: Session = Depends(get_db),
+):
+    return preview_campaign_audience(db, tenant, campaign_id)
 
 
 @router.post("/campaigns/{campaign_id}/approve", response_model=CampaignOut)

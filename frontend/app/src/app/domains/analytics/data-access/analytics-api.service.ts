@@ -47,6 +47,22 @@ export interface AnalyticsKpis {
     runs_failed: number;
     runs_cancelled: number;
   };
+  commerce?: {
+    total_orders: number;
+    paid_orders: number;
+    discrepancy_orders: number;
+    confirmed_gross_by_currency: Record<string, number>;
+    refunded_by_currency: Record<string, number>;
+    confirmed_net_by_currency: Record<string, number>;
+  };
+  voice?: {
+    total_calls: number;
+    completed_calls: number;
+    transferred_calls: number;
+    no_answer_calls: number;
+    total_billable_seconds: number;
+    total_estimated_cost_usd: string;
+  };
 }
 
 @Injectable({ providedIn: 'root' })

@@ -16,16 +16,19 @@ from app.api.v1.ai_proposals import router as ai_proposals_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.campaigns import router as campaigns_router
 from app.api.v1.capture import router as capture_router
+from app.api.v1.commerce import router as commerce_router
 from app.api.v1.contacts import router as contacts_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.domain_events import router as domain_events_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.mcp import router as mcp_router
+from app.api.v1.mcp_clients import router as mcp_clients_router
 from app.api.v1.opportunities import router as opportunities_router
 from app.api.v1.operational import router as operational_router
 from app.api.v1.post_v1 import router as post_v1_router
 from app.api.v1.tools import router as tools_router
+from app.api.v1.voice import router as voice_router
 from app.api.v1.webchat import router as webchat_router
 from app.api.v1.workflows import router as workflows_router
 from app.core.config import get_settings
@@ -74,6 +77,9 @@ app.include_router(ai_proposals_router)
 app.include_router(post_v1_router)
 app.include_router(integrations_router)
 app.include_router(mcp_router)
+app.include_router(mcp_clients_router)
+app.include_router(commerce_router)
+app.include_router(voice_router)
 app.include_router(tools_router)
 app.include_router(webchat_router)
 app.include_router(workflows_router)

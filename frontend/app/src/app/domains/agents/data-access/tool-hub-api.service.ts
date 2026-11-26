@@ -6,10 +6,13 @@ import { ApiResponse } from '@shared/types/api.types';
 import { toParams } from '@shared/utils/http.utils';
 import {
   ChannelWebhookRouteItem,
+  CommerceOrderItem,
   ExternalMappingItem,
+  RemoteMcpServerItem,
   ToolDefinitionItem,
   ToolEffectMode,
   ToolInvocationItem,
+  VoiceCallItem,
   WebchatWidgetItem
 } from '../domain/tool-hub.model';
 
@@ -110,7 +113,7 @@ export class ToolHubApiService {
   }
 
   createWebhookRoute(payload: {
-    channel: 'whatsapp' | 'instagram' | 'messenger';
+    channel: 'whatsapp' | 'instagram' | 'messenger' | 'shopify' | 'mercadopago' | 'voice_twilio';
     external_account_id: string;
     verify_token: string;
     app_secret: string;
@@ -152,5 +155,63 @@ export class ToolHubApiService {
       method,
       params
     });
+  }
+
+  listRemoteMcpServers(): Observable<RemoteMcpServerItem[]> {
+    return this.http
+      .get<ApiResponse<RemoteMcpServerItem[]>>(`${OPERATIONAL_API_BASE_URL}/mcp-clients`)
+      .pipe(map((res) => res.data));
+  }
+
+  createRemoteMcpServer(payload: {
+    server_key: string;
+    name: string;
+    base_url: string;
+    allowed_tools: string[];
+    auth_token?: string;
+  }): Observable<RemoteMcpServerItem> {
+    return this.http
+      .post<ApiResponse<RemoteMcpServerItem>>(`${OPERATIONAL_API_BASE_URL}/mcp-clients`, payload)
+      .pipe(map((res) => res.data));
+  }
+
+  revokeRemoteMcpServer(serverId: number): Observable<RemoteMcpServerItem> {
+    return this.http
+      .post<ApiResponse<RemoteMcpServerItem>>(`${OPERATIONAL_API_BASE_URL}/mcp-clients/${serverId}/revoke`, {})
+      .pipe(map((res) => res.data));
+  }
+
+  listCommerceOrders(): Observable<CommerceOrderItem[]> {
+    return this.http
+      .get<ApiResponse<CommerceOrderItem[]>>(`${OPERATIONAL_API_BASE_URL}/commerce/orders`)
+      .pipe(map((res) => res.data));
+  }
+
+  createCommerceOrder(payload: {
+    provider: 'mercadopago' | 'shopify' | 'stub';
+    currency: string;
+    expected_amount_minor: number;
+  }): Observable<CommerceOrderItem> {
+    return this.http
+      .post<ApiResponse<CommerceOrderItem>>(`${OPERATIONAL_API_BASE_URL}/commerce/orders`, payload)
+      .pipe(map((res) => res.data));
+  }
+
+  createCheckoutLink(orderId: number): Observable<CommerceOrderItem> {
+    return this.http
+      .post<ApiResponse<CommerceOrderItem>>(`${OPERATIONAL_API_BASE_URL}/commerce/orders/${orderId}/checkout-link`, {})
+      .pipe(map((res) => res.data));
+  }
+
+  listVoiceCalls(): Observable<VoiceCallItem[]> {
+    return this.http
+      .get<ApiResponse<VoiceCallItem[]>>(`${OPERATIONAL_API_BASE_URL}/voice/calls`)
+      .pipe(map((res) => res.data));
+  }
+
+  transferVoiceCall(callId: number, reason: string): Observable<VoiceCallItem> {
+    return this.http
+      .post<ApiResponse<VoiceCallItem>>(`${OPERATIONAL_API_BASE_URL}/voice/calls/${callId}/transfer`, { reason })
+      .pipe(map((res) => res.data));
   }
 }

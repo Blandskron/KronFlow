@@ -87,3 +87,27 @@ class ContactCreateOut(BaseModel):
 class ContactPointsUpdate(ContactPointsIn):
     expected_email: str | None
     expected_phone: str | None
+
+
+class ContactMergeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_contact_id: int = Field(ge=1)
+    confirmed: bool = False
+    reason: str = Field(default="manual_reconciliation", min_length=2, max_length=240)
+
+
+class ContactMergeOut(BaseModel):
+    source_contact_id: int
+    target_contact_id: int
+    leads_moved: int = 0
+    opportunities_moved: int = 0
+    contact_points_moved: int = 0
+    contact_points_deduped: int = 0
+    suppressions_moved: int = 0
+    consents_moved: int = 0
+    orders_moved: int = 0
+    voice_calls_moved: int = 0
+    webchat_sessions_moved: int = 0
+    mappings_moved: int = 0
+    preserved_aliases: dict = Field(default_factory=dict)

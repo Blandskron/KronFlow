@@ -13,9 +13,11 @@ from app.schemas.analytics import (
     AnalyticsKpisOut,
     AnalyticsSummary,
     CampaignKpis,
+    CommerceKpis,
     EventCoverageKpis,
     GovernanceKpis,
     PipelineKpis,
+    VoiceKpis,
     WorkflowKpis,
 )
 from app.services.ai_extensions_service import summarize_ai_usage
@@ -27,6 +29,7 @@ from app.tenant_models.campaigns import Campaign, CampaignRecipient
 from app.tenant_models.domain_events import DomainEvent
 from app.tenant_models.operations import Cliente, Lead, Message, SolicitudDerecho
 from app.tenant_models.opportunity import Opportunity
+from app.tenant_models.phase6_extensions import CommerceOrder, VoiceCallSession
 from app.tenant_models.workflows import WorkflowDefinition, WorkflowRun
 
 
@@ -205,6 +208,57 @@ def analytics_kpis(db: Session, tenant: TenantContext) -> AnalyticsKpisOut:
             runs_cancelled=int(run_counts.get("cancelled", 0)),
         )
 
+    commerce = CommerceKpis()
+    if CommerceOrder.__tablename__ in existing_tables:
+        order_counts = dict(db.execute(select(CommerceOrder.status, func.count()).group_by(CommerceOrder.status)).all())
+        gross_by_curr: dict[str, int] = {}
+        refund_by_curr: dict[str, int] = {}
+        net_by_curr: dict[str, int] = {}
+        for curr, gross, ref in db.execute(
+            select(
+                CommerceOrder.currency,
+                func.coalesce(func.sum(CommerceOrder.confirmed_amount_minor), 0),
+                func.coalesce(func.sum(CommerceOrder.refunded_amount_minor), 0),
+            )
+            .where(CommerceOrder.status.in_(("paid", "partially_refunded", "refunded")))
+            .group_by(CommerceOrder.currency)
+        ).all():
+            g = int(gross or 0)
+            r = int(ref or 0)
+            gross_by_curr[str(curr)] = g
+            refund_by_curr[str(curr)] = r
+            net_by_curr[str(curr)] = max(0, g - r)
+        commerce = CommerceKpis(
+            total_orders=sum(int(v) for v in order_counts.values()),
+            paid_orders=int(order_counts.get("paid", 0))
+            + int(order_counts.get("partially_refunded", 0))
+            + int(order_counts.get("refunded", 0)),
+            discrepancy_orders=int(order_counts.get("discrepancy", 0)),
+            confirmed_gross_by_currency=gross_by_curr,
+            refunded_by_currency=refund_by_curr,
+            confirmed_net_by_currency=net_by_curr,
+        )
+
+    voice = VoiceKpis()
+    if VoiceCallSession.__tablename__ in existing_tables:
+        call_counts = dict(
+            db.execute(select(VoiceCallSession.status, func.count()).group_by(VoiceCallSession.status)).all()
+        )
+        sec_sum, cost_sum = db.execute(
+            select(
+                func.coalesce(func.sum(VoiceCallSession.billable_seconds), 0),
+                func.coalesce(func.sum(VoiceCallSession.estimated_cost_usd), 0),
+            )
+        ).one()
+        voice = VoiceKpis(
+            total_calls=sum(int(v) for v in call_counts.values()),
+            completed_calls=int(call_counts.get("completed", 0)),
+            transferred_calls=int(call_counts.get("transferred", 0)),
+            no_answer_calls=int(call_counts.get("no_answer", 0)),
+            total_billable_seconds=int(sec_sum or 0),
+            total_estimated_cost_usd=str(cost_sum or 0),
+        )
+
     return AnalyticsKpisOut(
         as_of=as_of,
         pipeline=pipeline,
@@ -213,5 +267,7 @@ def analytics_kpis(db: Session, tenant: TenantContext) -> AnalyticsKpisOut:
         governance=governance,
         ai_usage=ai_usage,
         workflows=workflows,
+        commerce=commerce,
+        voice=voice,
     )
 

@@ -163,6 +163,51 @@
               <dt>Email verificado</dt><dd>{{ user.profile.email_verified_at ? 'Sí' : 'No' }}</dd>
               <dt>MFA</dt><dd>{{ user.profile.mfa_enabled ? 'Activo' : 'Inactivo' }}</dd>
             </dl>
+
+            <section class="card panel" aria-label="Configuración MFA">
+              <div class="panel-title">
+                <div>
+                  <h3>Seguridad y MFA (TOTP)</h3>
+                  <p class="muted">Protege acciones críticas de administración y claves API.</p>
+                </div>
+                @if (!user.profile.mfa_enabled) {
+                  <button class="btn btn-secondary" type="button" [disabled]="mfaBusy()" (click)="startMfaSetup()">
+                    Configurar MFA (TOTP)
+                  </button>
+                }
+              </div>
+
+              @if (mfaAlert(); as alert) {
+                <p class="notice" [class.error]="alert.kind === 'error'">{{ alert.text }}</p>
+              }
+
+              @if (mfaSetupData(); as setup) {
+                <div class="meta">
+                  <label for="settings-mfa-secret">Secreto TOTP</label>
+                  <input id="settings-mfa-secret" class="field" type="text" [value]="setup.secret" readonly>
+                  <label for="settings-mfa-uri">URI otpauth</label>
+                  <input id="settings-mfa-uri" class="field" type="text" [value]="setup.otpauth_uri" readonly>
+                </div>
+                <form class="invite-row" [formGroup]="mfaConfirmForm" (ngSubmit)="confirmMfaSetup()">
+                  <label for="settings-mfa-code">Código TOTP de 6 dígitos</label>
+                  <input id="settings-mfa-code" class="field" type="text" formControlName="code" inputmode="numeric" maxlength="6" placeholder="123456">
+                  <button class="btn btn-primary" type="submit" [disabled]="mfaBusy() || mfaConfirmForm.invalid">
+                    Confirmar MFA
+                  </button>
+                </form>
+              }
+
+              @if (mfaRecoveryCodes().length) {
+                <div>
+                  <p class="muted">Códigos de recuperación de un solo uso:</p>
+                  <ul>
+                    @for (rc of mfaRecoveryCodes(); track rc) {
+                      <li><code>{{ rc }}</code></li>
+                    }
+                  </ul>
+                </div>
+              }
+            </section>
           } @else {
             <p class="muted">No hay perfil cargado.</p>
           }

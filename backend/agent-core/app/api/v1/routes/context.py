@@ -64,11 +64,9 @@ def _document_payload(document) -> dict:
 
 
 def _document_actions() -> dict[str, bool]:
-    settings = get_settings()
-    local_document_mutations = settings.persistence_mode != "operational"
     return {
-        "delete": local_document_mutations,
-        "patch": local_document_mutations,
+        "delete": True,
+        "patch": True,
         "replace": False,
         "retry_processing": False,
     }
@@ -239,6 +237,8 @@ def get_context_status(tenant: TenantContext = Depends(resolve_tenant), db: Sess
 
 @router.get("/documents/{document_id}", response_model=DocumentRead)
 def get_document(document_id: int, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
+    if get_settings().persistence_mode == "operational":
+        return operational_context_client.get_document(tenant.tenant_id, document_id)
     require_local_persistence()
     document = db.get(BusinessContextDocument, document_id)
     if not document or document.tenant_id != tenant.tenant_id:
@@ -248,6 +248,10 @@ def get_document(document_id: int, tenant: TenantContext = Depends(resolve_tenan
 
 @router.patch("/documents/{document_id}", response_model=DocumentRead)
 def patch_document(document_id: int, payload: DocumentPatch, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
+    if get_settings().persistence_mode == "operational":
+        return operational_context_client.patch_document(
+            tenant.tenant_id, document_id, payload.model_dump(exclude_unset=True),
+        )
     require_local_persistence()
     document = get_document(document_id, tenant, db)
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -259,6 +263,9 @@ def patch_document(document_id: int, payload: DocumentPatch, tenant: TenantConte
 
 @router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: int, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
+    if get_settings().persistence_mode == "operational":
+        operational_context_client.delete_document(tenant.tenant_id, document_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     require_local_persistence()
     document = get_document(document_id, tenant, db)
     db.delete(document)

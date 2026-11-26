@@ -16,7 +16,7 @@ from .rate_limit import enforce_rate_limit, RateLimiter
 from .resend_provider import ProviderError, ResendEmailProvider
 from .security import ClientIdentity, authenticate_client, authorize_sender
 from .service import EmailService
-from .webhooks import handle_webhook
+from .webhooks import build_webhook_event_store, handle_webhook
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("email-gateway")
@@ -28,9 +28,11 @@ async def lifespan(app: FastAPI):
     validate_runtime_settings(settings)
     client = httpx.AsyncClient(base_url=settings.resend_base_url.rstrip("/"), timeout=settings.resend_timeout_seconds)
     store = build_idempotency_store(settings.redis_url)
+    webhook_store = build_webhook_event_store(settings.redis_url)
     app.state.settings = settings
     app.state.provider = ResendEmailProvider(settings, client)
     app.state.idempotency = store
+    app.state.webhook_store = webhook_store
     app.state.email_service = EmailService(settings, app.state.provider, store)
     app.state.rate_limiter = RateLimiter(settings.rate_limit_requests, settings.rate_limit_window_seconds)
     app.state.audit_logger = logging.getLogger("email-gateway.audit")
@@ -38,6 +40,8 @@ async def lifespan(app: FastAPI):
     await client.aclose()
     if hasattr(store, "close"):
         await store.close()
+    if hasattr(webhook_store, "close"):
+        await webhook_store.close()
 
 
 app = FastAPI(

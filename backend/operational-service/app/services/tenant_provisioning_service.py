@@ -229,6 +229,56 @@ def create_system_event(
     )
 
 
+def upgrade_agent_platform_schema(db: Session, schema_name: str) -> None:
+    """Additive lossless migration to tenant_schema_v17 for multi-agent profiles and AI usage flags."""
+    quoted_schema = quote_identifier(schema_name)
+    db.execute(
+        text(f"ALTER TABLE {quoted_schema}.tenant_agent_profiles DROP CONSTRAINT IF EXISTS uniq_agent_profile_tenant")
+    )
+    for col_ddl in (
+        "role VARCHAR(160) NOT NULL DEFAULT 'assistant'",
+        "is_default BOOLEAN NOT NULL DEFAULT FALSE",
+        "version INTEGER NOT NULL DEFAULT 1",
+        "active_revision_id BIGINT",
+        "language VARCHAR(16) NOT NULL DEFAULT 'es'",
+        "allowed_tools JSONB NOT NULL DEFAULT '[]'::jsonb",
+        "allowed_document_ids JSONB NOT NULL DEFAULT '[]'::jsonb",
+        "limits_json JSONB NOT NULL DEFAULT '{}'::jsonb",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.tenant_agent_profiles ADD COLUMN IF NOT EXISTS {col_ddl}"))
+
+    db.execute(
+        text(
+            f"""
+            UPDATE {quoted_schema}.tenant_agent_profiles
+            SET is_default = TRUE
+            WHERE id IN (
+                SELECT MIN(id)
+                FROM {quoted_schema}.tenant_agent_profiles
+                GROUP BY tenant_id
+                HAVING BOOL_OR(is_default) = FALSE
+            )
+            """
+        )
+    )
+    db.execute(
+        text(
+            f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_agent_default
+            ON {quoted_schema}.tenant_agent_profiles (tenant_id)
+            WHERE is_default = TRUE
+            """
+        )
+    )
+    for col_ddl in (
+        "is_simulation BOOLEAN NOT NULL DEFAULT FALSE",
+        "agent_id INTEGER",
+        "agent_revision_id BIGINT",
+        "pricing_version VARCHAR(32)",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.ai_usage_records ADD COLUMN IF NOT EXISTS {col_ddl}"))
+
+
 def apply_tenant_schema(db: Session, schema_name: str) -> None:
     # Serialize upgrades of the same schema, including first-time provisioning.
     db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"flowkron-schema:{schema_name}"})
@@ -258,6 +308,7 @@ def apply_tenant_schema(db: Session, schema_name: str) -> None:
         ),
     ).on_conflict_do_nothing())
     upgrade_message_schema(db, schema_name)
+    upgrade_agent_platform_schema(db, schema_name)
     apply_tenant_database_objects(db, schema_name)
 
 

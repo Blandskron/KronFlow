@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.tenant_resolver import TenantContext
 from app.public_models.tenant_runtime import TenantRuntime
 from app.services.action_outbox_service import enqueue_outbox_action
+from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.ingest_service import RECOVERABLE_TURN_STATES
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
@@ -158,6 +159,23 @@ def _record_transition(
             "reason": reason,
         },
     )
+    domain_event_type = "conversation.resolved" if to_mode == "resolved" else event_type
+    if domain_event_type in ("conversation.handoff.requested", "conversation.claimed", "conversation.resolved"):
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type=domain_event_type,
+            aggregate_type="conversation",
+            aggregate_id=control.conversation_id,
+            payload={
+                "conversation_id": control.conversation_id,
+                "from_mode": from_mode,
+                "to_mode": to_mode,
+                "owner_user_id": control.owner_user_id,
+                "reason": reason,
+            },
+            occurred_at=now,
+        )
 
 
 def get_conversation_control(db: Session, tenant: TenantContext, conversation_id: int) -> dict:

@@ -33,7 +33,7 @@ Los errores usan `ApiError` problem-details con `type`, `title`, `status`, `deta
 | Método y ruta | Auth | Respuesta |
 | --- | --- | --- |
 | `GET /healthz` | No | `data.status="ok"`; solo proceso web |
-| `GET /readyz` | No | Ejecuta `SELECT 1`; retorna `data.status="ready"` si funciona, pero una excepcion de DB puede terminar en `ApiError` 500 |
+| `GET /readyz` | No | Ejecuta `SELECT 1`; retorna `data.status="ready"` o `503` si la DB no está disponible |
 
 ## Endpoints internos
 
@@ -69,14 +69,24 @@ Estos endpoints tambien exigen `X-Internal-Token` y son consumidos solo por `flo
 | --- | --- |
 | `POST /internal/tenants/{tenant_id}/context/documents` | Crea documento de contexto y chunks en el schema tenant resuelto |
 | `GET /internal/tenants/{tenant_id}/context/documents` | Lista documentos de contexto del tenant |
-| `GET /internal/tenants/{tenant_id}/context/status` | Devuelve progreso, estado y documentos activos |
-| `POST /internal/tenants/{tenant_id}/context/retrieve` | Recupera chunks/fuentes para RAG lexical |
+| `GET /internal/tenants/{tenant_id}/context/documents/{document_id}` | Obtiene detalle de documento de contexto del tenant |
+| `PATCH /internal/tenants/{tenant_id}/context/documents/{document_id}` | Actualiza título, estado (`draft`/`active`/`deprecated`) o prioridad |
+| `DELETE /internal/tenants/{tenant_id}/context/documents/{document_id}` | Elimina documento y chunks en cascada (`204 No Content`) |
+| `GET /internal/tenants/{tenant_id}/context/status` | Devuelve progreso, estado, documentos y acciones habilitadas |
+| `POST /internal/tenants/{tenant_id}/context/retrieve` | Recupera chunks/fuentes para RAG lexical (acepta filtro `document_ids`) |
+| `GET/POST/PATCH/DELETE /internal/tenants/{tenant_id}/context/rules` | CRUD delegado de reglas del agente (`agent_rules`) |
+| `POST/GET /internal/tenants/{tenant_id}/context/traces` y `GET .../conversations/{id}/traces` | Persistencia delegada de trazas de ejecución IA |
+| `POST /internal/tenants/{tenant_id}/context/setup-sessions*` | Sesiones persistentes de onboarding y generación de documento borrador |
+| `GET /internal/tenants/{tenant_id}/context/agents/resolve` | Resuelve la revisión activa inmutable del agente para inferencia |
+| `GET /internal/tenants/{tenant_id}/context/conversations/{conversation_id}/memory` | Consulta memoria escoped vigente por ID numérico o `session_id` |
+| `POST /internal/tenants/{tenant_id}/context/proposals` | Registra propuesta tipada CRM (`pending`) desde Agent Core en turnos reales |
+| `POST /internal/tenants/{tenant_id}/context/ai-usage` | Registra consumo LLM, versión de tarifa y bandera `is_simulation` |
 
 El `tenant_id` de la ruta es el ID logico de Auth/IAM. Operational resuelve `tenant_runtime.schema_name` y aplica `schema_translate_map`; ningun consumidor debe enviar `schema_name`.
 
 `POST /context/documents` recibe texto ya extraido y chunks desde Agent Core. El payload puede incluir `tenant_id`, pero debe coincidir con el tenant resuelto por la ruta o responde 403. Operational asigna `version` automaticamente como `max(version)+1` por `tenant_id + filename`; si se sube el mismo archivo mas de una vez, no falla por la constraint unica y crea una nueva version.
 
-`GET /context/status` calcula progreso con cinco documentos activos recomendados, devuelve `agent_status` (`not_configured`, `processing`, `pending`, `trained` o `error`) y actualmente reporta `document_actions` en `false` para `delete`, `patch`, `replace` y `retry_processing`. `POST /context/retrieve` solo considera chunks de documentos `active`, usa busqueda lexical por tokens y limita `limit` entre 1 y 10.
+`GET /context/status` calcula progreso con cinco documentos activos recomendados, devuelve `agent_status` (`not_configured`, `processing`, `pending`, `trained` o `error`) y reporta `document_actions` con `delete: true` y `patch: true` (`replace` y `retry_processing` en `false`). `POST /context/retrieve` solo considera chunks de documentos `active` (opcionalmente filtrados por `document_ids`), usa busqueda lexical por tokens y limita `limit` entre 1 y 10.
 
 ## Ingesta WhatsApp
 
@@ -183,13 +193,59 @@ El endpoint proyecta altas y cambios de contactos y leads, derivaciones y transi
 
 `GET /api/v1/operational/privacy-cases` requiere `audit.read`. Pagina por fecha límite e ID y acepta `state`. Devuelve ID, tipo, estado y fechas de seguimiento. `PATCH /api/v1/operational/privacy-cases/{case_id}` requiere también `crm.manage`. Admite `pendiente → en_proceso` y `en_proceso → completada`. El cierre exige `confirmed: true`, registra la fecha y audita el actor junto con la transición. Un reintento de la transición ya aplicada conserva la fecha y el evento originales. El cierre registra una gestión confirmada. La ejecución de la solicitud y el tratamiento de copias quedan en su proceso específico.
 
-### Agents (stub)
+### Agentes IA multi-agente (`agents.create`)
 
-| Método y ruta | Comportamiento actual |
+| Método y ruta | Comportamiento |
 | --- | --- |
-| `GET /api/v1/agents` | `[]` |
-| `POST /api/v1/agents/configure` | 501 Not Implemented |
-| `PATCH /api/v1/agents/{id}` | 404 |
+| `GET /api/v1/agents` | Lista perfiles de agente del tenant (`is_default`, versión de borrador y revisión activa) |
+| `GET /api/v1/agents/{agent_id}` | Obtiene borrador y revisión activa de un agente |
+| `POST /api/v1/agents/configure` | Crea un nuevo borrador de agente con validación de herramientas y documentos |
+| `PATCH /api/v1/agents/{agent_id}` | Actualiza borrador con versión optimista (`expected_version`, responde `409` en conflicto) |
+| `POST /api/v1/agents/{agent_id}/publish` | Valida documentos activos y herramientas (`422` si inválidos) y congela una revisión inmutable en `agent_revisions` |
+| `GET /api/v1/agents/{agent_id}/revisions` | Lista historial de revisiones (`active`/`superseded`) |
+| `POST /api/v1/agents/{agent_id}/rollback` | Restaura configuración desde una revisión publicada y la reactiva con bloqueo optimista |
+
+### Workflows declarativos y analítica extendida
+
+| Método y ruta | Auth | Efecto |
+| --- | --- | --- |
+| `GET /api/v1/workflows/templates` | JWT tenant | Lista plantillas comerciales listas para crear borradores |
+| `GET /api/v1/workflows`, `GET /api/v1/workflows/{id}` | JWT tenant | Lista y consulta borradores y revisión activa de automatizaciones |
+| `POST /api/v1/workflows`, `PATCH /api/v1/workflows/{id}/draft` | JWT (`crm.manage`) | Crea o actualiza borrador con bloqueo optimista (`expected_version`, `409` en conflicto) |
+| `POST /api/v1/workflows/{id}/validate` | JWT (`crm.manage`) | Compila DAG, alcance desde `trigger`, ausencia de ciclos y configuración |
+| `POST /api/v1/workflows/{id}/simulate` | JWT (`crm.manage`) | Simula camino, ramas descartadas, esperas y efectos previstos sin mutar DB/outbox |
+| `POST /api/v1/workflows/{id}/publish` | JWT (`crm.manage`) | Congela revisión inmutable en `workflow_revisions` y activa el flujo (`422` si falla compilación) |
+| `GET /api/v1/workflows/{id}/revisions` | JWT tenant | Lista historial inmutable de revisiones publicadas |
+| `POST /api/v1/workflows/process-tick` | JWT (`crm.manage`) | Consume eventos de dominio pendientes y despierta ejecuciones en espera vencidas |
+| `GET /api/v1/workflow-runs`, `GET .../workflow-runs/{run_id}`, `POST .../cancel` | JWT tenant / `crm.manage` | Consulta ejecuciones y pasos o cancela runs en curso/espera |
+| `GET /api/v1/analytics/kpis` | JWT tenant | Incluye además `ai_usage` (excluyendo simulaciones) y conteos de `workflows` |
+
+### Hub de herramientas, Webchat embebible y adjuntos reales
+
+| Método y ruta | Auth | Efecto |
+| --- | --- | --- |
+| `GET /api/v1/tools`, `POST /api/v1/tools`, `PATCH /api/v1/tools/{id}` | JWT tenant / `crm.manage` | Catálogo gobernado con JSON Schema, versión de esquema, modo de efecto y cuota horaria |
+| `POST /api/v1/tool-invocations`, `GET /api/v1/tool-invocations` | JWT (`crm.manage`) / JWT tenant | Invocación idempotente (`read_only`, `proposal_required` o `outbox_async`) con historial |
+| `GET/POST/PATCH /api/v1/webchat/widgets*` | JWT tenant / `crm.manage` | Configura widgets webchat con lista estricta de orígenes permitidos |
+| `POST /api/v1/public/webchat/{widget_key}/sessions` | Público (`Origin` validado) | Emite token opaco de visitante (`wct_*`), crea cliente/lead/conversación y devuelve cursor |
+| `POST/GET /api/v1/public/webchat/{widget_key}/messages` | Público (`Origin` + `X-Webchat-Session`) | Envía mensajes idempotentes con continuidad HITL y consulta mensajes por cursor |
+| `POST /api/v1/attachments/upload`, `GET /api/v1/attachments/{id}/download` | JWT (`crm.manage` upload / tenant download) | Sube bytes reales con SHA-256 y descarga verificada por integridad y alcance |
+
+### Baja autoservicio y campañas
+
+| Método y ruta | Auth | Efecto |
+| --- | --- | --- |
+| `POST /api/v1/channels/unsubscribe-tokens` | JWT (`crm.manage`) | Emite un token opaco (almacena solo su hash SHA-256 en `public_unsubscribe_tokens`) para enlace de baja |
+| `POST /api/v1/public/channels/unsubscribe/{token}` | Público (sin JWT) | Canjea el token de forma idempotente, registra supresión durable y cancela trabajos pendientes de campaña |
+
+### MCP JSON-RPC 2.0, Webhooks Meta omnicanal y sincronización externa
+
+| Método y ruta | Auth | Efecto |
+| --- | --- | --- |
+| `POST /api/v1/mcp` | `X-Flowkron-Key` (`mcp:read` / `mcp:invoke`) o JWT (`crm.manage`) | Servidor MCP JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`) sobre el Hub gobernado de herramientas |
+| `GET/POST /api/v1/integrations/webhook-routes`, `POST .../deactivate` | JWT (`crm.manage`) / tenant | Registra, lista y desactiva rutas firmadas para WhatsApp, Instagram Direct y Messenger (`verify_token` hashed + secreto) |
+| `GET/POST /api/v1/public/webhooks/meta/{channel}` | Público (challenge `hub.verify_token` / firma `X-Hub-Signature-256`) | Valida reto Meta e ingiere mensajes entrantes aislados por canal/cuenta/remitente, recibos monotónicos y cancelación de esperas |
+| `GET/POST /api/v1/integrations/mappings`, `POST .../resolve`, `GET/POST /api/v1/integrations/cursors` | JWT tenant / `crm.manage` | Gestiona mapeos de entidades externas con detección/resolución de conflictos de versión y cursores de sincronización |
 
 ### Colecciones operacionales
 

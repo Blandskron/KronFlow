@@ -124,6 +124,18 @@
               <small class="muted">Eventos durables · Propuestas IA pendientes</small>
               <strong>{{ kpi.events.total_domain_events }} · {{ kpi.governance.pending_ai_proposals }}</strong>
             </article>
+            @if (kpi.ai_usage; as usage) {
+              <article class="card glass-surface metric">
+                <small class="muted">Uso y coste IA ({{ usage.days }}d · {{ usage.requests }} req)</small>
+                <strong>${{ usage.total_cost_usd }} USD</strong>
+              </article>
+            }
+            @if (kpi.workflows; as wf) {
+              <article class="card glass-surface metric">
+                <small class="muted">Automatizaciones (Activos / Completadas / En espera)</small>
+                <strong>{{ wf.active_workflows }} / {{ wf.runs_completed }} / {{ wf.runs_waiting }}</strong>
+              </article>
+            }
           </div>
         </section>
       }

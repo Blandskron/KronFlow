@@ -31,6 +31,22 @@ export interface AnalyticsKpis {
     pending_ai_proposals: number;
     executed_ai_proposals: number;
   };
+  ai_usage?: {
+    days: number;
+    requests: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_cost_usd: string;
+    avg_latency_ms: number;
+  };
+  workflows?: {
+    active_workflows: number;
+    runs_running: number;
+    runs_waiting: number;
+    runs_completed: number;
+    runs_failed: number;
+    runs_cancelled: number;
+  };
 }
 
 @Injectable({ providedIn: 'root' })

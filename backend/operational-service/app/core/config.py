@@ -30,8 +30,22 @@ class Settings(BaseSettings):
 
     default_page_size: int = 50
     max_page_size: int = 200
-    tenant_migration_version: str = "tenant_schema_v16"
+    tenant_migration_version: str = "tenant_schema_v20"
     ingest_rate_limit_per_minute: int = 120
+    redis_url: str = ""
+    attachment_storage_dir: str = ""
+    agent_core_url: str = ""
+
+    mail_gateway_url: str = ""
+    mail_internal_api_key: str = ""
+    mail_sender_key: str = "flowkron"
+    baileys_service_url: str = ""
+    worker_poll_interval_seconds: float = 2.0
+    worker_batch_size: int = 20
+    worker_lease_seconds: int = 120
+    worker_http_timeout_seconds: float = 15.0
+    worker_allow_stub_dispatch: bool = True
+    public_api_base_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

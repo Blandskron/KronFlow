@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import get_settings
 
 
-SKIP_CONTRACT_PATHS = {"/openapi.json", "/docs", "/redoc"}
+SKIP_CONTRACT_PATHS = {"/openapi.json", "/docs", "/redoc", "/api/v1/mcp"}
 audit_correlation = ContextVar[str | None]("operational_audit_correlation", default=None)
 
 

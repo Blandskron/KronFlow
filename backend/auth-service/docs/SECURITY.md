@@ -47,7 +47,7 @@ Claims de service account: `sub`, `typ=service_account`, `scopes`, `iat`, `exp`,
 
 ## Sesiones y riesgo
 
-Al crear sesión se marcan `NEW_DEVICE`, `DEVICE_CHANGED` o `IP_CHANGED` comparando con la sesión previa. Existe `mark_refresh_reuse`, pero el flujo HTTP de refresh actual no lo invoca; por tanto no se debe afirmar detección automática de refresh reuse. Logout y cambio/reset de password revocan sesiones IAM, pero la validación JWT normal de Simple JWT no consulta `UserSession` en cada request; usa introspection o el endpoint de estado cuando se requiera revocación inmediata distribuida.
+Al crear sesión se marcan `NEW_DEVICE`, `DEVICE_CHANGED` o `IP_CHANGED` comparando con la sesión previa. `TaggedTokenRefreshView` verifica si un refresh token rechazado corresponde a un token válido ya rotado/en lista negra y llama `mark_refresh_reuse` para marcar la sesión como `compromised`, asignar `REFRESH_REUSE_DETECTED` y auditar `session_compromised`. Logout y cambio/reset de password revocan sesiones IAM, pero la validación JWT normal de Simple JWT no consulta `UserSession` en cada request; usa introspection o el endpoint de estado cuando se requiera revocación inmediata distribuida.
 
 ## Onboarding e invitaciones
 

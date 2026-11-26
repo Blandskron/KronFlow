@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -20,14 +20,17 @@ from app.schemas.post_v1 import (
     WebhookSubscriptionOut,
 )
 from app.services.post_v1_service import (
+    MAX_ATTACHMENT_BYTES,
     cancel_appointment,
     confirm_appointment,
     create_webhook_subscription,
     enqueue_webhook_delivery,
     get_private_attachment,
+    read_private_attachment_bytes,
     record_webhook_attempt,
     register_private_attachment,
     simulate_appointment_slot,
+    upload_private_attachment_bytes,
 )
 
 
@@ -92,6 +95,58 @@ def attachments_register(
         sha256_hex=payload.sha256_hex,
         uploaded_by=principal.user_id,
         retention_days=payload.retention_days,
+    )
+
+
+@router.post("/attachments/upload", response_model=PrivateAttachmentOut, status_code=status.HTTP_201_CREATED)
+async def attachments_upload(
+    resource_type: Literal["conversation", "contact", "opportunity"] = Form(...),
+    resource_id: int = Form(..., ge=1),
+    retention_days: int = Form(default=90, ge=1, le=3650),
+    file: UploadFile = File(...),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    data = await file.read(MAX_ATTACHMENT_BYTES + 1)
+    if len(data) > MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=422, detail=f"Attachment exceeds max size of {MAX_ATTACHMENT_BYTES} bytes")
+    return upload_private_attachment_bytes(
+        db,
+        tenant,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        filename=file.filename or "attachment.bin",
+        content_type=file.content_type or "application/octet-stream",
+        data=data,
+        uploaded_by=principal.user_id,
+        retention_days=retention_days,
+    )
+
+
+@router.get("/attachments/{attachment_id}/download")
+def attachments_download(
+    attachment_id: int,
+    resource_type: Literal["conversation", "contact", "opportunity"] = Query(...),
+    resource_id: int = Query(..., ge=1),
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    db: Session = Depends(get_db),
+):
+    meta, data = read_private_attachment_bytes(
+        db,
+        tenant,
+        attachment_id,
+        resource_type=resource_type,
+        resource_id=resource_id,
+    )
+    safe_filename = str(meta["filename"]).replace('"', "")
+    return Response(
+        content=data,
+        media_type=meta["content_type"],
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

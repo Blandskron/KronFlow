@@ -13,6 +13,7 @@ from app.core.contracts import audit_correlation
 from app.core.tenant_resolver import TenantContext
 from app.public_models.tenant_runtime import TenantRuntime
 from app.services.conversation_control_service import mark_waiting_human_in_tx
+from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.ai_proposal import AIActionProposal
@@ -203,6 +204,20 @@ def create_ai_proposal(
             "proposed_by": proposal.proposed_by,
         },
     )
+    publish_domain_event_in_tx(
+        db,
+        tenant,
+        event_type="ai.proposal.created",
+        aggregate_type="ai_proposal",
+        aggregate_id=proposal.id,
+        payload={
+            "proposal_id": proposal.id,
+            "action_type": clean_action,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+        },
+        occurred_at=current,
+    )
     db.commit()
     db.refresh(proposal)
     return _proposal_to_dict(proposal, duplicate=False)
@@ -363,6 +378,20 @@ def execute_ai_proposal(
             "executed_by": proposal.executed_by,
             "proposal_version": proposal.proposal_version,
         },
+    )
+    publish_domain_event_in_tx(
+        db,
+        tenant,
+        event_type="ai.proposal.executed",
+        aggregate_type="ai_proposal",
+        aggregate_id=proposal.id,
+        payload={
+            "proposal_id": proposal.id,
+            "action_type": proposal.action_type,
+            "resource_type": proposal.resource_type,
+            "resource_id": proposal.resource_id,
+        },
+        occurred_at=current,
     )
     db.commit()
     db.refresh(proposal)

@@ -1,0 +1,276 @@
+<section class="page-section">
+  <kronflow-page-header
+    title="Agentes IA"
+    subtitle="Configura borradores multi-agente, alcances documentales, herramientas permitidas y revisiones publicadas."
+  >
+    <div class="header-actions">
+      <button class="btn btn-secondary" type="button" [disabled]="loading()" (click)="reloadAll()">
+        {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+      @if (canEdit()) {
+        <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="startNewDraft()">
+          Nuevo borrador
+        </button>
+      }
+    </div>
+  </kronflow-page-header>
+
+  @if (!canEdit()) {
+    <div class="section-spacer">
+      <kronflow-alert tone="info">
+        Tienes acceso de solo lectura. Necesitas el permiso <code>agents.create</code> para editar, publicar o restaurar agentes.
+      </kronflow-alert>
+    </div>
+  }
+
+  @if (notice(); as msg) {
+    <div class="section-spacer">
+      <kronflow-alert [tone]="msg.tone" [dismissible]="true" (dismissed)="notice.set(null)">
+        {{ msg.text }}
+      </kronflow-alert>
+    </div>
+  }
+
+  @if (loading() && !agents().length) {
+    <div class="agents-layout" role="status" aria-label="Cargando agentes IA">
+      <span class="sr-only">Cargando agentes IA…</span>
+      <kronflow-skeleton height="220px" />
+      <kronflow-skeleton height="360px" />
+    </div>
+  } @else {
+    <div class="agents-layout">
+      <aside class="card glass-surface panel-card" aria-label="Lista de agentes">
+        <div class="panel-heading">
+          <h2>Catálogo</h2>
+          <span class="muted">{{ agents().length }} registrados</span>
+        </div>
+
+        @if (!agents().length) {
+          <kronflow-empty-state
+            title="Sin agentes configurados"
+            description="Crea tu primer borrador para definir tono, documentos y herramientas."
+          />
+        } @else {
+          <ul class="agent-list">
+            @for (agent of agents(); track agent.id) {
+              <li>
+                <button
+                  type="button"
+                  class="agent-item"
+                  [class.agent-item-selected]="selectedAgentId() === agent.id"
+                  [attr.aria-current]="selectedAgentId() === agent.id ? 'true' : null"
+                  (click)="selectAgent(agent)"
+                >
+                  <div class="agent-item-top">
+                    <strong>{{ agent.name }}</strong>
+                    <kronflow-badge [tone]="statusTones[agent.status] || 'info'">
+                      {{ agent.status }}
+                    </kronflow-badge>
+                  </div>
+                  <div class="agent-item-meta">
+                    <span class="muted">{{ agent.role }} · v{{ agent.version }}</span>
+                    @if (agent.is_default) {
+                      <kronflow-badge tone="info">Predeterminado</kronflow-badge>
+                    }
+                    @if (agent.active_revision_number) {
+                      <kronflow-badge tone="success">r{{ agent.active_revision_number }}</kronflow-badge>
+                    } @else {
+                      <kronflow-badge tone="warning">Sin publicar</kronflow-badge>
+                    }
+                  </div>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </aside>
+
+      <div class="editor-column">
+        <form class="card glass-surface panel-card editor-form" [formGroup]="form" (ngSubmit)="saveDraft()">
+          <div class="panel-heading">
+            <div>
+              <h2>
+                @if (selectedAgent(); as current) {
+                  Editar borrador · {{ current.name }} (v{{ current.version }})
+                } @else {
+                  Nuevo borrador de agente
+                }
+              </h2>
+              <p class="muted">
+                Los cambios se guardan en el borrador sin alterar la revisión activa hasta que publiques.
+              </p>
+            </div>
+            @if (selectedAgent(); as current) {
+              <kronflow-badge [tone]="current.active_revision_number ? 'success' : 'warning'">
+                {{ current.active_revision_number ? 'Activa r' + current.active_revision_number : 'Borrador inédito' }}
+              </kronflow-badge>
+            }
+          </div>
+
+          <div class="form-grid">
+            <div class="control-group">
+              <label for="agent-name">Nombre del agente</label>
+              <input
+                id="agent-name"
+                class="field"
+                type="text"
+                formControlName="name"
+                placeholder="Ej. Asistente Comercial B2B"
+                [attr.aria-invalid]="form.controls.name.invalid && form.controls.name.touched ? 'true' : null"
+              />
+            </div>
+
+            <div class="control-group">
+              <label for="agent-role">Rol</label>
+              <input
+                id="agent-role"
+                class="field"
+                type="text"
+                formControlName="role"
+                placeholder="Asistente comercial"
+                [attr.aria-invalid]="form.controls.role.invalid && form.controls.role.touched ? 'true' : null"
+              />
+            </div>
+
+            <div class="control-group">
+              <label for="agent-tone">Tono</label>
+              <input id="agent-tone" class="field" type="text" formControlName="tone" placeholder="professional" />
+            </div>
+
+            <div class="control-group">
+              <label for="agent-language">Idioma</label>
+              <input id="agent-language" class="field" type="text" formControlName="language" placeholder="es" />
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="agent-instructions">Instrucciones de comportamiento</label>
+            <textarea
+              id="agent-instructions"
+              class="field textarea-field"
+              rows="5"
+              formControlName="instructions"
+              placeholder="Describe criterios de respuesta, límites comerciales y cuándo derivar a humano."
+            ></textarea>
+          </div>
+
+          <label class="checkbox-row" for="agent-default">
+            <input id="agent-default" type="checkbox" formControlName="isDefault" />
+            <span>Usar como agente predeterminado del tenant en canales entrantes</span>
+          </label>
+
+          <fieldset class="scope-fieldset">
+            <legend>Herramientas permitidas</legend>
+            <div class="checkbox-grid">
+              @for (tool of toolOptions; track tool.id) {
+                <label class="checkbox-row" [for]="'tool-' + tool.id">
+                  <input
+                    [id]="'tool-' + tool.id"
+                    type="checkbox"
+                    [checked]="selectedTools().includes(tool.id)"
+                    [disabled]="!canEdit() || saving()"
+                    (change)="toggleTool(tool.id, $event)"
+                  />
+                  <span>{{ tool.label }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
+
+          <fieldset class="scope-fieldset">
+            <legend>Documentos activos permitidos ({{ selectedDocIds().length }})</legend>
+            @if (!activeDocuments().length) {
+              <p class="muted">No hay documentos activos en Contexto empresarial. Si lo dejas vacío, se validará al publicar según tus documentos activos.</p>
+            } @else {
+              <div class="checkbox-grid">
+                @for (doc of activeDocuments(); track doc.id) {
+                  <label class="checkbox-row" [for]="'doc-' + doc.id">
+                    <input
+                      [id]="'doc-' + doc.id"
+                      type="checkbox"
+                      [checked]="selectedDocIds().includes(doc.id)"
+                      [disabled]="!canEdit() || saving()"
+                      (change)="toggleDocument(doc.id, $event)"
+                    />
+                    <span>#{{ doc.id }} · {{ doc.title }} ({{ doc.filename }})</span>
+                  </label>
+                }
+              </div>
+            }
+          </fieldset>
+
+          @if (selectedAgent()) {
+            <div class="control-group">
+              <label for="agent-publish-note">Nota de publicación (opcional)</label>
+              <input
+                id="agent-publish-note"
+                class="field"
+                type="text"
+                formControlName="publishNote"
+                placeholder="Ej. Incluye lista de precios Q4"
+              />
+            </div>
+          }
+
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit" [disabled]="!canEdit() || saving()">
+              {{ saving() ? 'Guardando…' : selectedAgent() ? 'Guardar borrador' : 'Crear borrador' }}
+            </button>
+            @if (selectedAgent()) {
+              <button class="btn btn-secondary" type="button" [disabled]="!canEdit() || saving()" (click)="publishSelected()">
+                Publicar revisión
+              </button>
+            }
+          </div>
+        </form>
+
+        @if (selectedAgent()) {
+          <section class="card glass-surface panel-card" aria-label="Historial de revisiones">
+            <div class="panel-heading">
+              <h2>Historial de revisiones</h2>
+              <span class="muted">{{ revisions().length }} publicadas</span>
+            </div>
+
+            @if (revisionsLoading()) {
+              <kronflow-skeleton height="88px" />
+            } @else if (!revisions().length) {
+              <kronflow-empty-state
+                title="Aún sin revisiones publicadas"
+                description="Guarda tu borrador y presiona Publicar revisión para congelar la primera versión inmutable."
+              />
+            } @else {
+              <div class="revisions-list">
+                @for (rev of revisions(); track rev.id) {
+                  <article class="revision-row">
+                    <div class="revision-info">
+                      <div class="revision-title">
+                        <strong>Revisión r{{ rev.revision_number }} · {{ rev.name }}</strong>
+                        <kronflow-badge [tone]="statusTones[rev.status] || 'neutral'">
+                          {{ rev.status }}
+                        </kronflow-badge>
+                      </div>
+                      <small class="muted">
+                        Publicada {{ rev.published_at | date:'short' }}
+                        @if (rev.publish_note) {
+                          · {{ rev.publish_note }}
+                        }
+                      </small>
+                    </div>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      type="button"
+                      [disabled]="!canEdit() || saving()"
+                      (click)="rollbackTo(rev)"
+                    >
+                      Restaurar revisión
+                    </button>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
+      </div>
+    </div>
+  }
+</section>

@@ -17,3 +17,4 @@ class SetupSessionRead(BaseModel):
 class GeneratedContextRead(BaseModel):
     summary: str
     status: str = "draft"
+    document_id: int | None = None

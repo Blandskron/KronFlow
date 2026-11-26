@@ -7,7 +7,16 @@ Copy-Item .env.example .env.local
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-Validar `/healthz`, `/readyz`, `/openapi.json` y un request autenticado. `/healthz` no comprueba DB; `/readyz` puede ser 500 si DB no está disponible.
+Validar `/healthz`, `/readyz`, `/openapi.json` y un request autenticado. `/healthz` no comprueba DB; `/readyz` devuelve `503` si DB no está disponible.
+
+## Worker durable de Outbox
+
+```powershell
+python -m app.worker --once
+python -m app.worker
+```
+
+El proceso worker (`operational-worker` en Compose) promueve campañas `scheduled` vencidas y despacha trabajos durables de `action_outbox_jobs` (`campaign.delivery.send`, `conversation.email.send`, `conversation.human_reply.send`, `webhook.deliver`, `notification.external.send`) usando leases en PostgreSQL, validación DNS anti-SSRF en webhooks y transición segura a `unknown` ante timeouts ambiguos. Cuando `REDIS_URL` está configurado, el límite de tasa de ingesta (`enforce_ingest_rate_limit`) usa ventana deslizante en Redis con fallback acotado en memoria.
 
 ## Provisioning
 

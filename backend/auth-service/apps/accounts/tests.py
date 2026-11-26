@@ -14,6 +14,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
+from apps.audit.models import AuditLog
+from apps.sessions.models import UserSession
 from apps.tenants.models import Tenant, TenantMembership
 
 
@@ -143,3 +145,34 @@ class PublicAuthTests(TestCase):
         self.assertEqual(response.status_code, 409)
         existing.profile.refresh_from_db()
         self.assertIsNone(existing.profile.google_subject)
+
+    def test_refresh_token_reuse_marks_session_compromised_and_blocks_subsequent_refresh(self):
+        password = secrets.token_urlsafe(24)
+        user = get_user_model().objects.create_user(username="reuse@example.com", email="reuse@example.com", password=password)
+        user.profile.email_verified_at = timezone.now()
+        user.profile.save(update_fields=["email_verified_at"])
+
+        login_res = self.client.post(reverse("auth-login"), {"email": user.email, "password": password}, format="json")
+        self.assertEqual(login_res.status_code, 200)
+        session_id = login_res.data["data"]["session_id"]
+        refresh_1 = login_res.data["data"]["refresh"]
+
+        first_refresh = self.client.post(reverse("auth-refresh"), {"refresh": refresh_1}, format="json")
+        self.assertEqual(first_refresh.status_code, 200)
+        refresh_2 = first_refresh.json()["data"]["refresh"]
+
+        # Replaying rotated/blacklisted refresh_1 must return 401 and compromise the session.
+        replay = self.client.post(reverse("auth-refresh"), {"refresh": refresh_1}, format="json")
+        self.assertEqual(replay.status_code, 401)
+
+        session = UserSession.objects.get(id=session_id)
+        self.assertEqual(session.status, UserSession.Status.COMPROMISED)
+        self.assertIn("REFRESH_REUSE_DETECTED", session.risk_flags)
+        self.assertEqual(session.risk_score, 100)
+        self.assertTrue(
+            AuditLog.objects.filter(user=user, event=AuditLog.Event.SESSION_COMPROMISED).exists()
+        )
+
+        # Subsequent refresh with refresh_2 must now fail because the session is compromised.
+        blocked = self.client.post(reverse("auth-refresh"), {"refresh": refresh_2}, format="json")
+        self.assertEqual(blocked.status_code, 401)

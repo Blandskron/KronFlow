@@ -124,6 +124,22 @@ class UnsubscribeOut(BaseModel):
     status: Literal["unsubscribed"]
 
 
+class UnsubscribeTokenCreateIn(BaseModel):
+    channel: Literal["email", "whatsapp"]
+    destination: str = Field(min_length=3, max_length=255)
+    purpose: str | None = Field(default=None, max_length=64)
+    client_id: int | None = Field(default=None, ge=1)
+    ttl_days: int = Field(default=90, ge=1, le=365)
+
+
+class UnsubscribeTokenOut(BaseModel):
+    token: str
+    channel: str
+    destination: str
+    purpose: str | None = None
+    expires_at: datetime
+
+
 class ConversationEmailIn(BaseModel):
     connection_id: int = Field(ge=1)
     to_email: str = Field(min_length=3, max_length=254)

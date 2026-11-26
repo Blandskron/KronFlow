@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.tenant_resolver import TenantContext
 from app.public_models.system_event import SystemEvent
 from app.schemas.lead import LeadUpdate
+from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.tenant_data import TEMPERATURE_TO_API, bind_tenant_session, count_for_tenant, execute_for_tenant, lead_to_dict, scalar_for_tenant
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente, Ejecutivo, Lead
@@ -90,6 +91,14 @@ def ensure_contact_lead(db: Session, tenant: TenantContext, contact_id: int) -> 
     lead, created = get_or_create_initial_lead(db, contact_id)
     if created:
         create_system_event(db, "crm.lead.created", tenant.auth_tenant_id, tenant.schema_name, {"lead_id": lead.id})
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type="lead.created",
+            aggregate_type="lead",
+            aggregate_id=lead.id,
+            payload={"lead_id": lead.id, "contact_id": contact_id},
+        )
     result = {"lead": lead_to_dict(lead), "created": created}
     db.commit()
     return result
@@ -133,16 +142,44 @@ def update_lead(db: Session, tenant: TenantContext, lead_id: int, payload: LeadU
     if "temperature" in data:
         classification = {"cold": "frio", "warm": "tibio", "hot": "caliente"}.get(data["temperature"], data["temperature"])
         if lead.clasificacion != classification:
+            prev_temp = TEMPERATURE_TO_API[lead.clasificacion]
+            next_temp = TEMPERATURE_TO_API[classification]
             create_system_event(db, "crm.lead.temperature.changed", tenant.auth_tenant_id, tenant.schema_name, {
-                "lead_id": lead.id, "previous_temperature": TEMPERATURE_TO_API[lead.clasificacion],
-                "temperature": TEMPERATURE_TO_API[classification],
+                "lead_id": lead.id, "previous_temperature": prev_temp,
+                "temperature": next_temp,
             })
+            publish_domain_event_in_tx(
+                db,
+                tenant,
+                event_type="lead.temperature.changed",
+                aggregate_type="lead",
+                aggregate_id=lead.id,
+                payload={
+                    "lead_id": lead.id,
+                    "contact_id": lead.cliente_id,
+                    "previous_temperature": prev_temp,
+                    "temperature": next_temp,
+                },
+            )
         lead.clasificacion = classification
     if "lifecycle_status" in data:
         if lead.estado != data["lifecycle_status"]:
             create_system_event(db, "crm.lead.stage.changed", tenant.auth_tenant_id, tenant.schema_name, {
                 "lead_id": lead.id, "previous_stage": lead.estado, "stage": data["lifecycle_status"],
             })
+            publish_domain_event_in_tx(
+                db,
+                tenant,
+                event_type="lead.stage.changed",
+                aggregate_type="lead",
+                aggregate_id=lead.id,
+                payload={
+                    "lead_id": lead.id,
+                    "contact_id": lead.cliente_id,
+                    "previous_stage": lead.estado,
+                    "stage": data["lifecycle_status"],
+                },
+            )
         lead.estado = data["lifecycle_status"]
     if "assigned_to_user_id" in data:
         assigned = data["assigned_to_user_id"]

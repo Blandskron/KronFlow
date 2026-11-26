@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import ipaddress
 import json
+from pathlib import Path
 import secrets
 from typing import Sequence
 from urllib.parse import urlparse
@@ -14,6 +15,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete, inspect, select, text
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.tenant_resolver import TenantContext
 from app.services.action_outbox_service import enqueue_outbox_action
 from app.services.tenant_data import bind_tenant_session
@@ -305,12 +307,127 @@ def get_private_attachment(
     return _attachment_to_dict(att)
 
 
-def purge_expired_attachments(db: Session, tenant: TenantContext, *, now: datetime | None = None) -> int:
+def _resolve_attachment_path(storage_key: str, *, storage_dir: str | Path | None = None) -> Path:
+    configured = storage_dir if storage_dir is not None else get_settings().attachment_storage_dir
+    base = Path(str(configured).strip() or (Path.cwd() / ".kronflow_attachments")).resolve()
+    target = (base / storage_key).resolve()
+    if not target.is_relative_to(base):
+        raise HTTPException(status_code=400, detail="Invalid attachment storage path")
+    return target
+
+
+def upload_private_attachment_bytes(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    resource_type: str,
+    resource_id: int,
+    filename: str,
+    content_type: str,
+    data: bytes,
+    uploaded_by: str,
+    retention_days: int = 90,
+    storage_dir: str | Path | None = None,
+    now: datetime | None = None,
+) -> dict:
+    if resource_type not in ("conversation", "contact", "opportunity"):
+        raise HTTPException(status_code=422, detail="Unsupported attachment resource_type")
+    norm_ct = content_type.strip().lower()
+    if norm_ct not in ALLOWED_ATTACHMENT_TYPES:
+        raise HTTPException(status_code=422, detail=f"Unsupported content_type: {content_type}")
+    size_bytes = len(data)
+    if not 1 <= size_bytes <= MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=422, detail=f"Attachment size must be between 1 and {MAX_ATTACHMENT_BYTES} bytes")
+    if not 1 <= retention_days <= 3650:
+        raise HTTPException(status_code=422, detail="retention_days must be between 1 and 3650")
+
     current = _now(now)
     bind_tenant_session(db, tenant.schema_name)
     _require_table(db, tenant, PrivateAttachment.__tablename__)
+    model_map = {"conversation": Conversation, "contact": Cliente, "opportunity": Opportunity}
+    if db.get(model_map[resource_type], resource_id) is None:
+        raise HTTPException(status_code=404, detail=f"Target {resource_type} not found")
+
+    safe_name = filename.replace("\\", "/").split("/")[-1].strip()[:180] or "attachment.bin"
+    storage_key = f"{tenant.schema_name}/{resource_type}/{resource_id}/{uuid4().hex}"
+    digest = hashlib.sha256(data).hexdigest()
+
+    target = _resolve_attachment_path(storage_key, storage_dir=storage_dir)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
+    tmp_path.write_bytes(data)
+    tmp_path.replace(target)
+
+    att = PrivateAttachment(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        filename=safe_name,
+        content_type=norm_ct,
+        size_bytes=size_bytes,
+        sha256_hex=digest,
+        storage_key=storage_key,
+        uploaded_by=uploaded_by[:64],
+        expires_at=current + timedelta(days=retention_days),
+        created_at=current,
+    )
+    try:
+        db.add(att)
+        db.commit()
+        db.refresh(att)
+    except Exception:
+        db.rollback()
+        target.unlink(missing_ok=True)
+        raise
+    return _attachment_to_dict(att)
+
+
+def read_private_attachment_bytes(
+    db: Session,
+    tenant: TenantContext,
+    attachment_id: int,
+    *,
+    resource_type: str,
+    resource_id: int,
+    storage_dir: str | Path | None = None,
+    now: datetime | None = None,
+) -> tuple[dict, bytes]:
+    meta = get_private_attachment(
+        db,
+        tenant,
+        attachment_id,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        now=now,
+    )
+    target = _resolve_attachment_path(meta["storage_key"], storage_dir=storage_dir)
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="Attachment content not found")
+    data = target.read_bytes()
+    if hashlib.sha256(data).hexdigest() != meta["sha256_hex"]:
+        raise HTTPException(status_code=409, detail="Attachment integrity check failed")
+    return meta, data
+
+
+def purge_expired_attachments(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    storage_dir: str | Path | None = None,
+    now: datetime | None = None,
+) -> int:
+    current = _now(now)
+    bind_tenant_session(db, tenant.schema_name)
+    _require_table(db, tenant, PrivateAttachment.__tablename__)
+    expired_keys = list(
+        db.scalars(select(PrivateAttachment.storage_key).where(PrivateAttachment.expires_at <= current)).all()
+    )
     res = db.execute(delete(PrivateAttachment).where(PrivateAttachment.expires_at <= current))
     db.commit()
+    for key in expired_keys:
+        try:
+            _resolve_attachment_path(key, storage_dir=storage_dir).unlink(missing_ok=True)
+        except HTTPException:
+            pass
     return int(res.rowcount or 0)
 
 

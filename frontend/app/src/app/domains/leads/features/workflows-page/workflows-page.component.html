@@ -1,51 +1,298 @@
+<section class="page-section workflow-page">
+  <kronflow-page-header
+    eyebrow="WORKFLOWS · KRONFLOW"
+    title="Automatizaciones y tablero operativo"
+    subtitle="Diseña grafos declarativos versionados con simulación sin efectos o revisa conversaciones en curso."
+  >
+    <a class="btn btn-secondary" routerLink="/app/leads">Abrir seguimiento de leads</a>
+  </kronflow-page-header>
 
-    <section class="workflow-page">
-      <header class="workflow-heading">
-        <h1>Oportunidades</h1>
-        <p class="muted">{{ tenantName() }}</p>
-        <a routerLink="/app/leads">Abrir seguimiento de leads</a>
-      </header>
-      <section class="workflow-controls card" aria-label="Filtros del tablero">
-        <div class="controls-top">
-          <div class="status-tabs" role="group" aria-label="Estado de las oportunidades">
-            <button [class.active]="statusFilter() === 'open'" [attr.aria-pressed]="statusFilter() === 'open'" type="button" (click)="statusFilter.set('open')">Abiertos</button>
-            <button [class.active]="statusFilter() === 'all'" [attr.aria-pressed]="statusFilter() === 'all'" type="button" (click)="statusFilter.set('all')">Todos</button>
-            <button [class.active]="statusFilter() === 'closed'" [attr.aria-pressed]="statusFilter() === 'closed'" type="button" (click)="statusFilter.set('closed')">Cerrados</button>
+  <div class="studio-tabs">
+    <kronflow-tabs
+      [tabs]="tabs"
+      [activeId]="activeTab()"
+      ariaLabel="Secciones de automatizaciones"
+      (selected)="setTab($event)"
+    />
+  </div>
+
+  @if (activeTab() === 'studio') {
+    @if (!canManage()) {
+      <div class="studio-banner">
+        <kronflow-alert tone="info">
+          Tienes vista de solo lectura. El permiso <code>crm.manage</code> habilita crear, simular, publicar o cancelar ejecuciones.
+        </kronflow-alert>
+      </div>
+    }
+
+    @if (studioNotice(); as msg) {
+      <div class="studio-banner">
+        <kronflow-alert [tone]="msg.tone" [dismissible]="true" (dismissed)="studioNotice.set(null)">
+          {{ msg.text }}
+        </kronflow-alert>
+      </div>
+    }
+
+    @if (templates().length) {
+      <section class="card glass-surface studio-card" aria-label="Plantillas comerciales">
+        <div class="studio-heading">
+          <h2>Plantillas rápidas</h2>
+          <div class="studio-actions">
+            <button class="btn btn-secondary btn-sm" type="button" [disabled]="studioLoading()" (click)="loadStudio()">
+              Actualizar
+            </button>
+            @if (canManage()) {
+              <button class="btn btn-secondary btn-sm" type="button" [disabled]="studioBusy()" (click)="processTick()">
+                Ejecutar ciclo de eventos
+              </button>
+            }
           </div>
         </div>
-
-        <div class="filters-row">
-          <label class="search-box">
-            <input [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" type="search" aria-label="Buscar oportunidad" placeholder="Buscar contacto o mensaje">
-            <svg lucideSearch size="18"></svg>
-          </label>
-
-          <div class="filter-group origin-group" role="group" aria-label="Filtrar por origen">
-            <button [class.active]="originFilter() === 'all'" [attr.aria-pressed]="originFilter() === 'all'" type="button" (click)="originFilter.set('all')">Todos</button>
-            <button [class.active]="originFilter() === 'inbound'" [attr.aria-pressed]="originFilter() === 'inbound'" type="button" (click)="originFilter.set('inbound')"><svg lucideArrowDownUp size="14"></svg> Entrantes</button>
-            <button [class.active]="originFilter() === 'outbound'" [attr.aria-pressed]="originFilter() === 'outbound'" type="button" (click)="originFilter.set('outbound')"><svg lucideInfo size="14"></svg> Salientes</button>
-          </div>
-
-          <div class="filter-group temperature-group" role="group" aria-label="Filtrar por temperatura">
-            <button [class.active]="temperatureFilter() === 'all'" [attr.aria-pressed]="temperatureFilter() === 'all'" type="button" (click)="temperatureFilter.set('all')">Todas</button>
-            <button [class.active]="temperatureFilter() === 'cold'" [attr.aria-pressed]="temperatureFilter() === 'cold'" type="button" (click)="temperatureFilter.set('cold')">Frío</button>
-            <button [class.active]="temperatureFilter() === 'warm'" [attr.aria-pressed]="temperatureFilter() === 'warm'" type="button" (click)="temperatureFilter.set('warm')">Tibio</button>
-            <button [class.active]="temperatureFilter() === 'hot'" [attr.aria-pressed]="temperatureFilter() === 'hot'" type="button" (click)="temperatureFilter.set('hot')">Caliente</button>
-            <button [class.active]="temperatureFilter() === 'unqualified'" [attr.aria-pressed]="temperatureFilter() === 'unqualified'" type="button" (click)="temperatureFilter.set('unqualified')">Sin calificar</button>
-          </div>
-
-          <button class="date-filter" type="button" [disabled]="isLoading()" (click)="loadWorkflow()">
-            <svg lucideRefreshCw size="16"></svg>
-            Actualizar
-          </button>
+        <div class="template-row">
+          @for (tpl of templates(); track tpl.code) {
+            <article class="template-chip">
+              <strong>{{ tpl.name }}</strong>
+              <small class="muted">{{ tpl.trigger_event_type }} · {{ tpl.description }}</small>
+              <div class="template-actions">
+                <button class="btn btn-secondary btn-sm" type="button" (click)="prefillFromTemplate(tpl)">
+                  Cargar en editor
+                </button>
+                @if (canManage()) {
+                  <button class="btn btn-primary btn-sm" type="button" [disabled]="studioBusy()" (click)="createFromTemplate(tpl)">
+                    Crear desde plantilla
+                  </button>
+                }
+              </div>
+            </article>
+          }
         </div>
       </section>
+    }
 
-      @if (isLoading()) {
-        <p class="muted board-state" role="status">Cargando oportunidades…</p>
-      } @else if (loadError()) {
-        <p class="muted board-state" role="alert">{{ loadError() }}</p>
-      } @else {
+    @if (studioLoading() && !workflows().length) {
+      <div class="studio-grid" role="status" aria-label="Cargando automatizaciones">
+        <span class="sr-only">Cargando automatizaciones…</span>
+        <kronflow-skeleton height="240px" />
+        <kronflow-skeleton height="380px" />
+      </div>
+    } @else {
+      <div class="studio-grid">
+        <aside class="card glass-surface studio-card" aria-label="Flujos configurados">
+          <h2>Flujos registrados ({{ workflows().length }})</h2>
+          @if (!workflows().length) {
+            <kronflow-empty-state
+              title="Sin automatizaciones"
+              description="Crea un borrador desde plantilla o edita un grafo JSON nuevo."
+            />
+          } @else {
+            <ul class="wf-list">
+              @for (wf of workflows(); track wf.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="wf-item"
+                    [class.wf-item-selected]="selectedWorkflowId() === wf.id"
+                    [attr.aria-current]="selectedWorkflowId() === wf.id ? 'true' : null"
+                    (click)="selectWorkflow(wf)"
+                  >
+                    <div class="wf-item-head">
+                      <strong>{{ wf.name }}</strong>
+                      <kronflow-badge [tone]="statusTones[wf.status] || 'info'">{{ wf.status }}</kronflow-badge>
+                    </div>
+                    <small class="muted">
+                      {{ wf.trigger_event_type }} · borrador v{{ wf.draft_version }}
+                      @if (wf.active_revision_number) {
+                        · activa r{{ wf.active_revision_number }}
+                      }
+                    </small>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </aside>
+
+        <div class="studio-main">
+          <form class="card glass-surface studio-card" [formGroup]="studioForm" (ngSubmit)="saveDraft()">
+            <div class="studio-heading">
+              <h2>
+                @if (selectedWorkflow(); as current) {
+                  Editor · {{ current.name }} (v{{ current.draft_version }})
+                } @else {
+                  Nueva automatización declarativa
+                }
+              </h2>
+              @if (selectedWorkflow(); as current) {
+                <kronflow-badge [tone]="current.active_revision_number ? 'success' : 'warning'">
+                  {{ current.active_revision_number ? 'Activa r' + current.active_revision_number : 'Sin publicar' }}
+                </kronflow-badge>
+              }
+            </div>
+
+            <div class="studio-form-row">
+              <div class="control-group">
+                <label for="wf-name">Nombre del flujo</label>
+                <input id="wf-name" class="field" type="text" formControlName="name" />
+              </div>
+
+              <div class="control-group">
+                <label for="wf-trigger">Evento disparador</label>
+                <select id="wf-trigger" class="field" formControlName="triggerEventType">
+                  @for (ev of triggerOptions; track ev) {
+                    <option [value]="ev">{{ ev }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label for="wf-description">Descripción</label>
+              <input id="wf-description" class="field" type="text" formControlName="description" />
+            </div>
+
+            <div class="control-group">
+              <label for="wf-graph">Grafo declarativo (JSON: nodes / edges)</label>
+              <textarea id="wf-graph" class="field json-area" rows="10" formControlName="graphJson"></textarea>
+            </div>
+
+            @if (selectedWorkflow()) {
+              <div class="studio-form-row">
+                <div class="control-group">
+                  <label for="wf-sample">Payload de simulación (JSON)</label>
+                  <textarea id="wf-sample" class="field json-area" rows="4" formControlName="samplePayloadJson"></textarea>
+                </div>
+
+                <div class="control-group">
+                  <label for="wf-note">Nota de publicación</label>
+                  <input id="wf-note" class="field" type="text" formControlName="publishNote" placeholder="Ej. Ajuste de espera 1h" />
+                </div>
+              </div>
+            }
+
+            <div class="studio-actions">
+              <button class="btn btn-primary" type="submit" [disabled]="!canManage() || studioBusy()">
+                {{ selectedWorkflow() ? 'Guardar borrador' : 'Crear borrador' }}
+              </button>
+              @if (selectedWorkflow()) {
+                <button class="btn btn-secondary" type="button" [disabled]="!canManage() || studioBusy()" (click)="validateDraft()">
+                  Validar grafo
+                </button>
+                <button class="btn btn-secondary" type="button" [disabled]="!canManage() || studioBusy()" (click)="simulateDraft()">
+                  Simular sin efectos
+                </button>
+                <button class="btn btn-primary" type="button" [disabled]="!canManage() || studioBusy()" (click)="publishSelected()">
+                  Publicar revisión
+                </button>
+              }
+            </div>
+          </form>
+
+          @if (validationResult(); as val) {
+            <article class="card glass-surface studio-card" aria-label="Resultado de validación">
+              <h3>Resultado del compilador: {{ val.valid ? 'Válido' : 'Inválido' }} ({{ val.node_count }} nodos, {{ val.edge_count }} aristas)</h3>
+              @for (err of val.errors; track err) {
+                <p class="error-line">{{ err }}</p>
+              }
+              @for (warn of val.warnings; track warn) {
+                <p class="muted">Aviso: {{ warn }}</p>
+              }
+            </article>
+          }
+
+          @if (simulationResult(); as sim) {
+            <article class="card glass-surface studio-card" aria-label="Resultado de simulación">
+              <h3>Simulación sin efectos</h3>
+              <p><strong>Camino visitado:</strong> {{ sim.visited_nodes.join(' → ') }}</p>
+              <p><strong>Ramas elegidas:</strong> {{ sim.matched_branches.join(', ') || 'Ninguna' }}</p>
+              @if (sim.discarded_branches.length) {
+                <p class="muted"><strong>Ramas descartadas:</strong> {{ sim.discarded_branches.join(', ') }}</p>
+              }
+              <p><strong>Espera acumulada:</strong> {{ sim.would_wait_seconds }} s</p>
+              <pre class="sim-json">{{ sim.planned_effects | json }}</pre>
+            </article>
+          }
+
+          <section class="card glass-surface studio-card" aria-label="Ejecuciones recientes">
+            <h2>Ejecuciones recientes ({{ runs().length }})</h2>
+            @if (!runs().length) {
+              <kronflow-empty-state
+                title="Aún sin ejecuciones"
+                description="Cuando ocurra un evento suscrito y el flujo esté publicado, sus ejecuciones aparecerán aquí."
+              />
+            } @else {
+              <div class="runs-list">
+                @for (run of runs(); track run.id) {
+                  <article class="run-row">
+                    <div>
+                      <strong>Ejecución #{{ run.id }} · {{ run.entity_type }} #{{ run.entity_id }}</strong>
+                      <div class="muted">
+                        Evento: {{ run.trigger_event_id }} · Revisión #{{ run.revision_id }} · Pasos: {{ run.steps.length }}
+                        @if (run.wake_at) {
+                          · Despierta {{ run.wake_at | date:'short' }}
+                        }
+                        @if (run.error_message) {
+                          · {{ run.error_message }}
+                        }
+                      </div>
+                    </div>
+                    <div class="run-right">
+                      <kronflow-badge [tone]="statusTones[run.status] || 'info'">{{ run.status }}</kronflow-badge>
+                      @if (canManage() && (run.status === 'running' || run.status === 'waiting')) {
+                        <button class="btn btn-secondary btn-sm" type="button" [disabled]="studioBusy()" (click)="cancelRun(run)">
+                          Cancelar
+                        </button>
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        </div>
+      </div>
+    }
+  } @else {
+    <p class="muted tenant-sub">{{ tenantName() }}</p>
+    <section class="workflow-controls card" aria-label="Filtros del tablero">
+      <div class="controls-top">
+        <div class="status-tabs" role="group" aria-label="Estado de las oportunidades">
+          <button [class.active]="statusFilter() === 'open'" [attr.aria-pressed]="statusFilter() === 'open'" type="button" (click)="statusFilter.set('open')">Abiertos</button>
+          <button [class.active]="statusFilter() === 'all'" [attr.aria-pressed]="statusFilter() === 'all'" type="button" (click)="statusFilter.set('all')">Todos</button>
+          <button [class.active]="statusFilter() === 'closed'" [attr.aria-pressed]="statusFilter() === 'closed'" type="button" (click)="statusFilter.set('closed')">Cerrados</button>
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <label class="search-box">
+          <input [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" type="search" aria-label="Buscar oportunidad" placeholder="Buscar contacto o mensaje">
+          <svg lucideSearch size="18"></svg>
+        </label>
+
+        <div class="filter-group origin-group" role="group" aria-label="Filtrar por origen">
+          <button [class.active]="originFilter() === 'all'" [attr.aria-pressed]="originFilter() === 'all'" type="button" (click)="originFilter.set('all')">Todos</button>
+          <button [class.active]="originFilter() === 'inbound'" [attr.aria-pressed]="originFilter() === 'inbound'" type="button" (click)="originFilter.set('inbound')"><svg lucideArrowDownUp size="14"></svg> Entrantes</button>
+          <button [class.active]="originFilter() === 'outbound'" [attr.aria-pressed]="originFilter() === 'outbound'" type="button" (click)="originFilter.set('outbound')"><svg lucideInfo size="14"></svg> Salientes</button>
+        </div>
+
+        <div class="filter-group temperature-group" role="group" aria-label="Filtrar por temperatura">
+          <button [class.active]="temperatureFilter() === 'all'" [attr.aria-pressed]="temperatureFilter() === 'all'" type="button" (click)="temperatureFilter.set('all')">Todas</button>
+          <button [class.active]="temperatureFilter() === 'cold'" [attr.aria-pressed]="temperatureFilter() === 'cold'" type="button" (click)="temperatureFilter.set('cold')">Frío</button>
+          <button [class.active]="temperatureFilter() === 'warm'" [attr.aria-pressed]="temperatureFilter() === 'warm'" type="button" (click)="temperatureFilter.set('warm')">Tibio</button>
+          <button [class.active]="temperatureFilter() === 'hot'" [attr.aria-pressed]="temperatureFilter() === 'hot'" type="button" (click)="temperatureFilter.set('hot')">Caliente</button>
+          <button [class.active]="temperatureFilter() === 'unqualified'" [attr.aria-pressed]="temperatureFilter() === 'unqualified'" type="button" (click)="temperatureFilter.set('unqualified')">Sin calificar</button>
+        </div>
+
+        <button class="date-filter" type="button" [disabled]="isLoading()" (click)="loadWorkflow()">
+          Actualizar
+        </button>
+      </div>
+    </section>
+
+    @if (isLoading()) {
+      <p class="muted board-state" role="status">Cargando oportunidades…</p>
+    } @else if (loadError()) {
+      <p class="muted board-state" role="alert">{{ loadError() }}</p>
+    } @else {
       <div class="board" role="region" aria-label="Tablero de oportunidades" tabindex="0">
         @for (column of columns(); track column.title) {
           <article class="column" [class.warning]="column.accent === 'warning'">
@@ -95,5 +342,6 @@
           </article>
         }
       </div>
-      }
-    </section>
+    }
+  }
+</section>

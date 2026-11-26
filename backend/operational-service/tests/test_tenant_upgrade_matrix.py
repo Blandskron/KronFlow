@@ -14,6 +14,7 @@ from app.public_models.system_event import SystemEvent
 from app.public_models.tenant_runtime import TenantRuntime
 from app.services.tenant_data import tenant_exec_options
 from app.services.tenant_provisioning_service import migrate_all_tenants, migrate_runtime
+from app.tenant_models.context import TenantAgentProfile
 from app.tenant_models.operations import ACTIVE_TENANT_TABLE_NAMES, Cliente, Conversation, Lead, Message
 from app.tenant_models.whatsapp_consent import WhatsAppConsentState
 from app.tenant_models.whatsapp_turn import WhatsAppSendEvidence, WhatsAppTurn, WhatsAppTurnJob
@@ -55,6 +56,19 @@ TABLE_INTRODUCED = {
     "webhook_deliveries": 16,
     "private_attachments": 16,
     "calendar_appointments": 16,
+    "agent_revisions": 17,
+    "agent_rules": 17,
+    "agent_execution_traces": 17,
+    "setup_chat_sessions": 17,
+    "workflow_definitions": 18,
+    "workflow_revisions": 18,
+    "workflow_runs": 18,
+    "workflow_step_runs": 18,
+    "tool_definitions": 19,
+    "tool_invocations": 19,
+    "webchat_sessions": 19,
+    "external_entity_mappings": 20,
+    "connector_sync_cursors": 20,
 }
 DECISION_AT = datetime(2026, 1, 1, tzinfo=UTC)
 EXISTING_BOUNDARY = datetime(2025, 12, 31, tzinfo=UTC)
@@ -88,6 +102,7 @@ class TenantUpgradeMatrixTests(PostgresCase):
             ])
             db.flush()
             db.add(Lead(id=1, cliente_id=1))
+            db.add(TenantAgentProfile(tenant_id=str(auth_id), name=f"Legacy Agent {version}"))
             db.flush()
             if version >= 4:
                 db.add(WhatsAppTurn(id=1, lead_id=1, conversation_id=1, phone=PHONE, state="prepared", reply_body="synthetic"))
@@ -104,12 +119,12 @@ class TenantUpgradeMatrixTests(PostgresCase):
         return name
 
     def test_active_matrix_is_repeatable_and_suspended_upgrade_is_transactional(self):
-        matrix = {version: self.seed_version(version, version) for version in range(3, 17)}
+        matrix = {version: self.seed_version(version, version) for version in range(3, 21)}
         suspended = self.seed_version(3, 99, status="suspended")
         for _ in range(2):
             with Session(self.engine) as db:
                 result = migrate_all_tenants(db)
-                self.assertEqual((result["total"], result["success"], result["failed"]), (14, 14, 0), result)
+                self.assertEqual((result["total"], result["success"], result["failed"]), (18, 18, 0), result)
         self.assertFalse(inspect(self.engine).has_table("whatsapp_turns", schema=suspended))
 
         for version, schema in matrix.items():
@@ -118,6 +133,9 @@ class TenantUpgradeMatrixTests(PostgresCase):
                 indexes = inspect(self.engine).get_indexes("mensajes_dashboard", schema=schema)
                 self.assertIn("idx_messages_thread_id", {index["name"] for index in indexes})
                 self.assertEqual(db.execute(select(Lead.id, Lead.cliente_id)).all(), [(1, 1)])
+                agent_profile = db.scalar(select(TenantAgentProfile).where(TenantAgentProfile.tenant_id == str(version)))
+                self.assertIsNotNone(agent_profile)
+                self.assertTrue(agent_profile.is_default)
                 self.assertEqual(db.execute(select(Message.id, Message.mensaje, Message.external_message_id)).all(),
                                  [(1, schema, "same-id-across-workspaces")])
                 self.assertEqual(db.scalars(select(WhatsAppTurn.id)).all(), [1] if version >= 4 else [])

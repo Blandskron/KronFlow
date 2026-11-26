@@ -365,6 +365,10 @@ def record_ai_usage(
     completion_tokens: int,
     latency_ms: int,
     estimated_cost_usd: Decimal,
+    is_simulation: bool = False,
+    agent_id: int | None = None,
+    agent_revision_id: int | None = None,
+    pricing_version: str | None = None,
     correlation_id: str | None = None,
     now: datetime | None = None,
 ) -> dict:
@@ -381,6 +385,10 @@ def record_ai_usage(
         completion_tokens=completion_tokens,
         latency_ms=latency_ms,
         estimated_cost_usd=estimated_cost_usd,
+        is_simulation=bool(is_simulation),
+        agent_id=agent_id,
+        agent_revision_id=agent_revision_id,
+        pricing_version=pricing_version.strip()[:32] if pricing_version else None,
         correlation_id=correlation_id or audit_correlation.get(),
         recorded_at=current,
     )
@@ -395,6 +403,10 @@ def record_ai_usage(
         "completion_tokens": row.completion_tokens,
         "latency_ms": row.latency_ms,
         "estimated_cost_usd": str(row.estimated_cost_usd),
+        "is_simulation": row.is_simulation,
+        "agent_id": row.agent_id,
+        "agent_revision_id": row.agent_revision_id,
+        "pricing_version": row.pricing_version,
         "correlation_id": row.correlation_id,
         "recorded_at": row.recorded_at,
     }
@@ -405,6 +417,7 @@ def summarize_ai_usage(
     tenant: TenantContext,
     *,
     days: int = 30,
+    include_simulations: bool = False,
     now: datetime | None = None,
 ) -> dict:
     current = _now(now)
@@ -412,15 +425,16 @@ def summarize_ai_usage(
     bind_tenant_session(db, tenant.schema_name)
     _require_table(db, tenant, AIUsageRecord.__tablename__)
 
-    row = db.execute(
-        select(
-            func.count().label("requests"),
-            func.coalesce(func.sum(AIUsageRecord.prompt_tokens), 0).label("prompt_tokens"),
-            func.coalesce(func.sum(AIUsageRecord.completion_tokens), 0).label("completion_tokens"),
-            func.coalesce(func.sum(AIUsageRecord.estimated_cost_usd), Decimal("0")).label("total_cost_usd"),
-            func.coalesce(func.avg(AIUsageRecord.latency_ms), 0).label("avg_latency_ms"),
-        ).where(AIUsageRecord.recorded_at >= cutoff)
-    ).mappings().one()
+    stmt = select(
+        func.count().label("requests"),
+        func.coalesce(func.sum(AIUsageRecord.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(AIUsageRecord.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(AIUsageRecord.estimated_cost_usd), Decimal("0")).label("total_cost_usd"),
+        func.coalesce(func.avg(AIUsageRecord.latency_ms), 0).label("avg_latency_ms"),
+    ).where(AIUsageRecord.recorded_at >= cutoff)
+    if not include_simulations:
+        stmt = stmt.where(AIUsageRecord.is_simulation.is_(False))
+    row = db.execute(stmt).mappings().one()
     return {
         "days": days,
         "requests": int(row["requests"]),

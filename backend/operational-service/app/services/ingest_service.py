@@ -20,9 +20,11 @@ from app.schemas.ingest import (
     WhatsAppMessageIn,
     WhatsAppStatusIn,
 )
+from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.lead_service import get_or_create_initial_lead
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
+from app.services.workflow_cancellation import cancel_waiting_runs_in_tx
 from app.tenant_models.operations import Cliente, Conversation, Ejecutivo, InventarioVehiculo, Lead, MensajeProcesado, Message, SolicitudDerecho
 from app.tenant_models.whatsapp_consent import WhatsAppConsentState
 from app.tenant_models.whatsapp_turn import WhatsAppTurn, WhatsAppTurnJob
@@ -190,6 +192,31 @@ def ingest_whatsapp_message(
             job.turn_id = message.id
             db.add(job)
     create_system_event(db, "ingest.message.received", tenant.auth_tenant_id, tenant.schema_name, {"message_id": payload.external_message_id})
+    if payload.direction == "inbound":
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type="message.inbound.received",
+            aggregate_type="conversation",
+            aggregate_id=conversation.id,
+            payload={
+                "conversation_id": conversation.id,
+                "contact_id": cliente.id,
+                "lead_id": lead.id,
+                "message_id": payload.external_message_id,
+                "channel": payload.channel,
+            },
+            occurred_at=payload.sent_at,
+        )
+        cancel_waiting_runs_in_tx(
+            db,
+            tenant,
+            event_type="message.inbound.received",
+            contact_id=cliente.id,
+            conversation_id=conversation.id,
+            reason="customer_replied",
+            now=payload.sent_at,
+        )
     db.commit()
     db.refresh(message)
     return {"lead_id": lead.id, "conversation_id": conversation.id, "message_id": message.id, "duplicate": False}

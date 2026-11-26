@@ -23,14 +23,18 @@ from app.schemas.campaign import (
     TemplateOut,
     UnsubscribeIn,
     UnsubscribeOut,
+    UnsubscribeTokenCreateIn,
+    UnsubscribeTokenOut,
 )
 from app.services.campaign_service import (
     approve_campaign,
     create_campaign,
     create_template_with_version,
     ingest_channel_receipt,
+    issue_unsubscribe_token,
     process_campaign_stub_batch,
     record_public_unsubscribe,
+    redeem_unsubscribe_token,
     set_campaign_state,
 )
 from app.services.channel_connection_service import (
@@ -207,6 +211,33 @@ def channels_unsubscribe(
     return record_public_unsubscribe(
         db, tenant, channel=payload.channel, destination=payload.destination, purpose=payload.purpose,
     )
+
+
+@router.post("/channels/unsubscribe-tokens", response_model=UnsubscribeTokenOut, status_code=status.HTTP_201_CREATED)
+def channels_issue_unsubscribe_token(
+    payload: UnsubscribeTokenCreateIn,
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+    tenant: TenantContext = Depends(resolve_crm_editor),
+    db: Session = Depends(get_db),
+):
+    _ = principal
+    return issue_unsubscribe_token(
+        db,
+        tenant,
+        channel=payload.channel,
+        destination=payload.destination,
+        purpose=payload.purpose,
+        client_id=payload.client_id,
+        ttl_days=payload.ttl_days,
+    )
+
+
+@router.post("/public/channels/unsubscribe/{token}", response_model=UnsubscribeOut)
+def public_channels_unsubscribe(
+    token: str,
+    db: Session = Depends(get_db),
+):
+    return redeem_unsubscribe_token(db, token)
 
 
 @router.post(

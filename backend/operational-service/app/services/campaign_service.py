@@ -1,8 +1,10 @@
 """Templates, campaigns, approval snapshots, stub dispatch worker, and receipts (FK-30)."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import hashlib
 import html
 import re
+import secrets
 from typing import Sequence
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -12,6 +14,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
+from app.public_models.tenant_runtime import TenantRuntime
+from app.public_models.unsubscribe import PublicUnsubscribeToken
 from app.services.action_outbox_service import (
     claim_next_outbox_jobs,
     complete_outbox_action,
@@ -22,8 +26,10 @@ from app.services.consent_authorization_service import (
     evaluate_persisted_consent,
     record_suppression,
 )
+from app.services.contact_points import normalize_email
 from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.tenant_data import bind_tenant_session
+from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.campaigns import (
     Campaign,
     CampaignApproval,
@@ -35,6 +41,7 @@ from app.tenant_models.campaigns import (
     TenantChannelConnection,
 )
 from app.tenant_models.contact_capture import ContactPoint
+from app.tenant_models.operations import Cliente
 
 
 TEMPLATE_VAR_RE = re.compile(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]{0,31})\s*\}\}")
@@ -638,3 +645,176 @@ def record_public_unsubscribe(
         commit=True,
     )
     return {"status": "unsubscribed"}
+
+
+def issue_unsubscribe_token(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    channel: str,
+    destination: str,
+    purpose: str | None = None,
+    client_id: int | None = None,
+    ttl_days: int = 90,
+    now: datetime | None = None,
+) -> dict:
+    """Issue a public opaque self-service unsubscribe token storing only its SHA-256 hash."""
+    norm_channel = channel.strip().lower()
+    if norm_channel not in ("email", "whatsapp"):
+        raise HTTPException(status_code=422, detail="channel must be 'email' or 'whatsapp'")
+    if norm_channel == "email":
+        norm_dest = normalize_email(destination)
+        if norm_dest is None:
+            raise HTTPException(status_code=422, detail="Invalid email destination")
+    else:
+        norm_dest = destination.strip()
+        if not norm_dest or len(norm_dest) > 255:
+            raise HTTPException(status_code=422, detail="Invalid whatsapp destination")
+
+    if not 1 <= ttl_days <= 365:
+        raise HTTPException(status_code=422, detail="ttl_days must be between 1 and 365")
+
+    norm_purpose = purpose.strip()[:64] if purpose and purpose.strip() else None
+    current = _now(now)
+    expires_at = current + timedelta(days=ttl_days)
+
+    if client_id is not None:
+        bind_tenant_session(db, tenant.schema_name)
+        if db.get(Cliente, client_id) is None:
+            raise HTTPException(status_code=404, detail="Contact not found")
+
+    raw_token = f"unsub_{secrets.token_urlsafe(32)}"
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    row = PublicUnsubscribeToken(
+        token_hash=token_hash,
+        auth_tenant_id=tenant.auth_tenant_id,
+        schema_name=tenant.schema_name,
+        channel=norm_channel,
+        destination=norm_dest,
+        purpose=norm_purpose,
+        client_id=client_id,
+        expires_at=expires_at,
+        created_at=current,
+    )
+    db.add(row)
+    db.commit()
+    return {
+        "token": raw_token,
+        "channel": norm_channel,
+        "destination": norm_dest,
+        "purpose": norm_purpose,
+        "expires_at": expires_at,
+    }
+
+
+def redeem_unsubscribe_token(
+    db: Session,
+    raw_token: str,
+    *,
+    now: datetime | None = None,
+) -> dict:
+    """Redeem an opaque self-service unsubscribe token, suppressing and cancelling pending jobs atomically."""
+    clean_token = raw_token.strip()
+    if not clean_token:
+        raise HTTPException(status_code=404, detail="Unsubscribe token not found or expired")
+    token_hash = hashlib.sha256(clean_token.encode("utf-8")).hexdigest()
+    current = _now(now)
+
+    tok = db.scalar(
+        select(PublicUnsubscribeToken)
+        .where(PublicUnsubscribeToken.token_hash == token_hash)
+        .with_for_update()
+    )
+    if tok is None or (tok.expires_at is not None and tok.expires_at <= current):
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Unsubscribe token not found or expired")
+
+    runtime = db.scalar(select(TenantRuntime).where(TenantRuntime.auth_tenant_id == tok.auth_tenant_id))
+    if runtime is None:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Unsubscribe token not found or expired")
+
+    tenant = TenantContext(
+        auth_tenant_id=runtime.auth_tenant_id,
+        tenant_slug=runtime.tenant_slug,
+        schema_name=runtime.schema_name,
+        tenant_code=runtime.tenant_code,
+        plan=runtime.plan,
+        status=runtime.status,
+    )
+    record_suppression(
+        db,
+        tenant,
+        channel=tok.channel,
+        destination=tok.destination,
+        purpose=tok.purpose,
+        reason="unsubscribe",
+        source="unsubscribe_link",
+        client_id=tok.client_id,
+        recorded_at=current,
+        cancel_pending_jobs=True,
+        commit=False,
+    )
+    if tok.used_at is None:
+        tok.used_at = current
+    db.commit()
+    return {"status": "unsubscribed"}
+
+
+def promote_due_scheduled_campaigns(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    now: datetime | None = None,
+) -> int:
+    """Promote scheduled campaigns whose scheduled_at has arrived to running (or pause if connection invalid)."""
+    current = _now(now)
+    bind_tenant_session(db, tenant.schema_name)
+    if not campaigns_ready(db, tenant):
+        return 0
+
+    due_campaigns = list(
+        db.scalars(
+            select(Campaign)
+            .where(
+                Campaign.status == "scheduled",
+                Campaign.scheduled_at.is_not(None),
+                Campaign.scheduled_at <= current,
+            )
+            .order_by(Campaign.id.asc())
+            .with_for_update(skip_locked=True)
+        ).all()
+    )
+    promoted = 0
+    for campaign in due_campaigns:
+        conn = db.get(TenantChannelConnection, campaign.connection_id)
+        if conn is None or conn.status != "active" or not conn.verified:
+            campaign.status = "paused"
+            campaign.version += 1
+            campaign.updated_at = current
+            create_system_event(
+                db,
+                "campaign.schedule.blocked_connection",
+                tenant.auth_tenant_id,
+                tenant.schema_name,
+                {"campaign_id": campaign.id, "connection_id": campaign.connection_id},
+            )
+            continue
+        campaign.status = "running"
+        campaign.version += 1
+        campaign.updated_at = current
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type="campaign.started",
+            aggregate_type="campaign",
+            aggregate_id=campaign.id,
+            payload={
+                "campaign_id": campaign.id,
+                "scheduled_at": campaign.scheduled_at.isoformat() if campaign.scheduled_at else None,
+            },
+            occurred_at=current,
+        )
+        promoted += 1
+    db.commit()
+    return promoted

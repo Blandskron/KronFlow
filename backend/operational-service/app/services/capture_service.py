@@ -26,7 +26,7 @@ from app.tenant_models.contact_capture import ContactPoint, LeadCapture
 from app.tenant_models.operations import Cliente, Lead
 
 
-ALLOWED_SCOPES = frozenset({"leads:create"})
+ALLOWED_SCOPES = frozenset({"leads:create", "mcp:read", "mcp:invoke", "events:read"})
 DEFAULT_FORM_FIELDS = ["name", "email", "phone", "message", "marketing_opt_in"]
 
 

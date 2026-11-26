@@ -1,4 +1,10 @@
 from app.tenant_models.action_outbox import ActionOutboxJob
+from app.tenant_models.agent_platform import (
+    AgentExecutionTrace,
+    AgentRevision,
+    AgentRule,
+    SetupChatSession,
+)
 from app.tenant_models.ai_extensions import (
     AIUsageRecord,
     ContactEnrichmentCandidate,
@@ -29,6 +35,21 @@ from app.tenant_models.post_v1 import (
 )
 from app.tenant_models.whatsapp_consent import WhatsAppConsentState
 from app.tenant_models.whatsapp_turn import WhatsAppSendEvidence, WhatsAppTurn, WhatsAppTurnJob
+from app.tenant_models.workflows import (
+    WorkflowDefinition,
+    WorkflowRevision,
+    WorkflowRun,
+    WorkflowStepRun,
+)
+from app.tenant_models.phase4_hub import (
+    ToolDefinition,
+    ToolInvocation,
+    WebchatSession,
+)
+from app.tenant_models.phase5_integrations import (
+    ConnectorSyncCursor,
+    ExternalEntityMapping,
+)
 from app.tenant_models.operations import (
     ACTIVE_TENANT_TABLE_NAMES,
     Cliente,
@@ -58,6 +79,10 @@ __all__ = [
     "AIActionProposal",
     "AIUsageRecord",
     "ActionOutboxJob",
+    "AgentExecutionTrace",
+    "AgentRevision",
+    "AgentRule",
+    "SetupChatSession",
     "Campaign",
     "CampaignApproval",
     "CampaignRecipient",
@@ -109,4 +134,13 @@ __all__ = [
     "ReglaNegocio",
     "SolicitudDerecho",
     "TenantAgentProfile",
+    "WorkflowDefinition",
+    "WorkflowRevision",
+    "WorkflowRun",
+    "WorkflowStepRun",
+    "ToolDefinition",
+    "ToolInvocation",
+    "WebchatSession",
+    "ConnectorSyncCursor",
+    "ExternalEntityMapping",
 ]

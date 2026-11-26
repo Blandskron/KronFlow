@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import hmac
 
 from fastapi import HTTPException
-from sqlalchemy import inspect, or_, select, text
+from sqlalchemy import inspect, or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
@@ -20,9 +20,12 @@ from app.services.campaign_eligibility import (
     Reason,
     campaign_eligibility,
 )
+from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
+from app.services.workflow_cancellation import cancel_waiting_runs_in_tx
 from app.tenant_models.action_outbox import ActionOutboxJob
+from app.tenant_models.campaigns import Campaign, CampaignRecipient as CampaignRecipientRow
 from app.tenant_models.consent_ledger import ContactConsentDecision, ContactSuppression
 from app.tenant_models.operations import Cliente
 
@@ -160,6 +163,24 @@ def record_consent_decision(
             "source": source,
         },
     )
+    if not granted:
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type="consent.withdrawn",
+            aggregate_type="contact",
+            aggregate_id=client_id,
+            payload={"client_id": client_id, "channel": norm_channel, "purpose": norm_purpose},
+            occurred_at=rec_utc,
+        )
+        cancel_waiting_runs_in_tx(
+            db,
+            tenant,
+            event_type="consent.withdrawn",
+            contact_id=client_id,
+            reason="consent_withdrawn",
+            now=rec_utc,
+        )
     if commit:
         db.commit()
         db.refresh(row)
@@ -178,6 +199,7 @@ def record_suppression(
     client_id: int | None = None,
     actor_id: str | None = None,
     recorded_at: datetime | None = None,
+    cancel_pending_jobs: bool = False,
     commit: bool = True,
 ) -> ContactSuppression:
     """Persist a durable suppression for a specific purpose or all purposes on a destination."""
@@ -207,6 +229,55 @@ def record_suppression(
     )
     db.add(row)
     db.flush()
+
+    cancelled_jobs = 0
+    if cancel_pending_jobs:
+        inspector = inspect(db.connection())
+        if inspector.has_table(ActionOutboxJob.__tablename__, schema=tenant.schema_name):
+            job_conditions = [
+                ActionOutboxJob.action_type == "campaign.delivery.send",
+                ActionOutboxJob.state.in_(("pending", "claimed")),
+                ActionOutboxJob.payload["channel"].astext == norm_channel,
+                ActionOutboxJob.payload["destination"].astext == norm_destination,
+            ]
+            if norm_purpose is not None:
+                job_conditions.append(ActionOutboxJob.payload["purpose"].astext == norm_purpose)
+            res = db.execute(
+                update(ActionOutboxJob)
+                .where(*job_conditions)
+                .values(
+                    state="cancelled",
+                    last_error=reason[:120],
+                    claim_token=None,
+                    lease_until=None,
+                    updated_at=rec_utc,
+                )
+            )
+            cancelled_jobs = int(res.rowcount or 0)
+
+        if inspector.has_table(CampaignRecipientRow.__tablename__, schema=tenant.schema_name) and inspector.has_table(
+            Campaign.__tablename__, schema=tenant.schema_name
+        ):
+            rec_conditions = [
+                CampaignRecipientRow.status == "queued",
+                CampaignRecipientRow.destination == norm_destination,
+                Campaign.channel == norm_channel,
+            ]
+            if norm_purpose is not None:
+                rec_conditions.append(Campaign.purpose == norm_purpose)
+            matching_ids = select(CampaignRecipientRow.id).join(
+                Campaign, Campaign.id == CampaignRecipientRow.campaign_id
+            ).where(*rec_conditions)
+            db.execute(
+                update(CampaignRecipientRow)
+                .where(CampaignRecipientRow.id.in_(matching_ids))
+                .values(
+                    status="suppressed",
+                    last_error=reason[:120],
+                    updated_at=rec_utc,
+                )
+            )
+
     create_system_event(
         db,
         "consent.suppression.recorded",
@@ -219,7 +290,25 @@ def record_suppression(
             "purpose": norm_purpose,
             "reason": reason,
             "source": row.source,
+            "cancelled_pending_jobs": cancelled_jobs,
         },
+    )
+    publish_domain_event_in_tx(
+        db,
+        tenant,
+        event_type="contact.suppressed",
+        aggregate_type="contact",
+        aggregate_id=client_id if client_id is not None else norm_destination,
+        payload={"client_id": client_id, "channel": norm_channel, "purpose": norm_purpose, "reason": reason},
+        occurred_at=rec_utc,
+    )
+    cancel_waiting_runs_in_tx(
+        db,
+        tenant,
+        event_type="contact.suppressed",
+        contact_id=client_id,
+        reason=f"suppressed:{reason}",
+        now=rec_utc,
     )
     if commit:
         db.commit()

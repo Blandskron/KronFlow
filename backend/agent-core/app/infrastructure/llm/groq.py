@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import logging
 from time import perf_counter
 
@@ -8,6 +9,15 @@ from app.domain.ports.llm import ChatInputBudgetExceeded, ChatMessage
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CompletionObservation:
+    provider: str
+    model: str
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    latency_ms: int
 
 
 def _observed_usage(data: dict) -> tuple[int, int, int] | None:
@@ -32,6 +42,7 @@ def _observe(outcome: str, started: float, input_chars: int, usage: tuple[int, i
 class GroqClient:
     def __init__(self, settings: Settings):
         self.settings = settings
+        self.last_observation: CompletionObservation | None = None
 
     @property
     def enabled_for_chat(self) -> bool:
@@ -43,6 +54,7 @@ class GroqClient:
         if not self.enabled_for_chat:
             raise RuntimeError("Groq chat is not configured")
 
+        self.last_observation = None
         started = perf_counter()
         input_chars = sum(len(message.content) for message in messages)
         if input_chars > self.settings.chat_input_max_chars:
@@ -73,5 +85,14 @@ class GroqClient:
             _observe("invalid_completion", started, input_chars)
             raise RuntimeError("Groq returned an invalid completion") from None
 
-        _observe("completed", started, input_chars, _observed_usage(data))
+        usage = _observed_usage(data)
+        elapsed_ms = max(0, int(round((perf_counter() - started) * 1000)))
+        self.last_observation = CompletionObservation(
+            provider="groq",
+            model=self.settings.groq_model,
+            prompt_tokens=usage[0] if usage is not None else None,
+            completion_tokens=usage[1] if usage is not None else None,
+            latency_ms=elapsed_ms,
+        )
+        _observe("completed", started, input_chars, usage)
         return content.strip()

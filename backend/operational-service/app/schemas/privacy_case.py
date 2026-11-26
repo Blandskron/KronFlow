@@ -43,6 +43,11 @@ class PrivacyCaseExportOut(BaseModel):
     message_count: int = 0
     consent_decisions: list[dict] = []
     suppressions: list[dict] = []
+    memory_items: list[dict] = []
+    attachments: list[dict] = []
+    webchat_sessions_count: int = 0
+    external_mappings_count: int = 0
+    workflow_runs_count: int = 0
 
 
 class PrivacyErasureIn(BaseModel):
@@ -59,6 +64,10 @@ class PrivacyErasureOut(BaseModel):
     contact_points_deleted: int
     suppression_recorded: bool
     cleanup_log_id: int
+    memory_items_deleted: int = 0
+    attachments_deleted: int = 0
+    webchat_sessions_anonymized: int = 0
+    workflow_runs_cancelled: int = 0
 
 
 class RetentionSweepIn(BaseModel):

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AnalyticsSummary(BaseModel):
@@ -66,11 +66,31 @@ class GovernanceKpis(BaseModel):
     executed_ai_proposals: int = 0
 
 
+class AIUsageKpis(BaseModel):
+    days: int = 30
+    requests: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_cost_usd: str = "0"
+    avg_latency_ms: float = 0.0
+
+
+class WorkflowKpis(BaseModel):
+    active_workflows: int = 0
+    runs_running: int = 0
+    runs_waiting: int = 0
+    runs_completed: int = 0
+    runs_failed: int = 0
+    runs_cancelled: int = 0
+
+
 class AnalyticsKpisOut(BaseModel):
     as_of: datetime
     pipeline: PipelineKpis
     campaigns: CampaignKpis
     events: EventCoverageKpis
     governance: GovernanceKpis
+    ai_usage: AIUsageKpis = Field(default_factory=AIUsageKpis)
+    workflows: WorkflowKpis = Field(default_factory=WorkflowKpis)
 
 

@@ -84,6 +84,7 @@ services:
       FLOWKRON_SETTINGS_DIR: /run/flowkron
       DATABASE_SCHEMA: ${OPERATIONAL_DATABASE_SCHEMA:-operational}
       DATABASE_GRANT_ROLE: ${OPERATIONAL_DATABASE_GRANT_ROLE:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/2}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-flowkron}
       JWT_ISSUER: ${JWT_ISSUER:-flowkron-auth-service}
       JWT_PUBLIC_KEY_PATH: ${OPERATIONAL_JWT_PUBLIC_KEY_PATH:-/keys/jwt_public.pem}
@@ -94,6 +95,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ${FLOWKRON_JWT_PUBLIC_MOUNT:-kronflow-jwt-public}:/keys:ro
       - kronflow-operational-config:/run/flowkron:ro
@@ -103,6 +106,35 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    restart: unless-stopped
+    networks:
+      - kronflow-network
+
+  operational-worker:
+    build:
+      context: ../../backend/operational-service
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.worker"]
+    environment:
+      FLOWKRON_SETTINGS_DIR: /run/flowkron
+      DATABASE_SCHEMA: ${OPERATIONAL_DATABASE_SCHEMA:-operational}
+      DATABASE_GRANT_ROLE: ${OPERATIONAL_DATABASE_GRANT_ROLE:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/2}
+      MAIL_GATEWAY_URL: ${MAIL_GATEWAY_URL:-http://mail-service:8000}
+      MAIL_INTERNAL_API_KEY: ${MAIL_INTERNAL_API_KEY:-}
+      MAIL_SENDER_KEY: ${MAIL_SENDER_KEY:-flowkron}
+      BAILEYS_SERVICE_URL: ${BAILEYS_SERVICE_URL:-http://baileys-services:3001}
+      WORKER_POLL_INTERVAL_SECONDS: ${WORKER_POLL_INTERVAL_SECONDS:-2.0}
+      WORKER_ALLOW_STUB_DISPATCH: ${WORKER_ALLOW_STUB_DISPATCH:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      operational-service:
+        condition: service_healthy
+    volumes:
+      - kronflow-operational-config:/run/flowkron:ro
     restart: unless-stopped
     networks:
       - kronflow-network

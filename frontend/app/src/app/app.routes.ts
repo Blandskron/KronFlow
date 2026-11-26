@@ -69,6 +69,20 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'agents',
+        title: 'Agentes IA · KronFlow',
+        loadComponent: () =>
+          import('@domains/agents/features/agents-page/agents-page.component').then((m) => m.AgentsPageComponent)
+      },
+      {
+        path: 'tools',
+        title: 'Herramientas y Webchat · KronFlow',
+        loadComponent: () =>
+          import('@domains/agents/features/tools-hub-page/tools-hub-page.component').then(
+            (m) => m.ToolsHubPageComponent
+          )
+      },
+      {
         path: 'conversations',
         title: 'Conversaciones · KronFlow',
         loadComponent: () =>

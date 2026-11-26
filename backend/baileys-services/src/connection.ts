@@ -37,6 +37,8 @@ type DisconnectCause = "signed_out" | "invalid_session" | "replaced_session" | "
   "device_mismatch" | "temporary" | "startup_failed" | "workspace_unavailable" | "manual";
 type Socket = Awaited<ReturnType<typeof openSocket>>["socket"];
 export class InactiveWorkspaceError extends Error {}
+export class SessionNotConnectedError extends Error {}
+export class ConsentWithdrawnError extends Error {}
 
 function accountKey(socket: Socket) {
   const id = jidNormalizedUser(socket.user?.id);
@@ -121,6 +123,21 @@ export class WhatsAppConnection {
 
   start(): Promise<void> {
     return this.startAttempt(false);
+  }
+
+  async sendHumanReply(phone: string, text: string): Promise<{ provider_message_id: string | undefined }> {
+    const digits = phone.replace(/\D/g, "");
+    if (!digits) {
+      throw new Error("Invalid WhatsApp recipient phone");
+    }
+    if (!this.socket || this.status !== "connected") {
+      throw new SessionNotConnectedError("WhatsApp session is not connected");
+    }
+    if (this.inbound.hasWithdrawal(digits) || this.inbound.hasWithdrawal(phone)) {
+      throw new ConsentWithdrawnError("Contact has a pending withdrawal");
+    }
+    const messageId = generateMessageIDV2(this.socket.user?.id);
+    return sendDurableText(this.socket, `${digits}@s.whatsapp.net`, text, messageId);
   }
 
   private transition(status: ConnectionStatus) {

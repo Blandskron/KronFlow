@@ -24,7 +24,7 @@ def _assert_payload_tenant(payload_tenant_id: str | None, tenant: TenantContext)
 def receive_message(payload: AgentMessageRequest, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
     _assert_payload_tenant(payload.tenant_id, tenant)
     if get_settings().persistence_mode == "operational":
-        return process_stateless_agent_message(tenant.tenant_id, payload)
+        return process_stateless_agent_message(tenant.tenant_id, payload, is_simulation=False)
     return process_agent_message(db, tenant.tenant_id, payload)
 
 
@@ -32,7 +32,7 @@ def receive_message(payload: AgentMessageRequest, tenant: TenantContext = Depend
 def simulate_message(payload: AgentMessageRequest, tenant: TenantContext = Depends(resolve_tenant), db: Session = Depends(get_db)):
     _assert_payload_tenant(payload.tenant_id, tenant)
     if get_settings().persistence_mode == "operational":
-        return process_stateless_agent_message(tenant.tenant_id, payload)
+        return process_stateless_agent_message(tenant.tenant_id, payload, is_simulation=True)
     return process_agent_message(db, tenant.tenant_id, payload)
 
 

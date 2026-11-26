@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
+from app.services.domain_event_service import publish_domain_event_in_tx
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
 from app.tenant_models.operations import Cliente, Conversation, Lead
@@ -278,6 +279,15 @@ def create_opportunity(
         tenant.schema_name,
         {"opportunity_id": opp.id, "contact_id": opp.contact_id, "lead_id": opp.lead_id, "stage_slug": stage.slug},
     )
+    publish_domain_event_in_tx(
+        db,
+        tenant,
+        event_type="opportunity.created",
+        aggregate_type="opportunity",
+        aggregate_id=opp.id,
+        payload={"opportunity_id": opp.id, "contact_id": opp.contact_id, "lead_id": opp.lead_id, "stage_slug": stage.slug},
+        occurred_at=current,
+    )
     db.commit()
     db.refresh(opp)
     db.refresh(activity)
@@ -469,6 +479,21 @@ def update_opportunity(
                 "actor_user_id": actor,
             },
         )
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type="opportunity.stage.changed",
+            aggregate_type="opportunity",
+            aggregate_id=opp.id,
+            payload={
+                "opportunity_id": opp.id,
+                "contact_id": opp.contact_id,
+                "from_stage": previous_stage.slug,
+                "to_stage": target_stage.slug,
+                "version": opp.version,
+            },
+            occurred_at=current,
+        )
 
     if owner_changed:
         db.add(
@@ -508,6 +533,21 @@ def update_opportunity(
                 "version": opp.version,
                 "actor_user_id": actor,
             },
+        )
+        publish_domain_event_in_tx(
+            db,
+            tenant,
+            event_type=event_name,
+            aggregate_type="opportunity",
+            aggregate_id=opp.id,
+            payload={
+                "opportunity_id": opp.id,
+                "contact_id": opp.contact_id,
+                "outcome": effective_outcome,
+                "amount": str(opp.amount) if opp.amount is not None else None,
+                "currency": opp.currency,
+            },
+            occurred_at=current,
         )
     elif not stage_changed and not owner_changed:
         db.add(

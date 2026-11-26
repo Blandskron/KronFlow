@@ -6,22 +6,28 @@ from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
 from app.schemas.analytics import (
+    AIUsageKpis,
     ActivityCounts,
     ActivityDay,
     AnalyticsActivity,
     AnalyticsKpisOut,
+    AnalyticsSummary,
     CampaignKpis,
     EventCoverageKpis,
     GovernanceKpis,
     PipelineKpis,
+    WorkflowKpis,
 )
+from app.services.ai_extensions_service import summarize_ai_usage
 from app.services.conversation_service import inbox_counts_statement
 from app.services.tenant_data import bind_tenant_session, execute_for_tenant
+from app.tenant_models.ai_extensions import AIUsageRecord
 from app.tenant_models.ai_proposal import AIActionProposal
 from app.tenant_models.campaigns import Campaign, CampaignRecipient
 from app.tenant_models.domain_events import DomainEvent
 from app.tenant_models.operations import Cliente, Lead, Message, SolicitudDerecho
 from app.tenant_models.opportunity import Opportunity
+from app.tenant_models.workflows import WorkflowDefinition, WorkflowRun
 
 
 def analytics_summary(db: Session, tenant: TenantContext) -> dict:
@@ -178,5 +184,34 @@ def analytics_kpis(db: Session, tenant: TenantContext) -> AnalyticsKpisOut:
         pending_ai_proposals=pending_props,
         executed_ai_proposals=executed_props,
     )
-    return AnalyticsKpisOut(as_of=as_of, pipeline=pipeline, campaigns=campaigns, events=events, governance=governance)
+
+    ai_usage = AIUsageKpis()
+    if AIUsageRecord.__tablename__ in existing_tables:
+        usage_summary = summarize_ai_usage(db, tenant, days=30, include_simulations=False, now=as_of)
+        ai_usage = AIUsageKpis(**usage_summary)
+
+    workflows = WorkflowKpis()
+    if WorkflowDefinition.__tablename__ in existing_tables and WorkflowRun.__tablename__ in existing_tables:
+        active_wf = int(
+            db.scalar(select(func.count()).select_from(WorkflowDefinition).where(WorkflowDefinition.status == "active")) or 0
+        )
+        run_counts = dict(db.execute(select(WorkflowRun.status, func.count()).group_by(WorkflowRun.status)).all())
+        workflows = WorkflowKpis(
+            active_workflows=active_wf,
+            runs_running=int(run_counts.get("running", 0)),
+            runs_waiting=int(run_counts.get("waiting", 0)),
+            runs_completed=int(run_counts.get("completed", 0)),
+            runs_failed=int(run_counts.get("failed", 0)),
+            runs_cancelled=int(run_counts.get("cancelled", 0)),
+        )
+
+    return AnalyticsKpisOut(
+        as_of=as_of,
+        pipeline=pipeline,
+        campaigns=campaigns,
+        events=events,
+        governance=governance,
+        ai_usage=ai_usage,
+        workflows=workflows,
+    )
 

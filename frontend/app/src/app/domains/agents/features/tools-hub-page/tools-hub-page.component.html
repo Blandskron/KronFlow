@@ -1,0 +1,356 @@
+<section class="page-section">
+  <kronflow-page-header
+    eyebrow="HUB OPERACIONAL · KRONFLOW"
+    title="Herramientas y Webchat embebible"
+    subtitle="Administra herramientas con validación JSON Schema e idempotencia, y configura widgets webchat firmados por origen."
+  >
+    <button class="btn btn-secondary" type="button" [disabled]="loading()" (click)="reloadAll()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </kronflow-page-header>
+
+  <div class="section-spacer">
+    <kronflow-tabs
+      [tabs]="tabs"
+      [activeId]="activeTab()"
+      ariaLabel="Secciones del Hub de integraciones"
+      (selected)="setTab($event)"
+    />
+  </div>
+
+  @if (!canManage()) {
+    <div class="section-spacer">
+      <kronflow-alert tone="info">
+        Modo solo lectura. Necesitas el permiso <code>crm.manage</code> para crear herramientas, invocar efectos o editar widgets webchat.
+      </kronflow-alert>
+    </div>
+  }
+
+  @if (notice(); as msg) {
+    <div class="section-spacer">
+      <kronflow-alert [tone]="msg.tone" [dismissible]="true" (dismissed)="notice.set(null)">
+        {{ msg.text }}
+      </kronflow-alert>
+    </div>
+  }
+
+  @if (loading() && !tools().length) {
+    <div class="hub-grid" role="status" aria-label="Cargando hub">
+      <span class="sr-only">Cargando…</span>
+      <kronflow-skeleton height="240px" />
+      <kronflow-skeleton height="320px" />
+    </div>
+  } @else if (activeTab() === 'tools') {
+    <div class="hub-grid">
+      <section class="card glass-surface panel-card" aria-label="Catálogo de herramientas">
+        <h2>Catálogo gobernado ({{ tools().length }})</h2>
+        @if (!tools().length) {
+          <kronflow-empty-state title="Sin herramientas" description="Registra una herramienta para comenzar." />
+        } @else {
+          <div class="stack-list">
+            @for (tool of tools(); track tool.id) {
+              <article class="row-card">
+                <div class="row-top">
+                  <div>
+                    <strong>{{ tool.name }}</strong>
+                    <div class="muted"><code>{{ tool.tool_key }}</code> · esquema v{{ tool.schema_version }} · máx {{ tool.max_calls_per_hour }}/h</div>
+                  </div>
+                  <kronflow-badge [tone]="effectTones[tool.effect_mode] || 'info'">
+                    {{ tool.effect_mode }}
+                  </kronflow-badge>
+                </div>
+                <p class="muted desc">{{ tool.description }}</p>
+                <div class="row-actions">
+                  <button class="btn btn-secondary btn-sm" type="button" (click)="selectTool(tool)">
+                    Probar en invocador
+                  </button>
+                  @if (canManage()) {
+                    <button class="btn btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="toggleTool(tool)">
+                      {{ tool.is_enabled ? 'Deshabilitar' : 'Habilitar' }}
+                    </button>
+                  }
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
+
+      <div class="right-column">
+        <form class="card glass-surface panel-card" [formGroup]="invokeForm" (ngSubmit)="runInvocation()">
+          <h2>Probar invocación gobernada</h2>
+          <div class="form-row">
+            <div class="control-group">
+              <label for="invoke-tool-key">Herramienta</label>
+              <select id="invoke-tool-key" class="field" formControlName="toolKey">
+                @for (t of tools(); track t.id) {
+                  <option [value]="t.tool_key">{{ t.tool_key }} ({{ t.effect_mode }})</option>
+                }
+              </select>
+            </div>
+            <div class="control-group">
+              <label for="invoke-idem">Idempotency-Key</label>
+              <input id="invoke-idem" class="field" type="text" formControlName="idempotencyKey" />
+            </div>
+          </div>
+          <div class="control-group">
+            <label for="invoke-args">Argumentos JSON</label>
+            <textarea id="invoke-args" class="field mono-area" rows="4" formControlName="argumentsJson"></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="!canManage() || busy()">
+            Ejecutar invocación
+          </button>
+        </form>
+
+        <form class="card glass-surface panel-card" [formGroup]="toolForm" (ngSubmit)="createTool()">
+          <h2>Registrar herramienta personalizada</h2>
+          <div class="form-row">
+            <div class="control-group">
+              <label for="tool-key">Identificador (tool_key)</label>
+              <input id="tool-key" class="field" type="text" formControlName="toolKey" placeholder="crm.custom.ping" />
+            </div>
+            <div class="control-group">
+              <label for="tool-name">Nombre visible</label>
+              <input id="tool-name" class="field" type="text" formControlName="name" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="control-group">
+              <label for="tool-mode">Modo de efecto</label>
+              <select id="tool-mode" class="field" formControlName="effectMode">
+                <option value="read_only">read_only</option>
+                <option value="proposal_required">proposal_required</option>
+                <option value="outbox_async">outbox_async</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label for="tool-quota">Límite por hora</label>
+              <input id="tool-quota" class="field" type="number" formControlName="maxCallsPerHour" />
+            </div>
+          </div>
+          <div class="control-group">
+            <label for="tool-desc">Descripción</label>
+            <input id="tool-desc" class="field" type="text" formControlName="description" />
+          </div>
+          <div class="control-group">
+            <label for="tool-schema">JSON Schema de entrada</label>
+            <textarea id="tool-schema" class="field mono-area" rows="4" formControlName="inputSchemaJson"></textarea>
+          </div>
+          <button class="btn btn-secondary" type="submit" [disabled]="!canManage() || busy()">
+            Registrar herramienta
+          </button>
+        </form>
+
+        <section class="card glass-surface panel-card" aria-label="Historial de invocaciones">
+          <h2>Invocaciones recientes ({{ invocations().length }})</h2>
+          @if (!invocations().length) {
+            <kronflow-empty-state title="Sin invocaciones" description="Las invocaciones auditadas aparecerán aquí." />
+          } @else {
+            <div class="stack-list">
+              @for (inv of invocations(); track inv.id) {
+                <article class="row-card">
+                  <div class="row-top">
+                    <strong>#{{ inv.id }} · {{ inv.tool_key }}</strong>
+                    <kronflow-badge [tone]="statusTones[inv.status] || 'info'">{{ inv.status }}</kronflow-badge>
+                  </div>
+                  <small class="muted">
+                    {{ inv.created_at | date:'short' }} · clave {{ inv.idempotency_key }} · actor {{ inv.invoked_by }}
+                  </small>
+                  <pre class="result-pre">{{ inv.result_json | json }}</pre>
+                </article>
+              }
+            </div>
+          }
+        </section>
+      </div>
+    </div>
+  } @else if (activeTab() === 'webchat') {
+    <div class="hub-grid">
+      <section class="card glass-surface panel-card" aria-label="Widgets de Webchat">
+        <div class="row-top">
+          <h2>Widgets registrados ({{ widgets().length }})</h2>
+          @if (canManage()) {
+            <button class="btn btn-primary btn-sm" type="button" [disabled]="busy()" (click)="startNewWidget()">
+              Nuevo widget
+            </button>
+          }
+        </div>
+        @if (!widgets().length) {
+          <kronflow-empty-state
+            title="Sin widgets webchat"
+            description="Crea un widget con orígenes autorizados exactos para embeber en tu sitio."
+          />
+        } @else {
+          <div class="stack-list">
+            @for (w of widgets(); track w.id) {
+              <button
+                type="button"
+                class="row-card widget-btn"
+                [class.widget-selected]="selectedWidgetId() === w.id"
+                (click)="selectWidget(w)"
+              >
+                <div class="row-top">
+                  <strong>{{ w.name }}</strong>
+                  <kronflow-badge [tone]="w.is_active ? 'success' : 'neutral'">
+                    {{ w.is_active ? 'Activo' : 'Inactivo' }}
+                  </kronflow-badge>
+                </div>
+                <small class="muted">Clave: <code>{{ w.widget_key }}</code> · {{ w.allowed_origins.length }} orígenes</small>
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <div class="right-column">
+        <form class="card glass-surface panel-card" [formGroup]="widgetForm" (ngSubmit)="saveWidget()">
+          <h2>{{ selectedWidget() ? 'Editar widget webchat' : 'Crear widget webchat' }}</h2>
+          <div class="control-group">
+            <label for="wc-name">Nombre del widget</label>
+            <input id="wc-name" class="field" type="text" formControlName="name" placeholder="Sitio corporativo" />
+          </div>
+          <div class="control-group">
+            <label for="wc-origins">Orígenes autorizados (uno por línea, sin comodines `*`)</label>
+            <textarea id="wc-origins" class="field mono-area" rows="3" formControlName="allowedOriginsText"></textarea>
+          </div>
+          <div class="control-group">
+            <label for="wc-welcome">Mensaje de bienvenida</label>
+            <input id="wc-welcome" class="field" type="text" formControlName="welcomeMessage" />
+          </div>
+          <label class="checkbox-row" for="wc-active">
+            <input id="wc-active" type="checkbox" formControlName="isActive" />
+            <span>Widget habilitado para nuevas sesiones de visitantes</span>
+          </label>
+          <button class="btn btn-primary" type="submit" [disabled]="!canManage() || busy()">
+            {{ selectedWidget() ? 'Guardar cambios' : 'Crear widget' }}
+          </button>
+        </form>
+
+        @if (selectedWidget(); as current) {
+          <article class="card glass-surface panel-card" aria-label="Snippet de integración">
+            <h3>Código de inserción (iframe / orígenes fijados)</h3>
+            <p class="muted">Orígenes permitidos: {{ current.allowed_origins.join(', ') }}</p>
+            <pre class="result-pre">{{ embedSnippet(current) }}</pre>
+          </article>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="hub-grid">
+      <div class="stack-list">
+        <form class="card glass-surface panel-card" [formGroup]="routeForm" (ngSubmit)="createRoute()">
+          <h2>Rutas webhook Meta firmadas (HMAC-SHA256)</h2>
+          <div class="control-group">
+            <label for="meta-channel">Canal omnicanal</label>
+            <select id="meta-channel" class="field" formControlName="channel">
+              <option value="whatsapp">WhatsApp Cloud / Baileys</option>
+              <option value="instagram">Instagram Direct</option>
+              <option value="messenger">Facebook Messenger</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="meta-account">ID de cuenta externa (page_id / ig_id / phone_id)</label>
+            <input id="meta-account" class="field" type="text" formControlName="externalAccountId" placeholder="ig-page-1001" />
+          </div>
+          <div class="form-row">
+            <div class="control-group">
+              <label for="meta-verify">Verify Token</label>
+              <input id="meta-verify" class="field" type="password" formControlName="verifyToken" autocomplete="off" />
+            </div>
+            <div class="control-group">
+              <label for="meta-secret">App Secret</label>
+              <input id="meta-secret" class="field" type="password" formControlName="appSecret" autocomplete="off" />
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="!canManage() || busy()">
+            Registrar ruta firmada
+          </button>
+        </form>
+
+        <section class="card glass-surface panel-card" aria-label="Rutas Meta registradas">
+          <h3>Rutas activas e inactivas ({{ webhookRoutes().length }})</h3>
+          @if (!webhookRoutes().length) {
+            <kronflow-empty-state
+              title="Sin rutas Meta"
+              description="Registra una cuenta de WhatsApp, Instagram o Messenger para validar retos y firmas X-Hub-Signature-256."
+            />
+          } @else {
+            <div class="stack-list">
+              @for (route of webhookRoutes(); track route.id) {
+                <article class="row-card">
+                  <div class="row-top">
+                    <strong>{{ route.channel }} · {{ route.external_account_id }}</strong>
+                    <kronflow-badge [tone]="route.is_active ? 'success' : 'neutral'">
+                      {{ route.is_active ? 'Activa' : 'Inactiva' }}
+                    </kronflow-badge>
+                  </div>
+                  <small class="muted">Proveedor {{ route.provider }} · huella {{ route.secret_fingerprint }}</small>
+                  @if (route.is_active && canManage()) {
+                    <div class="row-actions">
+                      <button class="btn btn-ghost btn-sm" type="button" [disabled]="busy()" (click)="deactivateRoute(route)">
+                        Desactivar
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </section>
+      </div>
+
+      <div class="right-column">
+        <section class="card glass-surface panel-card" aria-label="Mapeos externos y conflictos">
+          <h2>Mapeos externos y reconciliación ({{ mappings().length }})</h2>
+          @if (!mappings().length) {
+            <kronflow-empty-state
+              title="Sin mapeos externos"
+              description="Cuando conectes entidades con CRM o ecommerce aparecerán aquí sus estados y conflictos."
+            />
+          } @else {
+            <div class="stack-list">
+              @for (m of mappings(); track m.id) {
+                <article class="row-card">
+                  <div class="row-top">
+                    <strong>{{ m.connection_ref }} · {{ m.resource_type }} #{{ m.remote_id }}</strong>
+                    <kronflow-badge [tone]="m.sync_state === 'conflict' ? 'warning' : (m.sync_state === 'synced' ? 'success' : 'neutral')">
+                      {{ m.sync_state }}
+                    </kronflow-badge>
+                  </div>
+                  <small class="muted">
+                    Local {{ m.local_type }}:{{ m.local_id }} · vLocal {{ m.local_version }} · vRemota {{ m.remote_version || 'n/d' }}
+                  </small>
+                  @if (m.sync_state === 'conflict' && canManage()) {
+                    <div class="row-actions">
+                      <button class="btn btn-primary btn-sm" type="button" [disabled]="busy()" (click)="resolveMapping(m, 'synced')">
+                        Marcar sincronizado
+                      </button>
+                      <button class="btn btn-ghost btn-sm" type="button" [disabled]="busy()" (click)="resolveMapping(m, 'disconnected')">
+                        Desconectar
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="card glass-surface panel-card" aria-label="Inspector MCP JSON-RPC 2.0">
+          <div class="row-top">
+            <h2>Servidor MCP gobernado (<code>/api/v1/mcp</code>)</h2>
+            <button class="btn btn-secondary btn-sm" type="button" [disabled]="!canManage() || busy()" (click)="inspectMcp()">
+              Consultar tools/list
+            </button>
+          </div>
+          <p class="desc muted">
+            Expone el catálogo gobernado vía JSON-RPC 2.0 autenticando con JWT (`crm.manage`) o claves `X-Flowkron-Key` con alcances `mcp:read` / `mcp:invoke`.
+          </p>
+          @if (mcpToolsOutput(); as mcpRes) {
+            <pre class="result-pre">{{ mcpRes | json }}</pre>
+          }
+        </section>
+      </div>
+    </div>
+  }
+</section>

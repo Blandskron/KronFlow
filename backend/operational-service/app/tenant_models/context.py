@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,14 +20,25 @@ CONTEXT_TENANT_TABLE_NAMES = {
 
 class TenantAgentProfile(Base):
     __tablename__ = "tenant_agent_profiles"
-    __table_args__ = (UniqueConstraint("tenant_id", name="uniq_agent_profile_tenant"), {"schema": "tenant"})
+    __table_args__ = (
+        Index("idx_agent_profile_tenant", "tenant_id"),
+        {"schema": "tenant"},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tenant_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False, default="Flowkron Agent")
+    role: Mapped[str] = mapped_column(String(160), nullable=False, default="assistant", server_default=text("'assistant'"))
     tone: Mapped[str] = mapped_column(String(120), nullable=False, default="professional")
+    language: Mapped[str] = mapped_column(String(16), nullable=False, default="es", server_default=text("'es'"))
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
+    active_revision_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     context_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    allowed_tools: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    allowed_document_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    limits_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     configuration: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

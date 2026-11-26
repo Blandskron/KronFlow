@@ -6,7 +6,9 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import parsers, permissions, status, views
 from rest_framework.response import Response
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import TokenBackendError, TokenError
+from rest_framework_simplejwt.state import token_backend
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
@@ -14,6 +16,7 @@ from apps.audit.models import AuditLog
 from apps.audit.services import audit
 from apps.rbac.services import permissions_for_membership, roles_for_membership
 from apps.sessions.models import UserSession
+from apps.sessions.services import mark_refresh_reuse
 from apps.shared.responses import ok
 from apps.shared.image_uploads import absolute_media_url, save_uploaded_image
 from apps.tenants.entitlements import subscription_summary
@@ -151,13 +154,40 @@ class ChangePasswordView(views.APIView):
         return ok({"sessions_revoked": True})
 
 
+def _handle_possible_refresh_reuse(raw_token, request) -> None:
+    if not isinstance(raw_token, str) or not raw_token:
+        return
+    try:
+        decoded = token_backend.decode(raw_token, verify=True)
+    except TokenBackendError:
+        return
+    if decoded.get("token_type") != "refresh":
+        return
+    jti = decoded.get("jti")
+    session_id = decoded.get("session_id")
+    user_id = decoded.get("user_id")
+    if not jti or not session_id or not user_id:
+        return
+    if not BlacklistedToken.objects.filter(token__jti=jti).exists():
+        return
+    session = UserSession.objects.select_for_update().filter(
+        id=session_id,
+        user_id=user_id,
+        status=UserSession.Status.ACTIVE,
+    ).first()
+    if session is not None:
+        mark_refresh_reuse(session, request=request)
+
+
 class TaggedTokenRefreshView(TokenRefreshView):
     @extend_schema(tags=["Auth - Tokens"])
     @transaction.atomic
     def post(self, request, *args, **kwargs):
+        raw_refresh = request.data.get("refresh") or ""
         try:
-            refresh_claims = FlowkronRefreshToken(request.data.get("refresh") or "")
+            refresh_claims = FlowkronRefreshToken(raw_refresh)
         except TokenError:
+            _handle_possible_refresh_reuse(raw_refresh, request)
             return Response({"detail": "Token inválido o revocado.", "code": "token_not_valid"}, status=401)
 
         session_id = refresh_claims.get("session_id")
@@ -178,6 +208,7 @@ class TaggedTokenRefreshView(TokenRefreshView):
         try:
             serializer.is_valid(raise_exception=True)
         except TokenError:
+            _handle_possible_refresh_reuse(raw_refresh, request)
             return Response({"detail": "Token inválido o revocado.", "code": "token_not_valid"}, status=401)
         data = dict(serializer.validated_data)
         session.last_refresh_at = timezone.now()

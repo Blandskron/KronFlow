@@ -10,6 +10,7 @@ from app.idempotency import MemoryIdempotencyStore
 from app.main import app
 from app.rate_limit import RateLimiter
 from app.service import EmailService
+from app.webhooks import MemoryWebhookEventStore
 
 
 class FakeProvider:
@@ -36,6 +37,7 @@ async def client():
     app.state.settings = settings
     app.state.rate_limiter = RateLimiter(100, 60)
     app.state.audit_logger = logging.getLogger("test")
+    app.state.webhook_store = MemoryWebhookEventStore()
     app.state.email_service = EmailService(settings, provider, store)
     app.state.fake_provider = provider
     transport = httpx.ASGITransport(app=app)

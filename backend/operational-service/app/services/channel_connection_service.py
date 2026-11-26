@@ -19,6 +19,8 @@ from app.tenant_models.operations import Conversation, Message
 VALID_CHANNEL_PROVIDERS = {
     "email": frozenset({"stub", "resend"}),
     "whatsapp": frozenset({"stub", "whatsapp_business_official"}),
+    "instagram": frozenset({"stub", "meta_instagram"}),
+    "messenger": frozenset({"stub", "meta_messenger"}),
 }
 
 

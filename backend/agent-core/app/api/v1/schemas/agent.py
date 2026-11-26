@@ -5,7 +5,18 @@ from pydantic import BaseModel, Field
 
 Channel = Literal["whatsapp", "instagram", "facebook", "tiktok", "webchat", "email", "voice", "other"]
 MessageType = Literal["text", "audio", "image", "file"]
-ActionType = Literal["create_lead", "schedule_meeting", "send_email", "handoff_human", "create_ticket", "none"]
+ActionType = Literal[
+    "create_lead",
+    "schedule_meeting",
+    "send_email",
+    "handoff_human",
+    "create_ticket",
+    "crm.contact.rename",
+    "crm.lead.update_stage",
+    "crm.opportunity.add_note",
+    "crm.conversation.request_handoff",
+    "none",
+]
 NextStep = Literal["continue_conversation", "wait_user", "handoff", "close"]
 
 
@@ -36,6 +47,8 @@ class AgentMessageRequest(BaseModel):
     customer: CustomerPayload
     message: MessagePayload
     metadata: MessageMetadata = Field(default_factory=MessageMetadata)
+    agent_id: int | None = None
+    agent_revision_id: int | None = None
 
 
 class ReplyPayload(BaseModel):
@@ -67,3 +80,5 @@ class AgentMessageResponse(BaseModel):
     confidence: float
     sources: list[SourcePayload]
     next_step: NextStep
+    agent_id: int | None = None
+    agent_revision_id: int | None = None

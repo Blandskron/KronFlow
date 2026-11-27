@@ -59,6 +59,7 @@ Carga la skill correspondiente antes de editar cada dominio:
 | `angular-frontend` | [.agents/skills/angular-frontend/SKILL.md](.agents/skills/angular-frontend/SKILL.md) | Cambios en `frontend/app` o `frontend/landing`, rutas, servicios HTTP, Vitest y ESLint |
 | `compose-deploy-and-ci` | [.agents/skills/compose-deploy-and-ci/SKILL.md](.agents/skills/compose-deploy-and-ci/SKILL.md) | Cambios en `deploy/`, `compose*.yaml`, smoke tests, CI (`validate.yml`) y `gitleaks` |
 | `docs-and-agents-protocol` | [.agents/skills/docs-and-agents-protocol/SKILL.md](.agents/skills/docs-and-agents-protocol/SKILL.md) | Actualizar `README.md`, `ARCHITECTURE.md`, `AGENTS.md` o skills manteniendo estructura minimalista |
+| `blandskron-git-flow` | [.agents/skills/blandskron-git-flow/SKILL.md](.agents/skills/blandskron-git-flow/SKILL.md) | Gobernanza Git (`BLK-ENG-001` Perfil A): ramas, Conventional Commits, PRs, releases SemVer, hotfix/rollback e higiene |
 
 ---
 

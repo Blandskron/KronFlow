@@ -12,13 +12,12 @@ from app.core.database import get_db
 from app.main import app
 from app.schemas.tenant import TenantProvisionRequest
 from app.services.tenant_provisioning_service import provision_tenant
-from tests.pg_harness import TemporaryPostgresMixin
+from test_message_identity import PostgresCase
 
 
-class DemoSeedTests(TemporaryPostgresMixin, unittest.TestCase):
+class DemoSeedTests(PostgresCase):
     def setUp(self) -> None:
         super().setUp()
-        self.engine = self.create_temp_engine()
 
         def _override_db():
             with Session(self.engine) as session:

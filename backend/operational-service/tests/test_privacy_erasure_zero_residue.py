@@ -103,7 +103,6 @@ class PrivacyErasureZeroResidueTests(PostgresCase):
                     expires_at=T0 + timedelta(hours=24),
                 ),
                 DomainEvent(
-                    id=1,
                     event_id="evt-prv003-1",
                     event_type="contact.created",
                     aggregate_type="contact",

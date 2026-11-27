@@ -7,7 +7,7 @@ import unittest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.main import app
 from app.schemas.tenant import TenantProvisionRequest
@@ -18,12 +18,14 @@ from test_message_identity import PostgresCase
 class DemoSeedTests(PostgresCase):
     def setUp(self) -> None:
         super().setUp()
+        self.internal_token = "demo-seed-internal-token"
 
         def _override_db():
             with Session(self.engine) as session:
                 yield session
 
         app.dependency_overrides[get_db] = _override_db
+        app.dependency_overrides[get_settings] = lambda: Settings(internal_token=self.internal_token)
         self.addCleanup(app.dependency_overrides.clear)
 
     def test_demo_seed_populates_all_modules_and_is_idempotent(self) -> None:
@@ -34,7 +36,7 @@ class DemoSeedTests(PostgresCase):
             )
             tenant_id = runtime.auth_tenant_id
 
-        headers = {"X-Internal-Token": get_settings().internal_token}
+        headers = {"X-Internal-Token": self.internal_token}
         client = TestClient(app)
 
         first = client.post(f"/internal/tenants/{tenant_id}/demo-seed", headers=headers)

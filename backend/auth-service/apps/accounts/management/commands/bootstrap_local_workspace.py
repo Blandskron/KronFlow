@@ -60,6 +60,7 @@ class Command(BaseCommand):
             provision_operational_runtime(tenant)
         if local and tenant and os.getenv("FLOWKRON_DEMO_CONTEXT") == "true":
             self.seed_demo_context(tenant)
+            self.seed_demo_operational_data(tenant)
 
     def seed_demo_context(self, tenant):
         url = f"{settings.OPERATIONAL_SERVICE_URL.rstrip('/')}/internal/tenants/{tenant.pk}/context/documents"
@@ -72,17 +73,33 @@ class Command(BaseCommand):
         if documents:
             return
 
-        text = (
-            "BLANDSKRON ofrece una demostración de Flowkron para gestionar consultas por WhatsApp. "
+        guide_text = (
+            "BLANDSKRON ofrece una demostración de KronFlow para gestionar consultas por WhatsApp y canales digitales. "
             "El asistente explica cómo conectar WhatsApp, cargar productos y consultar conversaciones. "
             "El catálogo, los precios y la disponibilidad se deben confirmar con el equipo. "
             "Si un cliente pide una cotización, toma nota del producto o servicio que busca y deriva la consulta."
         )
-        result = requests.post(url, headers=headers, timeout=12, json={
-            "tenant_id": str(tenant.pk),
-            "title": "Guía del agente demo de BLANDSKRON",
-            "filename": "agente-demo-blandskron.txt",
-            "raw_text": text,
-            "chunks": [{"chunk_index": 0, "content": text, "token_count": len(text.split())}],
-        })
+        catalog_text = (
+            "Planes de referencia KronFlow (demo): Starter (hasta 5 ejecutivos, WhatsApp + CRM + RAG), "
+            "Pro (hasta 25 ejecutivos, multi-agente, workflows DAG y campañas email) y Enterprise "
+            "(esquema dedicado, Tool Hub + MCP bidireccional, integraciones comercio/voz y soporte SLA). "
+            "Horario de atención comercial demo: lunes a viernes de 09:00 a 18:30 hora Chile."
+        )
+        for title, filename, text in (
+            ("Guía del agente demo de BLANDSKRON", "agente-demo-blandskron.txt", guide_text),
+            ("Catálogo y planes de referencia KronFlow", "catalogo-servicios-kronflow.md", catalog_text),
+        ):
+            result = requests.post(url, headers=headers, timeout=12, json={
+                "tenant_id": str(tenant.pk),
+                "title": title,
+                "filename": filename,
+                "raw_text": text,
+                "chunks": [{"chunk_index": 0, "content": text, "token_count": len(text.split())}],
+            })
+            result.raise_for_status()
+
+    def seed_demo_operational_data(self, tenant):
+        url = f"{settings.OPERATIONAL_SERVICE_URL.rstrip('/')}/internal/tenants/{tenant.pk}/demo-seed"
+        headers = {"X-Internal-Token": settings.OPERATIONAL_INTERNAL_TOKEN}
+        result = requests.post(url, headers=headers, timeout=20)
         result.raise_for_status()

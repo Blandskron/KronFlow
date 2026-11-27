@@ -41,7 +41,7 @@ class DemoSeedTests(PostgresCase):
 
         first = client.post(f"/internal/tenants/{tenant_id}/demo-seed", headers=headers)
         self.assertEqual(first.status_code, 200, first.text)
-        body = first.json()
+        body = first.json().get("data", first.json())
         self.assertTrue(body["seeded"])
         self.assertFalse(body["already_populated"])
         self.assertEqual(body["counts"]["contacts"], 6)
@@ -58,7 +58,7 @@ class DemoSeedTests(PostgresCase):
         # Calling a second time must be a safe no-op.
         second = client.post(f"/internal/tenants/{tenant_id}/demo-seed", headers=headers)
         self.assertEqual(second.status_code, 200, second.text)
-        body2 = second.json()
+        body2 = second.json().get("data", second.json())
         self.assertFalse(body2["seeded"])
         self.assertTrue(body2["already_populated"])
 

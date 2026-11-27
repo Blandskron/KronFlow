@@ -294,13 +294,13 @@
         <div class="container stats-grid">
           <article class="card glass stat-card">
             <small>Microservicios + Frontends</small>
-            <strong>9 contenedores</strong>
-            <span class="muted">Stack completo en Docker Compose saludable de extremo a extremo.</span>
+            <strong>10 contenedores</strong>
+            <span class="muted">Stack completo en Docker Compose (incl. worker Outbox) saludable de extremo a extremo.</span>
           </article>
           <article class="card glass stat-card">
             <small>Pruebas automatizadas</small>
-            <strong>157+ checks</strong>
-            <span class="muted">Tests PG18 en Operational, Vitest Zoneless, ESLint y auditoría WCAG 2.2 AA.</span>
+            <strong>11/11 jobs CI</strong>
+            <span class="muted">Suite PG18 + upgrade v3–v21, Vitest Zoneless, ESLint, gitleaks y smoke estándar/demo.</span>
           </article>
           <article class="card glass stat-card">
             <small>Frontend Angular 21</small>
@@ -310,7 +310,7 @@
           <article class="card glass stat-card">
             <small>Aislamiento de datos</small>
             <strong>Schema / Tenant</strong>
-            <span class="muted">Migraciones versionadas v3–v16 en PostgreSQL 18 con RLS y auditoría.</span>
+            <span class="muted">Migraciones repetibles v3–v21 en PostgreSQL 18 con <code>schema_translate_map</code> y auditoría.</span>
           </article>
         </div>
       </section>
@@ -342,13 +342,13 @@
 
             <article class="card glass service-card">
               <div class="service-top">
-                <h3>Operational CRM</h3>
+                <h3>Operational CRM + Worker</h3>
                 <span class="badge badge-success">FastAPI · PG18</span>
               </div>
               <code>backend/operational-service · :8001</code>
               <p>
-                Esquema por tenant (<code>v16</code>): contactos, leads, pipeline de oportunidades, bandeja HITL, propuestas IA,
-                campañas, consentimiento, privacidad (export/erasure/retention) y KPIs consolidados.
+                Esquema por tenant (<code>tenant_schema_v21</code>): contactos y fusión, pipeline, bandeja HITL,
+                plataforma multi-agente, workflows DAG, Tool Hub + MCP bidireccional, webchat, comercio/voz, campañas y privacidad.
               </p>
             </article>
 
@@ -395,8 +395,8 @@
               </div>
               <code>backend/baileys-services · backend/mail-service</code>
               <p>
-                Conector WhatsApp QR por tenant con webhooks firmados y servicio SMTP-over-HTTP dedicado para correos
-                transaccionales de verificación, recuperación y campañas.
+                Conector WhatsApp QR por tenant con ingesta durable de turnos/consentimiento y gateway HTTP sobre Resend
+                HTTPS con idempotencia en Redis para correos transaccionales y campañas.
               </p>
             </article>
           </div>
@@ -415,10 +415,10 @@
           </div>
 
           <div class="filter-bar" role="group" aria-label="Filtrar capturas por módulo">
-            <button class="filter-btn" type="button" data-filter="all" aria-pressed="true">Todas (10)</button>
+            <button class="filter-btn" type="button" data-filter="all" aria-pressed="true">Todas (14)</button>
             <button class="filter-btn" type="button" data-filter="landing" aria-pressed="false">Landing (2)</button>
-            <button class="filter-btn" type="button" data-filter="crm" aria-pressed="false">CRM Core (5)</button>
-            <button class="filter-btn" type="button" data-filter="ai" aria-pressed="false">IA &amp; Campañas (3)</button>
+            <button class="filter-btn" type="button" data-filter="crm" aria-pressed="false">CRM Core (6)</button>
+            <button class="filter-btn" type="button" data-filter="ai" aria-pressed="false">IA &amp; Automatización (6)</button>
           </div>
 
           <div class="gallery-grid" id="gallery">
@@ -548,7 +548,59 @@
                   <h3>10 · Métricas y KPIs Consolidados</h3>
                   <span class="badge badge-success">Analytics</span>
                 </div>
-                <p>Resumen de bandeja, leads por temperatura, actividad diaria e indicadores consolidados.</p>
+                <p>Resumen de bandeja, leads por temperatura, actividad diaria, ingresos por divisa y uso IA.</p>
+              </div>
+            </article>
+
+            <article class="card glass shot-card" data-category="ai">
+              <button class="shot-trigger" type="button" data-full="docs/screenshots/11-crm-agents.png" data-title="IA · Plataforma Multi-Agente y Revisiones">
+                <img src="docs/screenshots/11-crm-agents.png" alt="Catálogo multi-agente y editor de borradores en KronFlow CRM" loading="lazy" />
+              </button>
+              <div class="shot-body">
+                <div class="shot-meta">
+                  <h3>11 · Plataforma Multi-Agente</h3>
+                  <span class="badge badge-info">Multi-Agente</span>
+                </div>
+                <p>Borradores, revisiones inmutables, herramientas autorizadas y alcance documental por agente.</p>
+              </div>
+            </article>
+
+            <article class="card glass shot-card" data-category="ai">
+              <button class="shot-trigger" type="button" data-full="docs/screenshots/12-crm-workflows.png" data-title="Automatizaciones · Motor de Workflows DAG">
+                <img src="docs/screenshots/12-crm-workflows.png" alt="Editor y plantillas de workflows declarativos DAG en KronFlow CRM" loading="lazy" />
+              </button>
+              <div class="shot-body">
+                <div class="shot-meta">
+                  <h3>12 · Workflows Declarativos DAG</h3>
+                  <span class="badge badge-info">Automatización</span>
+                </div>
+                <p>Plantillas rápidas, compilador DAG versionado, simulación sin efectos y esperas cancelables.</p>
+              </div>
+            </article>
+
+            <article class="card glass shot-card" data-category="ai">
+              <button class="shot-trigger" type="button" data-full="docs/screenshots/13-crm-tools-hub.png" data-title="Hub Operacional · Herramientas, Webchat y MCP">
+                <img src="docs/screenshots/13-crm-tools-hub.png" alt="Tool Hub gobernado, Webchat embebible y clientes MCP en KronFlow CRM" loading="lazy" />
+              </button>
+              <div class="shot-body">
+                <div class="shot-meta">
+                  <h3>13 · Tool Hub, Webchat y MCP</h3>
+                  <span class="badge badge-warning">Integraciones</span>
+                </div>
+                <p>Catálogo gobernado con JSON Schema e idempotencia, webchat firmado, comercio, voz y MCP bidireccional.</p>
+              </div>
+            </article>
+
+            <article class="card glass shot-card" data-category="crm">
+              <button class="shot-trigger" type="button" data-full="docs/screenshots/14-crm-conversations.png" data-title="CRM · Bandeja HITL y Handoff entre Agentes">
+                <img src="docs/screenshots/14-crm-conversations.png" alt="Bandeja de conversaciones HITL en KronFlow CRM" loading="lazy" />
+              </button>
+              <div class="shot-body">
+                <div class="shot-meta">
+                  <h3>14 · Bandeja HITL y Conversaciones</h3>
+                  <span class="badge badge-success">HITL</span>
+                </div>
+                <p>Control humano CAS, filtros por estado, compositor saliente y handoff entre agentes especialistas.</p>
               </div>
             </article>
           </div>
@@ -576,7 +628,7 @@
                 <tr>
                   <td><strong>CRM Angular 21 (<code>frontend/app</code>)</strong></td>
                   <td><code>npm run lint</code> + <code>npm test</code> (Vitest zoneless) + <code>npm run build</code></td>
-                  <td><span class="badge badge-success">PASS · 28/28 tests</span></td>
+                  <td><span class="badge badge-success">PASS · 29/29 tests</span></td>
                 </tr>
                 <tr>
                   <td><strong>Landing Angular 21 (<code>frontend/landing</code>)</strong></td>
@@ -591,7 +643,7 @@
                 <tr>
                   <td><strong>Stack completo Docker (<code>compose.demo.yaml</code>)</strong></td>
                   <td><code>python deploy/bootstrap/smoke.py kronflow-demo</code></td>
-                  <td><span class="badge badge-success">PASS · 9/9 servicios</span></td>
+                  <td><span class="badge badge-success">PASS · 10/10 servicios</span></td>
                 </tr>
               </tbody>
             </table>
@@ -632,7 +684,8 @@ python deploy/bootstrap/smoke.py kronflow-demo</pre>
           <a href="https://github.com/Blandskron/KronFlow" target="_blank" rel="noopener">Repositorio</a>
           <a href="https://github.com/Blandskron/KronFlow/blob/main/README.md" target="_blank" rel="noopener">README</a>
           <a href="https://github.com/Blandskron/KronFlow/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">Arquitectura</a>
-          <a href="https://github.com/Blandskron/KronFlow/blob/main/docs/IMPLEMENTATION_STATUS.md" target="_blank" rel="noopener">Estado de implementación</a>
+          <a href="https://github.com/Blandskron/KronFlow/blob/main/AGENTS.md" target="_blank" rel="noopener">Protocolo Agents-First</a>
+          <a href="https://github.com/Blandskron/KronFlow/blob/main/RELEASE_READINESS.md" target="_blank" rel="noopener">Release Readiness</a>
         </div>
       </div>
     </footer>

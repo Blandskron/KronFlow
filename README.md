@@ -38,6 +38,10 @@ Capturas reales generadas sobre los builds de producción de KronFlow (modo oscu
 | ![Contexto empresarial RAG en KronFlow CRM](docs/screenshots/07-crm-business-context.png) | ![Simulador IA e inspector RAG en KronFlow CRM](docs/screenshots/08-crm-ai-simulator.png) |
 | **Campañas y Canales Delegados** | **Métricas Comerciales y KPIs** |
 | ![Campañas y canales en KronFlow CRM](docs/screenshots/09-crm-campaigns.png) | ![Métricas comerciales y KPIs en KronFlow CRM](docs/screenshots/10-crm-analytics.png) |
+| **Plataforma Multi-Agente IA** | **Workflows Declarativos DAG** |
+| ![Plataforma multi-agente en KronFlow CRM](docs/screenshots/11-crm-agents.png) | ![Workflows declarativos DAG en KronFlow CRM](docs/screenshots/12-crm-workflows.png) |
+| **Tool Hub, Webchat y MCP** | **Bandeja HITL y Conversaciones** |
+| ![Tool Hub, Webchat y MCP en KronFlow CRM](docs/screenshots/13-crm-tools-hub.png) | ![Bandeja HITL y conversaciones en KronFlow CRM](docs/screenshots/14-crm-conversations.png) |
 
 ## Estructura del repositorio
 

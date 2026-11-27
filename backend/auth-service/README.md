@@ -67,7 +67,7 @@ El Compose levanta `app`, `postgres` y `redis`. No incluye credenciales funciona
 | `APP_PUBLIC_URL` | Base URL usada en enlaces de invitación |
 | `EMAIL_*` / `DEFAULT_FROM_EMAIL` | SMTP y remitente |
 
-La lista completa y los flags del entrypoint están en [Despliegue](docs/DEPLOYMENT.md).
+La lista completa de variables vive en `.env.example` y `config/settings.py`.
 
 ## Rutas principales
 
@@ -80,7 +80,7 @@ La lista completa y los flags del entrypoint están en [Despliegue](docs/DEPLOYM
 | Claves y service accounts | `/api/v1/security/` |
 | Auditoría | `/api/v1/audit/` |
 
-Consulta el inventario y los requisitos de autorización en [API y contratos](docs/API.md). Swagger es la referencia generada para payloads exactos.
+Swagger (`/api/docs/`) y el esquema OpenAPI (`/api/schema/`) son la referencia viva para payloads y requisitos de autorización.
 
 ## Flujo humano principal
 
@@ -96,19 +96,13 @@ Las invitaciones requieren un token válido: si el email ya existe, el usuario i
 ## Validación
 
 ```powershell
-python -m compileall -q apps config scripts manage.py
+ruff check --select E9,F63,F7,F82 .
 python manage.py check
 python manage.py makemigrations --check --dry-run
 python manage.py test
-docker compose config
+docker compose config --quiet
 ```
 
-La suite versionada contiene actualmente 20 métodos `test_*`. No confundas ese conteo con una garantía de cobertura completa; las brechas conocidas están en [Testing](docs/TESTING.md).
+## Protocolo y licencia
 
-## Documentación
-
-El índice mantenido está en [docs/README.md](docs/README.md). Las reglas para asistentes de IA están consolidadas en [AGENTS.md](AGENTS.md).
-
-## Propiedad
-
-See the repository license for distribution terms. Consulta [LICENSE](../../LICENSE) y [uso aceptable](docs/LEGAL_AND_ACCEPTABLE_USE.md). No incluyas secretos ni credenciales reales en código, ejemplos o documentación.
+Las reglas agénticas y de validación del monorepo están consolidadas en [AGENTS.md](../../AGENTS.md) y [.agents/skills/backend-multitenant/SKILL.md](../../.agents/skills/backend-multitenant/SKILL.md). Distribuido bajo [Apache License 2.0](../../LICENSE). No incluyas secretos ni credenciales reales en código, ejemplos o documentación.

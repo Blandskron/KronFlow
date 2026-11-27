@@ -5,13 +5,13 @@ SPA privada de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) construida con
 ## Capacidades implementadas
 
 - **Autenticación y acceso multi-tenant:** login por correo/contraseña, Google Identity Services, registro/confirmación de correo, recuperación de contraseña y onboarding obligatorio de empresa (`authGuard` / `noAuthGuard`).
-- **Workspace y administración:** edición de empresa y logo, perfil y avatar, gestión de equipo, invitaciones, roles RBAC y notificaciones.
-- **Bandeja HITL y conversaciones (`/app/conversations`):** búsqueda y segmentación de hilos, toma/liberación de control humano (`CAS`), compositor de respuestas y cambio entre atención humana e IA.
-- **Directorio de contactos (`/app/contacts`) y leads (`/app/leads`):** alta idempotente, búsqueda por origen/texto, consentimiento, eventos de dominio y fichas detalladas.
-- **Pipeline de oportunidades (`/app/opportunities` y `/app/workflows`):** etapas editables, creación reactiva tipada y control optimista de versión.
-- **Contexto empresarial y simulador RAG (`/app/business-context`):** progreso real del agente, carga multipart de documentos, plantillas Word/PDF, asistente interactivo de setup y simulador RAG con inspección de fuentes y confianza.
+- **Workspace y administración (`/app/settings`):** edición de empresa y logo, perfil y avatar, MFA TOTP, gestión de equipo, invitaciones, roles RBAC y notificaciones.
+- **Bandeja HITL y conversaciones (`/app/conversations`):** búsqueda y segmentación de hilos, toma/liberación de control humano (`CAS`), compositor de respuestas, handoff entre especialistas IA y cambio entre atención humana e IA.
+- **Directorio de contactos (`/app/contacts`) y leads (`/app/leads`):** alta idempotente, búsqueda por origen/texto, consentimiento, fusión autorizada de contactos (`/app/contacts/:id`), eventos de dominio y fichas detalladas.
+- **Pipeline de oportunidades y workflows DAG (`/app/opportunities`, `/app/workflows`):** etapas editables, control optimista de versión, editor/compilador/simulador de workflows declarativos versionados.
+- **Agentes, Tool Hub y Contexto RAG (`/app/agents`, `/app/tools`, `/app/business-context`):** catálogo multi-agente con revisiones inmutables, Tool Hub + clientes MCP remotos, carga multipart de documentos, plantillas Word/PDF, asistente interactivo de setup y simulador RAG.
 - **Propuestas IA (`/app/ai-proposals`):** bandeja de aprobación, rechazo y ejecución `at-most-once` con previsualización de argumentos.
-- **Campañas y analítica (`/app/campaigns`, `/app/analytics`):** conexiones de correo delegadas, plantillas, worker stub, métricas comerciales, temperatura de leads, actividad diaria e indicadores consolidados.
+- **Campañas y analítica (`/app/campaigns`, `/app/analytics`):** conexiones de correo delegadas, plantillas, preview de audiencia, métricas comerciales, ingresos por divisa, uso IA/workflows e indicadores consolidados.
 - **Privacidad y auditoría (`/app/settings/privacy`, `/app/settings/audit-events`):** solicitudes de exportación/supresión y feed histórico filtrado.
 - **Canal WhatsApp (`/app/whatsapp`):** vinculación QR multi-tenant, transiciones de estado y desconexión segura.
 
@@ -50,6 +50,6 @@ Nginx endurecido publica la SPA en `http://localhost:8081` con `X-Content-Type-O
 | `LANDING_PUBLIC_URL` | `http://localhost:8080` | Retorno a portal público |
 | `SALES_WHATSAPP_NUMBER` | `""` | Botón comercial opcional (oculto si está vacío) |
 
-## Documentación
+## Protocolo y arquitectura
 
-Consulta [docs/README.md](docs/README.md) para arquitectura, rutas, APIs, configuración, seguridad y pruebas. Las reglas para agentes de código viven en [AGENTS.md](AGENTS.md).
+Las fronteras HTTP con backend están en [ARCHITECTURE.md](../../ARCHITECTURE.md). Las reglas agénticas y skills viven en [AGENTS.md](../../AGENTS.md), [.agents/skills/angular-frontend/SKILL.md](../../.agents/skills/angular-frontend/SKILL.md) y [.agents/skills/ui-ux-pro-max/SKILL.md](../../.agents/skills/ui-ux-pro-max/SKILL.md).

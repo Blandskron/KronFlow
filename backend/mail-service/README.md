@@ -71,14 +71,14 @@ python -m app.cli.test_email --sender-key blandskron --to delivered@resend.dev
 
 La CLI usa el mismo proveedor y no muestra credenciales.
 
-## Docker y Railway
+## Docker
 
 ```powershell
-docker build -t blandskron-email-gateway .
-docker run --env-file .env -p 8000:8000 blandskron-email-gateway
+docker build -t kronflow-mail-service .
+docker run --env-file .env -p 8000:8000 kronflow-mail-service
 ```
 
-Railway debe ejecutar Uvicorn en `0.0.0.0` usando `PORT`, y configurar las variables secretas en Railway. `passenger_wsgi.py` se conserva únicamente para instalaciones Passenger existentes; no es el método principal de Railway.
+El contenedor ejecuta Uvicorn en `0.0.0.0` usando `PORT` (por defecto `8000`) y lee los secretos exclusivamente desde variables de entorno. En el stack integrado corre dentro de `kronflow-network` (ver [deploy/README.md](../../deploy/README.md) y [AGENTS.md](../../AGENTS.md)).
 
 ## Pruebas
 

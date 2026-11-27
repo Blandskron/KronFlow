@@ -2,7 +2,7 @@
 
 KronFlow (formerly Flowkron) Community v1.0 (`tenant_schema_v21`, Apache-2.0) has completed all functional implementation and passed full CI validation on `main` (builds, PostgreSQL integration suites, repeatable `v3–v21` upgrade matrix, contract validators, security audits, and standard/demo Compose smoke tests).
 
-The [Community v1 release gates](docs/planning/v1/RELEASE_GATES.md) and [implementation traceability](docs/planning/v1/TRACEABILITY.md) define the evidence required for RC promotion and each enabled production channel.
+See [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for service boundaries, invariants and CI validation commands.
 
 ## Validate the release candidate
 
@@ -17,5 +17,5 @@ The [Community v1 release gates](docs/planning/v1/RELEASE_GATES.md) and [impleme
 - Validate a backup restore and a migration in an isolated deployment. Ensure the IAM private PEM is never mounted into validators. For installations previously running the vulnerable version, inspect archived/deleted workspaces for orphaned Operational runtimes and WhatsApp sessions before re-exposing services. Review old role assignments and invitations, and rotate the JWT key if it may have been exposed.
 - Configure TLS, exposed origins and hosts, secrets, Redis/PostgreSQL grants, telemetry and a recovery process. The per-process admission controls complement ingress limits; they do not constitute distributed rate limiting.
 - Refresh credentials no longer authenticate to backends. Previously issued access JWTs can keep their claims until expiration in services that verify them locally; plan logout/revocation and role changes with the configured access lifetime in mind.
-- Confirm sandbox delivery with authorized Resend, Google and Groq configurations. Test a dedicated WhatsApp account for linking, automatic replies, consent withdrawal, overload and disconnect. WhatsApp turns become durable after Operational admits them. Requests still in the connector's in-memory queue can be lost on restart. See [turn recovery](backend/operational-service/docs/TURN_RECOVERY.md).
+- Confirm sandbox delivery with authorized Resend, Google and Groq configurations. Test a dedicated WhatsApp account for linking, automatic replies, consent withdrawal, overload and disconnect. WhatsApp turns become durable after Operational admits them. Requests still in the connector's in-memory queue can be lost on restart (see [backend/baileys-services/README.md](backend/baileys-services/README.md)).
 - Use deployment-specific privacy and retention terms. Workspace deletion stops integrations; it is not a purge of the separately stored CRM data. Define who may authorize retention, export and deletion of that data.

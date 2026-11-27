@@ -92,7 +92,7 @@ La suite actual cubre healthcheck, formularios locales, catalogo de plantillas W
 
 ## Proveedores de chat
 
-Groq usa `GROQ_API_KEY` y el modelo configurable `GROQ_MODEL`. En modo integrado, el agente genera respuestas con las fuentes obtenidas desde Operational y solicita traspaso si falla el proveedor. Consulta la [configuración de proveedores](docs/CONFIGURATION.md).
+Groq usa `GROQ_API_KEY` y el modelo configurable `GROQ_MODEL` (`CHAT_PROVIDER=auto|groq|local`). En modo integrado, el agente genera respuestas con las fuentes obtenidas desde Operational y solicita traspaso si falla el proveedor. Consulta `.env.example`, `app/core/config.py` y [AGENTS.md](../../AGENTS.md).
 
 ## Modelo de datos
 

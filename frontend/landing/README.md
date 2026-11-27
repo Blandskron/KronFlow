@@ -49,6 +49,6 @@ Nginx endurecido sirve la SPA en `http://localhost:8080` con fallback SPA, cabec
 - `npm run build`: bundle de producción con `0` warnings y presupuestos CSS verificados.
 - `docker compose --profile visual up --build --abort-on-container-exit`: smoke Playwright en `tests/visual/kronflow-landing.visual.spec.ts`.
 
-## Documentación
+## Protocolo y arquitectura
 
-Consulta [docs/README.md](docs/README.md) para arquitectura, configuración, seguridad y testing. Las reglas para agentes viven en [AGENTS.md](AGENTS.md).
+Las fronteras HTTP con IAM están en [ARCHITECTURE.md](../../ARCHITECTURE.md). Las reglas agénticas y skills viven en [AGENTS.md](../../AGENTS.md), [.agents/skills/angular-frontend/SKILL.md](../../.agents/skills/angular-frontend/SKILL.md) y [.agents/skills/ui-ux-pro-max/SKILL.md](../../.agents/skills/ui-ux-pro-max/SKILL.md).

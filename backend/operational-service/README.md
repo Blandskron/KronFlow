@@ -53,7 +53,7 @@ docker compose --env-file .env.local up --build
 | `CORS_ALLOWED_ORIGINS` | Origenes web permitidos |
 | `OPERATIONAL_PORT` | Puerto host de Compose; no lo lee FastAPI |
 
-Settings adicionales disponibles: `APP_NAME`, `ENVIRONMENT`, `DEBUG`, `DATABASE_SCHEMA`, `DATABASE_GRANT_ROLE`, `JWT_ALGORITHM`, `JWT_AUDIENCE`, `JWT_ISSUER`, `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE`, `TENANT_MIGRATION_VERSION` e `INGEST_RATE_LIMIT_PER_MINUTE`. Consulta [Configuracion](docs/CONFIGURATION.md).
+Settings adicionales disponibles en `.env.example` y `app/core/config.py`: `APP_NAME`, `ENVIRONMENT`, `DEBUG`, `DATABASE_SCHEMA`, `DATABASE_GRANT_ROLE`, `JWT_ALGORITHM`, `JWT_AUDIENCE`, `JWT_ISSUER`, `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE`, `TENANT_MIGRATION_VERSION` e `INGEST_RATE_LIMIT_PER_MINUTE`.
 
 ## Operaciones
 
@@ -69,10 +69,6 @@ Los scripts de validacion crean schemas temporales dentro de la base configurada
 
 Para tenants existentes, despues de agregar nuevas tablas tenant activas se debe ejecutar `python scripts/migrate_all_tenants.py` o `POST /internal/migrations/run-all`.
 
-## Documentacion
+## Protocolo y licencia
 
-Consulta [docs/README.md](docs/README.md) para arquitectura, API, datos, seguridad, operacion y testing. Las instrucciones agenticas estan consolidadas en [AGENTS.md](AGENTS.md).
-
-## Propiedad
-
-See the repository license for distribution terms. Consulta [LICENSE](../../LICENSE). No incluyas secretos, ingest keys ni datos personales en documentacion o logs.
+Las fronteras entre servicios están en [ARCHITECTURE.md](../../ARCHITECTURE.md); las reglas agénticas y de validación viven en [AGENTS.md](../../AGENTS.md) y [.agents/skills/backend-multitenant/SKILL.md](../../.agents/skills/backend-multitenant/SKILL.md). Distribuido bajo [Apache License 2.0](../../LICENSE). No incluyas secretos, ingest keys ni datos personales en documentación o logs.

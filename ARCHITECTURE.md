@@ -2,7 +2,7 @@
 
 > **KronFlow — Intelligent CRM** (*Smart conversations. Seamless automation.* · Open Source · By **BLANDSKRON**).
 
-See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [implementation traceability](docs/planning/v1/TRACEABILITY.md) and [release readiness](RELEASE_READINESS.md) for current Community v1.0 (`tenant_schema_v21`) boundaries and verification.
+See the [Agents-First protocol](AGENTS.md) and [release readiness](RELEASE_READINESS.md) for current Community v1.0 (`tenant_schema_v21`) boundaries, invariants and verification.
 
 ## Service topology & monorepo boundaries
 
@@ -48,4 +48,4 @@ Services never share internal ORM models, SQL queries or domain repositories; ev
 
 IAM issues signing keys at bootstrap and shares the public key with validation services over a read-only mount. PostgreSQL hosts IAM and Operational schemas in one cluster, while Redis handles local cache and mail idempotency. Only local development use is documented for the included Compose configuration.
 
-See the [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [deployment notes](deploy/README.md).
+See [AGENTS.md](AGENTS.md) for invariants/skills and [deploy/README.md](deploy/README.md) for local and smoke deployment notes.

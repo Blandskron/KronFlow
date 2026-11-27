@@ -21,7 +21,7 @@
 - **Frontend Angular 21 Zoneless:** 100% `OnPush`, Design System unificado Teal/Esmeralda/Cyan con tipografía `Sora` + `Inter` + `JetBrains Mono`, Floating Glassmorphism, modo oscuro/claro persistente, `0` violaciones WCAG 2.2 AA en `31/31` auditorías y Lighthouse Desktop `100/100/100/100` en Landing.
 - **Orquestación RAG + HITL:** outbox transaccional durable, ledger de consentimientos, control humano CAS de conversaciones, simulador RAG con trazas de fuentes y aprobación `at-most-once` de acciones IA.
 
-KronFlow es un proyecto independiente y no tiene afiliación ni respaldo de Meta o WhatsApp. Se distribuye bajo [Apache License 2.0](LICENSE). Consulta la [revisión de release](RELEASE_READINESS.md) para el alcance de verificación y despliegue y sigue la [guía de seguridad de despliegue](deploy/docs/SECURITY.md) antes de exponer una instancia.
+KronFlow es un proyecto independiente y no tiene afiliación ni respaldo de Meta o WhatsApp. Se distribuye bajo [Apache License 2.0](LICENSE). Consulta la [revisión de release](RELEASE_READINESS.md) y la [guía de despliegue y seguridad](deploy/README.md) antes de exponer una instancia.
 
 ## Capturas de la plataforma
 
@@ -54,7 +54,8 @@ KronFlow/
 │   └── landing/               # Portal público y formulario CSRF (Angular 21 Zoneless · OnPush)
 ├── deploy/                    # Stack Docker Compose modular, bootstrap y smoke E2E
 ├── assets/brand/              # Logotipos, isotipos, OG card y diagramas SVG oficiales
-└── docs/                      # Planificación v1, estado de implementación y capturas reales
+├── .agents/skills/            # Skills operativas del protocolo Agents-First
+└── docs/screenshots/          # Capturas reales embebidas en README e index.html
 ```
 
 ## Inicio rápido local
@@ -125,18 +126,19 @@ Consulta `/health` para liveness y `/ready` para verificar configuración comple
 ## Canales y proveedor IA
 
 - **WhatsApp:** empareja una cuenta por empresa escaneando el QR desde el CRM. El [conector Baileys](backend/baileys-services/README.md) registra consentimientos (`ACEPTO` / `BAJA`), ingesta texto con durabilidad y reenvía respuestas del agente.
-- **IA / RAG:** configura `GROQ_API_KEY` en tu `.env` privado y recrea `agent-core` para usar Groq con `CHAT_PROVIDER=auto`. Revisa la [guía de configuración](backend/agent-core/docs/CONFIGURATION.md) para seleccionar modelo u operar en modo local.
+- **IA / RAG:** configura `GROQ_API_KEY` en tu `.env` privado y recrea `agent-core` para usar Groq con `CHAT_PROVIDER=auto`. Revisa [backend/agent-core/README.md](backend/agent-core/README.md) para seleccionar modelo u operar en modo local.
 
 ## Centro de documentación
 
 | Documento | Contenido |
 | --- | --- |
+| [Protocolo Agents-First](AGENTS.md) | Mapa operativo del monorepo, invariantes, comandos de validación y skills (`.agents/skills/`) |
 | [Arquitectura e integración](ARCHITECTURE.md) | Topología de servicios, diagrama de flujo y fronteras de contratos HTTP/eventos |
-| [Estado de implementación](docs/IMPLEMENTATION_STATUS.md) | Matriz verificada de capacidades, propietarios y brechas vigentes |
-| [Despliegue y operaciones](deploy/README.md) | Stacks Compose modulares, volúmenes persistentes y validación smoke |
+| [Despliegue y operaciones](deploy/README.md) | Stacks Compose modulares, volúmenes persistentes, seguridad y validación smoke |
+| [Microservicios backend](backend/operational-service/README.md) | Guías por servicio: [auth](backend/auth-service/README.md) · [operational](backend/operational-service/README.md) · [agent-core](backend/agent-core/README.md) · [mail](backend/mail-service/README.md) · [baileys](backend/baileys-services/README.md) |
+| [Frontends Angular 21](frontend/app/README.md) | Guías por SPA: [CRM App](frontend/app/README.md) · [Landing Pública](frontend/landing/README.md) |
 | [Contribución y pruebas](CONTRIBUTING.md) | Comandos locales para Angular 21, Python 3.12, Node 24 y Compose |
-| [Release readiness](RELEASE_READINESS.md) | Criterios de liberación RC/producción y [gates de release](docs/planning/v1/RELEASE_GATES.md) |
-| [Trazabilidad técnica](docs/planning/v1/TRACEABILITY.md) | Mapa código–pruebas de los tickets `FK-01`–`FK-30` |
+| [Release readiness](RELEASE_READINESS.md) | Criterios de liberación RC/producción y checklist operativo |
 | [Historial de cambios](CHANGELOG.md) | Registro cronológico de evolución y notas de migración |
 | [Política de seguridad](SECURITY.md) | Canal privado de divulgación y superficie crítica |
 | [Terceros y licencias](THIRD_PARTY.md) | Dependencias clave, SBOM y obligaciones de redistribución |

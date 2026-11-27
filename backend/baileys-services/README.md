@@ -1,10 +1,10 @@
 # KronFlow Baileys Services (`backend/baileys-services`)
 
-La ingestión conserva el ID real del proveedor en cada mensaje. Para una respuesta, registra el ID devuelto por su propio envío y el estado reportado `sent`; ese estado no confirma entrega ni lectura. Ver la [decisión de identidad de mensajes](../operational-service/docs/MESSAGE_IDENTITY.md).
+La ingestión conserva el ID real del proveedor en cada mensaje. Para una respuesta, registra el ID devuelto por su propio envío y el estado reportado `sent`; ese estado no confirma entrega ni lectura.
 
-FK-02 persiste el turno en Operational y reutiliza respuestas preparadas al reintentar. FK-03 guarda consultas aceptadas en PostgreSQL y las retoma cuando se abre o restaura el socket de la cuenta original. FK-07 reserva el ID antes de enviar y transmite recibos directos de Baileys a Operational. Un recibo que coincida puede resolver un resultado incierto sin retransmitir. El conector de empresa requiere `tenant_schema_v8` antes de abrir tráfico. Ver [recuperación y reconciliación](../operational-service/docs/TURN_RECOVERY.md).
+FK-02 persiste el turno en Operational y reutiliza respuestas preparadas al reintentar. FK-03 guarda consultas aceptadas en PostgreSQL y las retoma cuando se abre o restaura el socket de la cuenta original. FK-07 reserva el ID antes de enviar y transmite recibos directos de Baileys a Operational. Un recibo que coincida puede resolver un resultado incierto sin retransmitir. El conector de empresa requiere `tenant_schema_v8` o superior (actual: `tenant_schema_v21`) antes de abrir tráfico.
 
-En las sesiones de empresa, BAJA puede guardarse mientras el agente procesa un mensaje. Operational deduplica los comandos de consentimiento por identidad del mensaje. La garantía empieza cuando se guarda la decisión en Operational. Ver [retirada de consentimiento](../operational-service/docs/TURN_RECOVERY.md#retirada-de-consentimiento).
+En las sesiones de empresa, `BAJA` puede guardarse mientras el agente procesa un mensaje. Operational deduplica los comandos de consentimiento por identidad del mensaje; la garantía empieza cuando se guarda la decisión en Operational. Consulta [AGENTS.md](../../AGENTS.md) para el protocolo y validación del monorepo.
 
 Vincula una cuenta de WhatsApp por empresa en **WhatsApp → Generar código QR** dentro del CRM. Escanea el código desde **Dispositivos vinculados** en el teléfono. El código vigente aparece únicamente a miembros con el permiso de conexión de su empresa.
 

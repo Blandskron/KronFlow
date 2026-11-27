@@ -1,0 +1,9 @@
+# Verified false positives: synthetic webhook verify_token / app_secret strings
+# used exclusively in backend/operational-service integration test fixtures.
+d0c0deb67f99bbb8feb1e438a226ecb27840495c:backend/operational-service/tests/test_commerce_voice_mcp_client.py:generic-api-key:126
+d0c0deb67f99bbb8feb1e438a226ecb27840495c:backend/operational-service/tests/test_commerce_voice_mcp_client.py:generic-api-key:302
+1ef9a9a08d041d6751c6796e499ee1646a40bd92:backend/operational-service/tests/test_mcp_meta_sync_privacy.py:generic-api-key:198
+1ef9a9a08d041d6751c6796e499ee1646a40bd92:backend/operational-service/tests/test_mcp_meta_sync_privacy.py:generic-api-key:199
+1ef9a9a08d041d6751c6796e499ee1646a40bd92:backend/operational-service/tests/test_mcp_meta_sync_privacy.py:generic-api-key:210
+1ef9a9a08d041d6751c6796e499ee1646a40bd92:backend/operational-service/tests/test_mcp_meta_sync_privacy.py:generic-api-key:222
+1ef9a9a08d041d6751c6796e499ee1646a40bd92:backend/operational-service/tests/test_mcp_meta_sync_privacy.py:generic-api-key:281

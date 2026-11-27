@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Platform Phases 1–8 (`tenant_schema_v17`–`v21`, repeatable upgrade `v3–v21`):**
+  - Durable Outbox worker (`worker.py` + `outbox_dispatcher.py`), scheduled campaign auto-promotion, opaque self-service unsubscribe tokens, and end-to-end delivery dispatch.
+  - Multi-agent platform with immutable revisions, scoped RAG/rules/traces, persistent setup-chat, bounded specialist handoff with HITL fallback, and `/app/agents` + `/app/conversations` UI.
+  - Declarative DAG workflow engine (`/app/workflows`, compiler, dry-run simulation, waiting timers, and transactional wait cancellation on reply/opt-out/erasure).
+  - Tool Hub + bidirectional MCP JSON-RPC 2.0 (`POST /api/v1/mcp` + SSRF/allowlist remote MCP client `/api/v1/mcp-clients`), signed embeddable webchat, SHA-256 private attachments, and `/app/tools` UI.
+  - Omnichannel Meta webhooks (HMAC-SHA256), outbound connectors (WhatsApp Cloud, Google Calendar OAuth, HubSpot), Shopify & Mercado Pago commerce reconciliation/refunds with per-currency KPIs, Twilio voice sessions + Media Streams WebSocket (`barge-in`/HITL/privacy), authorized contact merge (`/app/contacts/:id`), campaign audience preview (`/app/campaigns`), and IAM TOTP MFA enrollment UI (`/app/settings`).
 - **Monorepo reorganization & documentation consolidation:**
   - Reorganized services under `backend/` (`agent-core`, `auth-service`, `baileys-services`, `mail-service`, `operational-service`), frontends under `frontend/` (`app`, `landing`), and Compose deployment under `deploy/`, removing the legacy `flowkron-` directory and service name prefixes.
   - Absorbed API contract boundaries and conventions into [`ARCHITECTURE.md`](ARCHITECTURE.md), retired `flowkron-api-contracts/`, removed completed planning roadmaps and stale audit snapshots, added the 10-screenshot platform gallery to [`README.md`](README.md), and verified cross-repository documentation links.

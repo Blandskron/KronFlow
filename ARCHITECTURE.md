@@ -2,7 +2,7 @@
 
 > **KronFlow — Intelligent CRM** (*Smart conversations. Seamless automation.* · Open Source · By **BLANDSKRON**).
 
-See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [implementation traceability](docs/planning/v1/TRACEABILITY.md) and [release readiness](RELEASE_READINESS.md) for current Community v1.0 (`tenant_schema_v16`) boundaries and verification.
+See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [implementation traceability](docs/planning/v1/TRACEABILITY.md) and [release readiness](RELEASE_READINESS.md) for current Community v1.0 (`tenant_schema_v21`) boundaries and verification.
 
 ## Service topology & monorepo boundaries
 
@@ -11,7 +11,7 @@ See the [architecture decisions](docs/planning/v1/02-architecture-adrs.md), [imp
 | Browser (CRM) | [frontend/app](frontend/app/README.md) | Angular 21 Zoneless SPA: auth and tenant context, HITL inbox, contacts, opportunities pipeline, AI proposals review, campaigns, consolidated KPIs, privacy workflows, agent setup |
 | Browser (Landing) | [frontend/landing](frontend/landing/README.md) | Angular 21 Zoneless SPA: public portal, Floating Glassmorphism showcase and CSRF-protected contact form |
 | IAM | [backend/auth-service](backend/auth-service/README.md) | Django/DRF: identity, tenant membership, plan state, RBAC data, RS256 JWT issuance, account email |
-| Operational | [backend/operational-service](backend/operational-service/README.md) | FastAPI + PostgreSQL 18: tenant provisioning (`tenant_schema_v16`, repeatable `v3–v16`), durable action outbox, consent ledger, HITL control, opportunities, AI proposals, contact points/forms/credentials, domain events, campaigns/channels, KPIs, privacy/retention, webhooks, private attachments and scheduling |
+| Operational | [backend/operational-service](backend/operational-service/README.md) | FastAPI + PostgreSQL 18: tenant provisioning (`tenant_schema_v21`, repeatable `v3–v21`), durable action outbox + worker, consent ledger, HITL control, opportunities, AI proposals, multi-agent platform, DAG workflows, Tool Hub + bidirectional MCP, webchat, Meta/Shopify/Mercado Pago/Twilio + outbound connectors, contact points/forms/credentials, domain events, campaigns/channels, KPIs, privacy/retention, webhooks, private attachments and scheduling |
 | Agent Core | [backend/agent-core](backend/agent-core/README.md) | FastAPI: channel-agnostic conversational runtime, business context extraction/RAG, simulation and optional Groq LLM calls |
 | Email | [backend/mail-service](backend/mail-service/README.md) | FastAPI + Redis: Bearer authentication, scoped sender keys, idempotency using Redis and delivery through Resend |
 | WhatsApp lab | [backend/baileys-services](backend/baileys-services/README.md) | Node/TypeScript: optional private QR pairing and consent-gated text ingestion for one tenant per instance |

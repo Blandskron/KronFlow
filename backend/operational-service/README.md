@@ -1,6 +1,6 @@
 # KronFlow Operational Service (`backend/operational-service`)
 
-Microservicio FastAPI de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) que mantiene datos operacionales aislados en un schema PostgreSQL 18 por tenant (`tenant_schema_v16`, migraciones repetibles `v3–v16`). Expone lectura/escritura para el CRM, bandeja HITL, pipeline comercial, campañas y privacidad, ingesta WhatsApp durable y endpoints internos de aprovisionamiento, migración y contexto RAG.
+Microservicio FastAPI de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) que mantiene datos operacionales aislados en un schema PostgreSQL 18 por tenant (`tenant_schema_v21`, migraciones repetibles `v3–v21`). Expone lectura/escritura para el CRM, bandeja HITL, pipeline comercial, plataforma multi-agente, workflows DAG, Tool Hub/MCP, webchat, comercio/voz, campañas y privacidad, ingesta omnicanal durable y endpoints internos de aprovisionamiento, migración y contexto RAG.
 
 ## Capacidades reales
 
@@ -12,7 +12,7 @@ Microservicio FastAPI de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) que 
 
 Límites documentados:
 
-- Los endpoints públicos heredados `/api/v1/agents` permanecen como stubs (`[]` / `501`); las capacidades activas de agente viven en `agent-core` y `/api/v1/ai-proposals`.
+- Los endpoints públicos `/api/v1/agents` administran el catálogo multi-agente con revisiones inmutables, reglas, trazas y handoff; la inferencia y el simulador viven en `agent-core` y las acciones supervisadas en `/api/v1/ai-proposals`.
 - El rate limit de ingesta opera por proceso; producción requiere límites distribuidos en ingress.
 - Suite automatizada contra PostgreSQL 18 verificable localmente (`python -m unittest discover -s tests -v`).
 

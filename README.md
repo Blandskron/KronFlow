@@ -17,7 +17,7 @@
 
 **KronFlow** (anteriormente *Flowkron*) es una plataforma CRM inteligente, modular y multi-tenant open source del ecosistema **BLANDSKRON**, diseñada para centralizar conversaciones de WhatsApp, gestionar contactos y oportunidades comerciales, operar propuestas tipadas de IA con contexto empresarial verificable (RAG) y gobernanza Human-in-the-Loop (HITL).
 
-- **Multi-tenant schema-per-tenant:** cada empresa opera en su propio esquema PostgreSQL 18 aislado (`tenant_schema_v16`) con auditoría, retención y flujos de privacidad (`export` / `erase` / `retention`).
+- **Multi-tenant schema-per-tenant:** cada empresa opera en su propio esquema PostgreSQL 18 aislado (`tenant_schema_v21`) con auditoría, retención y flujos de privacidad (`export` / `erase` / `retention`).
 - **Frontend Angular 21 Zoneless:** 100% `OnPush`, Design System unificado Teal/Esmeralda/Cyan con tipografía `Sora` + `Inter` + `JetBrains Mono`, Floating Glassmorphism, modo oscuro/claro persistente, `0` violaciones WCAG 2.2 AA en `31/31` auditorías y Lighthouse Desktop `100/100/100/100` en Landing.
 - **Orquestación RAG + HITL:** outbox transaccional durable, ledger de consentimientos, control humano CAS de conversaciones, simulador RAG con trazas de fuentes y aprobación `at-most-once` de acciones IA.
 

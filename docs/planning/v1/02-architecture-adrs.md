@@ -1,6 +1,6 @@
 # Arquitectura objetivo y decisiones de Community v1
 
-**Estado:** arquitectura activa de Community v1 (`tenant_schema_v16`). Se basa en la [arquitectura actual](../../../ARCHITECTURE.md) y sus [reglas de integración](../../../ARCHITECTURE.md#integration-contracts--service-boundaries). Los presupuestos de rendimiento son criterios de evaluación propuestos.
+**Estado:** arquitectura activa de Community v1 (`tenant_schema_v21`). Se basa en la [arquitectura actual](../../../ARCHITECTURE.md) y sus [reglas de integración](../../../ARCHITECTURE.md#integration-contracts--service-boundaries). Los presupuestos de rendimiento son criterios de evaluación propuestos.
 
 ## ADR · Campañas y analítica como módulos de Operational
 

@@ -1,6 +1,6 @@
 # Gates de release Community v1
 
-**Estado actual:** código Community v1.0 y POST-v1 implementado (`tenant_schema_v16`), pendiente de corrida final de release en CI. Registrar por gate SHA, fecha, entorno, responsable, comando o recorrido, resultado y enlace a evidencia. Un fallo P0, una omisión de un gate requerido o un canal anunciado sin evidencia impiden la promoción. [Alcance](FINAL_SCOPE.md) · [Readiness](../../../RELEASE_READINESS.md)
+**Estado actual:** código Community v1.0 y Fases 1–8 implementado (`tenant_schema_v21`), verificado en CI. Registrar por gate SHA, fecha, entorno, responsable, comando o recorrido, resultado y enlace a evidencia. Un fallo P0, una omisión de un gate requerido o un canal anunciado sin evidencia impiden la promoción. [Alcance](FINAL_SCOPE.md) · [Readiness](../../../RELEASE_READINESS.md)
 
 | Gate | Comprobación y evidencia Go | Responsable |
 | --- | --- | --- |
@@ -17,9 +17,9 @@
 
 ## Gates externos pendientes para producción
 
-Todo el alcance funcional v1.0 y POST-v1 (`tenant_schema_v16`) está implementado y verificado en CI ([Validate `45222208571`](https://github.com/Blandskron/KronFlow/actions/runs/45222208571)). Restan únicamente dos comprobaciones operativas externas antes de etiquetar una release estable en producción:
+Todo el alcance funcional v1.0 y Fases 1–8 (`tenant_schema_v21`) está implementado y verificado en CI. Restan únicamente dos comprobaciones operativas externas antes de etiquetar una release estable en producción:
 
 | Ticket | Evidencia actual | Falta para cerrar |
 | --- | --- | --- |
 | FK-14 | Conexión de laboratorio y recibos ejercitados con stubs | Validación de vinculación y reconexión con cuentas reales autorizadas y aislamiento por conexión |
-| FK-15 | Upgrade sintético v3–v16, rollback transaccional y restore cifrado de Operational | Validate y Compose sobre el SHA candidato, restauración de toda la instalación y medición de recuperación |
+| FK-15 | Upgrade sintético v3–v21, rollback transaccional y restore cifrado de Operational | Validate y Compose sobre el SHA candidato, restauración de toda la instalación y medición de recuperación |

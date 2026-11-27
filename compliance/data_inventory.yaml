@@ -237,8 +237,8 @@ services:
         non_pii_columns:
           [id, slug, name, legal_name, logo_url, country, privacy_jurisdiction,
            privacy_policy_url, status, plan, subscription_status, subscription_provider,
-           subscription_external_id, subscription_current_period_end, created_by_id,
-           created_at, updated_at]
+           subscription_external_id, subscription_current_period_end, pending_purge_at,
+           purge_after, created_by_id, created_at, updated_at]
 
       iam_tenant_membership:
         owner_role: controller
@@ -401,6 +401,24 @@ services:
         non_pii_columns:
           [id, auth_tenant_id, widget_key, name, is_active, allowed_origins, agent_id,
            welcome_message, session_ttl_minutes, rate_limit_per_minute, created_by, created_at, updated_at]
+
+      public.privacy_erasure_tombstones:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "legal_statute"
+        pii_columns: {}
+        non_pii_columns:
+          [id, auth_tenant_id, schema_name, identifier_kind, subject_hash, case_id, erased_at]
+
+      public.security_incidents:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "legal_statute"
+        pii_columns: {}
+        non_pii_columns:
+          [id, auth_tenant_id, severity, status, title, summary, affected_records_estimate,
+           detected_at, csirt_early_warning_due_at, authority_notice_due_at,
+           containment_notes, reported_by, created_at, updated_at]
 
       public_capture_forms:
         owner_role: processor
@@ -1086,7 +1104,7 @@ services:
         pii_columns: {}
         non_pii_columns:
           [id, fecha_ejecucion, mensajes_eliminados, clientes_anonimizados,
-           solicitudes_eliminadas, estado, detalle, notas]
+           solicitudes_eliminadas, estado, detalle, notas, prev_hash, entry_hash]
 
       tenant.mensajes_dashboard:
         owner_role: processor
@@ -1302,6 +1320,25 @@ services:
         non_pii_columns:
           [id, ai_enabled, allow_external_ai_transfer, memory_auto_capture,
            updated_by, reason, updated_at]
+
+      tenant.tenant_retention_policies:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, messages_retention_days, memory_retention_days, attachments_retention_days,
+           voice_retention_days, traces_retention_days, webchat_retention_days,
+           legal_hold, legal_hold_reason, last_swept_at, updated_by, updated_at]
+
+      tenant.tenant_subprocessor_approvals:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "legal_statute"
+        pii_columns: {}
+        non_pii_columns:
+          [id, provider_key, jurisdiction, subprocessor_list_version, approved,
+           approved_by, approved_at, revoked_at, updated_at]
 
       tenant.tenant_channel_connections:
         owner_role: processor

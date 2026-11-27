@@ -74,6 +74,8 @@ TABLE_INTRODUCED = {
     "voice_call_sessions": 21,
     "voice_call_segments": 21,
     "remote_mcp_servers": 21,
+    "tenant_retention_policies": 22,
+    "tenant_subprocessor_approvals": 22,
 }
 DECISION_AT = datetime(2026, 1, 1, tzinfo=UTC)
 EXISTING_BOUNDARY = datetime(2025, 12, 31, tzinfo=UTC)

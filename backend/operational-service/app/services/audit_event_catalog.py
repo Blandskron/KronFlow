@@ -28,6 +28,9 @@ EVENTS = {
     "ai.proposal.rejected": EventProjection("ai.proposal.rejected", "proposal_id"),
     "ai.proposal.executed": EventProjection("ai.proposal.executed", "proposal_id"),
     "privacy.case.state.changed": EventProjection("privacy.case.state.changed", "case_id", "state"),
+    "privacy.pii.accessed": EventProjection("privacy.pii.accessed", "case_id"),
+    "security.incident.opened": EventProjection("security.incident.opened", "incident_id"),
+    "security.incident.updated": EventProjection("security.incident.updated", "incident_id"),
 }
 
 TRANSITIONS = {

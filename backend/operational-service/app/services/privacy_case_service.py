@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 import hashlib
+import json
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -7,6 +8,8 @@ from sqlalchemy import delete, func, inspect, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.tenant_resolver import TenantContext
+from app.public_models.erasure_tombstone import PrivacyErasureTombstone
+from app.public_models.tenant_runtime import TenantRuntime
 from app.schemas.privacy_case import CaseState, PrivacyCaseCreateIn, PrivacyCaseTransition
 from app.services.consent_authorization_service import build_ts27560_consent_receipt, record_suppression
 from app.services.post_v1_service import _resolve_attachment_path
@@ -34,8 +37,10 @@ from app.tenant_models.phase4_hub import WebchatSession
 from app.tenant_models.phase5_integrations import ExternalEntityMapping
 from app.tenant_models.phase6_extensions import CommerceOrder, VoiceCallSegment, VoiceCallSession
 from app.tenant_models.post_v1 import PrivateAttachment
+from app.tenant_models.privacy_lifecycle import TenantRetentionPolicy
 from app.tenant_models.whatsapp_turn import WhatsAppTurn
 from app.tenant_models.workflows import WorkflowRun
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 
 CASE_FIELDS = (
@@ -44,6 +49,97 @@ CASE_FIELDS = (
     SolicitudDerecho.fecha_resolucion.label("completed_at"),
 )
 NEXT_STATE = {"pendiente": "en_proceso", "en_proceso": "completada"}
+GENESIS_CLEANUP_HASH = "0" * 64
+
+
+def compute_cleanup_entry_hash(
+    prev_hash: str,
+    *,
+    fecha_ejecucion: datetime,
+    mensajes_eliminados: int,
+    clientes_anonimizados: int,
+    solicitudes_eliminadas: int,
+    estado: str,
+    detalle: dict | None,
+) -> str:
+    """Compute deterministic SHA-256 chain hash for a LogLimpieza row (PRV-023)."""
+    ts = fecha_ejecucion.astimezone(UTC).isoformat() if fecha_ejecucion.tzinfo else fecha_ejecucion.replace(tzinfo=UTC).isoformat()
+    canonical = json.dumps(
+        {
+            "prev_hash": prev_hash,
+            "fecha_ejecucion": ts,
+            "mensajes_eliminados": int(mensajes_eliminados),
+            "clientes_anonimizados": int(clientes_anonimizados),
+            "solicitudes_eliminadas": int(solicitudes_eliminadas),
+            "estado": str(estado),
+            "detalle": detalle or {},
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _append_chained_cleanup_log(db: Session, cleanup: LogLimpieza) -> LogLimpieza:
+    """Attach prev_hash and entry_hash to a LogLimpieza row and flush in the current tenant tx."""
+    last_hash = db.scalar(
+        select(LogLimpieza.entry_hash)
+        .where(LogLimpieza.entry_hash.is_not(None))
+        .order_by(LogLimpieza.id.desc())
+        .limit(1)
+    )
+    prev_hash = last_hash or GENESIS_CLEANUP_HASH
+    cleanup.prev_hash = prev_hash
+    cleanup.entry_hash = compute_cleanup_entry_hash(
+        prev_hash,
+        fecha_ejecucion=cleanup.fecha_ejecucion,
+        mensajes_eliminados=cleanup.mensajes_eliminados,
+        clientes_anonimizados=cleanup.clientes_anonimizados,
+        solicitudes_eliminadas=cleanup.solicitudes_eliminadas,
+        estado=cleanup.estado,
+        detalle=cleanup.detalle,
+    )
+    db.add(cleanup)
+    db.flush()
+    return cleanup
+
+
+def verify_cleanup_hash_chain(entries: list[dict | LogLimpieza]) -> dict:
+    """Verify hash-chain continuity across ordered LogLimpieza entries (PRV-023)."""
+    expected_prev = GENESIS_CLEANUP_HASH
+    checked = 0
+    for item in entries:
+        entry_id = item["id"] if isinstance(item, dict) else item.id
+        prev_hash = item.get("prev_hash") if isinstance(item, dict) else item.prev_hash
+        entry_hash = item.get("entry_hash") if isinstance(item, dict) else item.entry_hash
+        if not entry_hash:
+            continue
+        checked += 1
+        if prev_hash != expected_prev:
+            return {"valid": False, "checked": checked, "broken_entry_id": entry_id, "reason": "prev_hash_mismatch"}
+        recomputed = compute_cleanup_entry_hash(
+            prev_hash,
+            fecha_ejecucion=item["fecha_ejecucion"] if isinstance(item, dict) else item.fecha_ejecucion,
+            mensajes_eliminados=item["mensajes_eliminados"] if isinstance(item, dict) else item.mensajes_eliminados,
+            clientes_anonimizados=item["clientes_anonimizados"] if isinstance(item, dict) else item.clientes_anonimizados,
+            solicitudes_eliminadas=item["solicitudes_eliminadas"] if isinstance(item, dict) else item.solicitudes_eliminadas,
+            estado=item["estado"] if isinstance(item, dict) else item.estado,
+            detalle=item.get("detalle") if isinstance(item, dict) else item.detalle,
+        )
+        if recomputed != entry_hash:
+            return {"valid": False, "checked": checked, "broken_entry_id": entry_id, "reason": "entry_hash_mismatch"}
+        expected_prev = entry_hash
+    return {"valid": True, "checked": checked, "broken_entry_id": None, "reason": None}
+
+
+def verify_tenant_cleanup_chain(db: Session, tenant: TenantContext) -> dict:
+    """Read tenant log_limpiezas in ascending order and verify tamper-evident hash chain (PRV-023)."""
+    bind_tenant_session(db, tenant.schema_name)
+    rows = list(db.scalars(select(LogLimpieza).order_by(LogLimpieza.id.asc())).all())
+    result = verify_cleanup_hash_chain(rows)
+    result["total_rows"] = len(rows)
+    return result
 
 
 def list_privacy_cases(db: Session, tenant: TenantContext, state: CaseState | None, limit: int, offset: int) -> dict:
@@ -347,6 +443,18 @@ def export_privacy_case_data(db: Session, tenant: TenantContext, case_id: int, *
     message_count = len(messages_list)
     create_system_event(
         db,
+        "privacy.pii.accessed",
+        tenant.auth_tenant_id,
+        tenant.schema_name,
+        {
+            "case_id": case_id,
+            "actor_id": actor_id,
+            "action": "export",
+            "subject_contact_id": subject.id if subject else None,
+        },
+    )
+    create_system_event(
+        db,
         "privacy.case.exported",
         tenant.auth_tenant_id,
         tenant.schema_name,
@@ -537,6 +645,9 @@ def execute_privacy_erasure(
 
     points_deleted = 0
     for client in clients:
+        record_erasure_tombstone_in_tx(db, tenant, identifier_kind="rut", raw_value=client.rut, case_id=case_id, erased_at=now)
+        record_erasure_tombstone_in_tx(db, tenant, identifier_kind="email", raw_value=client.email, case_id=case_id, erased_at=now)
+        record_erasure_tombstone_in_tx(db, tenant, identifier_kind="whatsapp", raw_value=client.whatsapp_id, case_id=case_id, erased_at=now)
         rut_digest = hashlib.sha256(f"{tenant.schema_name}:{client.id}:{client.rut}".encode("utf-8")).hexdigest()[:16]
         client.rut = f"anon-{rut_digest}"
         client.rut_encrypted = None
@@ -809,8 +920,7 @@ def execute_privacy_erasure(
         },
         notas=f"Ejecucion de borrado/anonimizacion caso #{case_id}",
     )
-    db.add(cleanup)
-    db.flush()
+    _append_chained_cleanup_log(db, cleanup)
     create_system_event(
         db,
         "privacy.case.erased",
@@ -883,8 +993,7 @@ def run_retention_sweep(
         detalle={"retention_days": message_retention_days, "cutoff": cutoff.isoformat(), "actor_id": actor_id},
         notas="Barrido de retencion de mensajes",
     )
-    db.add(cleanup)
-    db.flush()
+    _append_chained_cleanup_log(db, cleanup)
     create_system_event(
         db,
         "privacy.retention.swept",
@@ -898,5 +1007,305 @@ def run_retention_sweep(
         "messages_deleted": deleted,
         "cleanup_log_id": cleanup.id,
         "swept_at": current,
+    }
+
+
+def _tombstone_hash(schema_name: str, kind: str, raw_value: str) -> str:
+    norm = raw_value.strip().lower()
+    if kind == "rut":
+        norm = norm.replace(".", "").replace(" ", "").upper()
+    return hashlib.sha256(f"{schema_name}:{kind}:{norm}".encode("utf-8")).hexdigest()
+
+
+def record_erasure_tombstone_in_tx(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    identifier_kind: str,
+    raw_value: str | None,
+    case_id: int | None,
+    erased_at: datetime,
+) -> None:
+    """Persist an irreversible hash tombstone in public.privacy_erasure_tombstones (PRV-019)."""
+    if not raw_value or not raw_value.strip() or raw_value.strip().startswith("anon"):
+        return
+    if not inspect(db.connection()).has_table(PrivacyErasureTombstone.__tablename__, schema="public"):
+        return
+    db.add(
+        PrivacyErasureTombstone(
+            auth_tenant_id=tenant.auth_tenant_id,
+            schema_name=tenant.schema_name,
+            identifier_kind=identifier_kind[:24],
+            subject_hash=_tombstone_hash(tenant.schema_name, identifier_kind, raw_value),
+            case_id=case_id,
+            erased_at=erased_at,
+        )
+    )
+
+
+def get_tenant_retention_policy(db: Session, tenant: TenantContext) -> dict:
+    bind_tenant_session(db, tenant.schema_name)
+    defaults = {
+        "messages_retention_days": 180,
+        "memory_retention_days": 90,
+        "attachments_retention_days": 90,
+        "voice_retention_days": 90,
+        "traces_retention_days": 90,
+        "webchat_retention_days": 90,
+        "legal_hold": False,
+        "legal_hold_reason": None,
+        "last_swept_at": None,
+        "updated_by": None,
+        "updated_at": None,
+    }
+    if not inspect(db.connection()).has_table(TenantRetentionPolicy.__tablename__, schema=tenant.schema_name):
+        return defaults
+    row = db.get(TenantRetentionPolicy, 1)
+    if row is None:
+        return defaults
+    return {
+        "messages_retention_days": row.messages_retention_days,
+        "memory_retention_days": row.memory_retention_days,
+        "attachments_retention_days": row.attachments_retention_days,
+        "voice_retention_days": row.voice_retention_days,
+        "traces_retention_days": row.traces_retention_days,
+        "webchat_retention_days": row.webchat_retention_days,
+        "legal_hold": bool(row.legal_hold),
+        "legal_hold_reason": row.legal_hold_reason,
+        "last_swept_at": row.last_swept_at,
+        "updated_by": row.updated_by,
+        "updated_at": row.updated_at,
+    }
+
+
+def set_tenant_retention_policy(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    messages_retention_days: int = 180,
+    memory_retention_days: int = 90,
+    attachments_retention_days: int = 90,
+    voice_retention_days: int = 90,
+    traces_retention_days: int = 90,
+    webchat_retention_days: int = 90,
+    legal_hold: bool = False,
+    legal_hold_reason: str | None = None,
+    actor_user_id: str,
+    now: datetime | None = None,
+) -> dict:
+    for field_name, days in (
+        ("messages_retention_days", messages_retention_days),
+        ("memory_retention_days", memory_retention_days),
+        ("attachments_retention_days", attachments_retention_days),
+        ("voice_retention_days", voice_retention_days),
+        ("traces_retention_days", traces_retention_days),
+        ("webchat_retention_days", webchat_retention_days),
+    ):
+        if days < 1 or days > 3650:
+            raise HTTPException(status_code=422, detail=f"{field_name} must be between 1 and 3650")
+
+    current = now.astimezone(UTC) if now is not None else datetime.now(UTC)
+    bind_tenant_session(db, tenant.schema_name)
+    if not inspect(db.connection()).has_table(TenantRetentionPolicy.__tablename__, schema=tenant.schema_name):
+        raise HTTPException(status_code=503, detail="Retention policy schema is unavailable")
+
+    clean_reason = legal_hold_reason.strip()[:240] if (legal_hold and legal_hold_reason) else None
+    values = {
+        "messages_retention_days": int(messages_retention_days),
+        "memory_retention_days": int(memory_retention_days),
+        "attachments_retention_days": int(attachments_retention_days),
+        "voice_retention_days": int(voice_retention_days),
+        "traces_retention_days": int(traces_retention_days),
+        "webchat_retention_days": int(webchat_retention_days),
+        "legal_hold": bool(legal_hold),
+        "legal_hold_reason": clean_reason,
+        "updated_by": actor_user_id[:64],
+        "updated_at": current,
+    }
+    db.execute(
+        pg_insert(TenantRetentionPolicy)
+        .values(id=1, **values)
+        .on_conflict_do_update(index_elements=["id"], set_=values)
+    )
+    create_system_event(
+        db,
+        "privacy.retention_policy.changed",
+        tenant.auth_tenant_id,
+        tenant.schema_name,
+        {"actor_user_id": actor_user_id, "legal_hold": bool(legal_hold), "messages_retention_days": int(messages_retention_days)},
+    )
+    db.commit()
+    return get_tenant_retention_policy(db, tenant)
+
+
+def run_tenant_policy_retention_sweep(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    actor_id: str = "operational-worker",
+    now: datetime | None = None,
+    storage_dir: str | Path | None = None,
+) -> dict:
+    """Automated multi-table retention sweep honoring tenant policy and legal_hold (PRV-017)."""
+    current = now.astimezone(UTC) if now is not None else datetime.now(UTC)
+    policy = get_tenant_retention_policy(db, tenant)
+    if policy["legal_hold"]:
+        return {"skipped_legal_hold": True, "swept_at": current, "counts": {}}
+
+    bind_tenant_session(db, tenant.schema_name)
+    existing_tables = set(inspect(db.connection()).get_table_names(schema=tenant.schema_name))
+    counts: dict[str, int] = {}
+
+    msg_cutoff = current - timedelta(days=policy["messages_retention_days"])
+    counts["messages"] = int(db.execute(delete(Message).where(Message.creado_en < msg_cutoff)).rowcount or 0)
+
+    if ConversationMemoryItem.__tablename__ in existing_tables:
+        mem_cutoff = current - timedelta(days=policy["memory_retention_days"])
+        counts["memory_items"] = int(
+            db.execute(
+                delete(ConversationMemoryItem).where(
+                    or_(ConversationMemoryItem.expires_at < current, ConversationMemoryItem.created_at < mem_cutoff)
+                )
+            ).rowcount or 0
+        )
+
+    unlink_keys: list[str] = []
+    if PrivateAttachment.__tablename__ in existing_tables:
+        att_cutoff = current - timedelta(days=policy["attachments_retention_days"])
+        att_cond = or_(PrivateAttachment.expires_at < current, PrivateAttachment.created_at < att_cutoff)
+        unlink_keys = list(db.scalars(select(PrivateAttachment.storage_key).where(att_cond)).all())
+        counts["attachments"] = int(db.execute(delete(PrivateAttachment).where(att_cond)).rowcount or 0)
+
+    if VoiceCallSegment.__tablename__ in existing_tables:
+        voice_cutoff = current - timedelta(days=policy["voice_retention_days"])
+        counts["voice_segments"] = int(
+            db.execute(delete(VoiceCallSegment).where(VoiceCallSegment.created_at < voice_cutoff)).rowcount or 0
+        )
+
+    if AgentExecutionTrace.__tablename__ in existing_tables:
+        trace_cutoff = current - timedelta(days=policy["traces_retention_days"])
+        counts["agent_traces"] = int(
+            db.execute(delete(AgentExecutionTrace).where(AgentExecutionTrace.created_at < trace_cutoff)).rowcount or 0
+        )
+
+    if WebchatSession.__tablename__ in existing_tables:
+        wc_cutoff = current - timedelta(days=policy["webchat_retention_days"])
+        counts["webchat_sessions"] = int(
+            db.execute(
+                delete(WebchatSession).where(
+                    WebchatSession.status == "closed",
+                    WebchatSession.created_at < wc_cutoff,
+                )
+            ).rowcount or 0
+        )
+
+    if TenantRetentionPolicy.__tablename__ in existing_tables:
+        db.execute(
+            pg_insert(TenantRetentionPolicy)
+            .values(id=1, last_swept_at=current, updated_at=current)
+            .on_conflict_do_update(index_elements=["id"], set_={"last_swept_at": current})
+        )
+
+    cleanup = LogLimpieza(
+        fecha_ejecucion=current,
+        mensajes_eliminados=counts.get("messages", 0),
+        clientes_anonimizados=0,
+        solicitudes_eliminadas=0,
+        estado="exitoso",
+        detalle={"actor_id": actor_id, "counts": counts},
+        notas="Barrido automatico multi-tabla de retencion",
+    )
+    _append_chained_cleanup_log(db, cleanup)
+    create_system_event(
+        db,
+        "privacy.retention.auto_swept",
+        tenant.auth_tenant_id,
+        tenant.schema_name,
+        {"actor_id": actor_id, "counts": counts, "cleanup_log_id": cleanup.id},
+    )
+    db.commit()
+
+    for key in unlink_keys:
+        try:
+            _resolve_attachment_path(key, storage_dir=storage_dir).unlink(missing_ok=True)
+        except HTTPException:
+            pass
+    return {"skipped_legal_hold": False, "swept_at": current, "counts": counts, "cleanup_log_id": cleanup.id}
+
+
+def run_due_retention_sweeps(session_factory, *, now: datetime | None = None) -> dict:
+    """Run automated retention sweep across all active tenants (invoked periodically by operational-worker)."""
+    current = now.astimezone(UTC) if now is not None else datetime.now(UTC)
+    swept = 0
+    skipped = 0
+    failed = 0
+    with session_factory() as db:
+        runtimes = list(db.scalars(select(TenantRuntime).where(TenantRuntime.status == "active")).all())
+    for runtime in runtimes:
+        tenant = TenantContext(
+            auth_tenant_id=runtime.auth_tenant_id,
+            tenant_slug=runtime.tenant_slug,
+            schema_name=runtime.schema_name,
+            tenant_code=runtime.tenant_code,
+            plan=runtime.plan,
+            status=runtime.status,
+        )
+        try:
+            with session_factory() as db:
+                res = run_tenant_policy_retention_sweep(db, tenant, now=current)
+                if res.get("skipped_legal_hold"):
+                    skipped += 1
+                else:
+                    swept += 1
+        except Exception:
+            failed += 1
+    return {"swept": swept, "skipped_legal_hold": skipped, "failed": failed}
+
+
+def reapply_erasure_tombstones(db: Session, *, schema_name: str | None = None) -> dict:
+    """Re-anonymize any resurrected PII rows matching public.privacy_erasure_tombstones after restore (PRV-019)."""
+    stmt = select(PrivacyErasureTombstone)
+    if schema_name:
+        stmt = stmt.where(PrivacyErasureTombstone.schema_name == schema_name)
+    tombstones = list(db.scalars(stmt).all())
+    by_schema: dict[str, set[str]] = {}
+    for row in tombstones:
+        by_schema.setdefault(row.schema_name, set()).add(row.subject_hash)
+
+    reapplied_clients = 0
+    reapplied_messages = 0
+    for target_schema, hashes in by_schema.items():
+        bind_tenant_session(db, target_schema)
+        if not inspect(db.connection()).has_table(Cliente.__tablename__, schema=target_schema):
+            continue
+        for client in db.scalars(select(Cliente)).all():
+            candidates = [
+                _tombstone_hash(target_schema, "whatsapp", client.whatsapp_id) if client.whatsapp_id else "",
+                _tombstone_hash(target_schema, "email", client.email) if client.email else "",
+                _tombstone_hash(target_schema, "rut", client.rut) if client.rut else "",
+            ]
+            if any(h in hashes for h in candidates if h):
+                orig_wa = client.whatsapp_id
+                client.rut = f"anon-{hashlib.sha256(f'{target_schema}:{client.id}'.encode()).hexdigest()[:16]}"
+                client.rut_encrypted = None
+                client.rut_blind_index = None
+                client.nombre = "Anonimizado"
+                client.email = None
+                client.telefono = None
+                client.whatsapp_id = f"anon:{client.id}"
+                client.consentimiento_datos = False
+                reapplied_clients += 1
+                if orig_wa and not orig_wa.startswith("anon:"):
+                    res = db.execute(
+                        update(Message)
+                        .where(Message.whatsapp_id == orig_wa)
+                        .values(mensaje="[REDACTED_PRIVACY]", whatsapp_id=f"anon:{client.id}")
+                    )
+                    reapplied_messages += int(res.rowcount or 0)
+        db.commit()
+    return {
+        "tombstones_checked": len(tombstones),
+        "reapplied_clients": reapplied_clients,
+        "reapplied_messages": reapplied_messages,
     }
 

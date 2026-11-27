@@ -158,3 +158,22 @@ def test_prv012_greeting_and_response_include_eu_ai_act_art50_disclosure(monkeyp
     response = agent_runtime.process_stateless_agent_message("tenant-prv", request)
     assert "Inteligencia Artificial" in response.reply.content
     assert "Art. 50" in response.ai_disclosure
+
+
+def test_prv021_sensitive_or_minor_message_triggers_human_handoff_without_llm(monkeypatch):
+    def fail_if_http_called(**_kwargs):
+        raise AssertionError("External LLM must NOT be called when sensitive/minor data is detected")
+
+    settings = Settings(_env_file=None, chat_provider="groq", groq_api_key=SecretStr("synthetic-key"))
+    monkeypatch.setattr(httpx, "Client", fail_if_http_called)
+    monkeypatch.setattr(agent_runtime, "get_settings", lambda: settings)
+    request = AgentMessageRequest(
+        channel="whatsapp",
+        conversation_id="conv-prv021",
+        customer={"external_id": "cust-21"},
+        message={"content": "Hola, tengo 16 años y quiero consultar por mi diagnóstico médico."},
+    )
+    response = agent_runtime.process_stateless_agent_message("tenant-prv", request)
+    assert response.requires_human is True
+    assert response.next_step == "handoff"
+    assert response.actions[0].payload.get("reason") == "sensitive_data_detected"

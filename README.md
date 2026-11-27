@@ -17,7 +17,7 @@
 
 **KronFlow** (anteriormente *Flowkron*) es una plataforma CRM inteligente, modular y multi-tenant open source del ecosistema **BLANDSKRON**, diseñada para centralizar conversaciones de WhatsApp, gestionar contactos y oportunidades comerciales, operar propuestas tipadas de IA con contexto empresarial verificable (RAG) y gobernanza Human-in-the-Loop (HITL).
 
-- **Multi-tenant schema-per-tenant:** cada empresa opera en su propio esquema PostgreSQL 18 aislado (`tenant_schema_v21`) con auditoría, retención y flujos de privacidad (`export` / `erase` / `retention`).
+- **Multi-tenant schema-per-tenant:** cada empresa opera en su propio esquema PostgreSQL 18 aislado (`tenant_schema_v22`) con auditoría encadenada por hash, retención automática multi-tabla, tombstones post-restore y flujos ARCOP-B (`export` / `rectify` / `restrict` / `erase`).
 - **Frontend Angular 21 Zoneless:** 100% `OnPush`, Design System unificado Teal/Esmeralda/Cyan con tipografía `Sora` + `Inter` + `JetBrains Mono`, Floating Glassmorphism, modo oscuro/claro persistente, `0` violaciones WCAG 2.2 AA en `31/31` auditorías y Lighthouse Desktop `100/100/100/100` en Landing.
 - **Orquestación RAG + HITL:** outbox transaccional durable, ledger de consentimientos, control humano CAS de conversaciones, simulador RAG con trazas de fuentes y aprobación `at-most-once` de acciones IA.
 
@@ -57,6 +57,7 @@ KronFlow/
 │   ├── app/                   # KronFlow CRM Web App (Angular 21 Zoneless · OnPush)
 │   └── landing/               # Portal público y formulario CSRF (Angular 21 Zoneless · OnPush)
 ├── deploy/                    # Stack Docker Compose modular, bootstrap y smoke E2E
+├── compliance/                # Inventario declarativo PII (YAML) y plantilla DPIA ISO/IEC 29134
 ├── assets/brand/              # Logotipos, isotipos, OG card y diagramas SVG oficiales
 ├── .agents/skills/            # Skills operativas del protocolo Agents-First
 └── docs/screenshots/          # Capturas reales embebidas en README e index.html
@@ -144,6 +145,7 @@ Consulta `/health` para liveness y `/ready` para verificar configuración comple
 | [Contribución y pruebas](CONTRIBUTING.md) | Comandos locales para Angular 21, Python 3.12, Node 24 y Compose |
 | [Release readiness](RELEASE_READINESS.md) | Criterios de liberación RC/producción y checklist operativo |
 | [Historial de cambios](CHANGELOG.md) | Registro cronológico de evolución y notas de migración |
-| [Política de seguridad](SECURITY.md) | Canal privado de divulgación y superficie crítica |
-| [Terceros y licencias](THIRD_PARTY.md) | Dependencias clave, SBOM y obligaciones de redistribución |
+| [Política de seguridad](SECURITY.md) | Canal privado de divulgación, superficie crítica y runbook de incidentes (3h CSIRT / 72h GDPR) |
+| [Privacidad y cumplimiento](compliance/DPIA_TEMPLATE_ISO29134.md) | [Inventario PII](compliance/data_inventory.yaml) validado en CI y plantilla DPIA ISO/IEC 29134 / PIMS ISO/IEC 27701 |
+| [Terceros y licencias](THIRD_PARTY.md) | Dependencias clave, SBOM CycloneDX automatizado y obligaciones de redistribución |
 | [Kit de marca SVG](assets/brand/README.md) | Logotipos, paleta Teal/Esmeralda/Cyan y reglas de uso |

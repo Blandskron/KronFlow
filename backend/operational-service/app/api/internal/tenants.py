@@ -8,7 +8,7 @@ from app.core.tenant_resolver import TenantContext, ensure_runtime_is_usable
 from app.public_models.tenant_runtime import TenantRuntime
 from app.schemas.tenant import RotateIngestKeyResponse, TenantProvisionRequest, TenantProvisionResponse, TenantRuntimeResponse
 from app.services.demo_seed_service import seed_demo_tenant_data
-from app.services.tenant_provisioning_service import provision_tenant, rotate_ingest_key, set_tenant_status
+from app.services.tenant_provisioning_service import provision_tenant, purge_tenant_schema, rotate_ingest_key, set_tenant_status
 
 router = APIRouter(prefix="/internal/tenants", tags=["Internal Tenants"], dependencies=[Depends(require_internal_token)])
 
@@ -66,4 +66,13 @@ def seed_demo_data(tenant_id: int, db: Session = Depends(get_db)):
         status=runtime.status,
     )
     return seed_demo_tenant_data(db, tenant)
+
+
+@router.delete("/{tenant_id}/purge")
+def purge_tenant(tenant_id: int, db: Session = Depends(get_db)):
+    """Physically drop a tenant PostgreSQL schema after grace window (PRV-018)."""
+    result = purge_tenant_schema(db, tenant_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant runtime not found")
+    return result
 

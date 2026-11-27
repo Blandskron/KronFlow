@@ -21,10 +21,21 @@ from app.schemas.privacy_case import (
     PrivacyRestrictIn,
     RetentionSweepIn,
     RetentionSweepOut,
+    SecurityIncidentCreateIn,
+    SecurityIncidentUpdateIn,
+    SubprocessorApprovalIn,
     TenantAIPolicyOut,
     TenantAIPolicyUpdateIn,
+    TenantRetentionPolicyOut,
+    TenantRetentionPolicyUpdateIn,
 )
 from app.services.conversation_control_service import get_tenant_ai_policy, set_tenant_ai_policy
+from app.services.security_incident_service import (
+    create_security_incident,
+    list_security_incidents,
+    update_security_incident,
+)
+from app.services.subprocessor_service import list_subprocessors, set_subprocessor_approval
 from app.services.operational_read_service import (
     list_clientes,
     list_conversaciones,
@@ -39,11 +50,14 @@ from app.services.privacy_case_service import (
     create_privacy_case,
     execute_privacy_erasure,
     export_privacy_case_data,
+    get_tenant_retention_policy,
     list_privacy_cases,
     rectify_privacy_case_subject,
     run_retention_sweep,
     set_privacy_case_restriction,
+    set_tenant_retention_policy,
     transition_privacy_case,
+    verify_tenant_cleanup_chain,
 )
 from app.services.audit_event_service import list_audit_events
 
@@ -277,4 +291,114 @@ def ai_policy_update(
         memory_auto_capture=payload.memory_auto_capture,
         actor_user_id=principal.user_id,
         reason=payload.reason,
+    )
+
+
+@router.get("/retention-policy", response_model=TenantRetentionPolicyOut)
+def retention_policy_read(
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+):
+    return get_tenant_retention_policy(db, tenant)
+
+
+@router.put("/retention-policy", response_model=TenantRetentionPolicyOut)
+def retention_policy_update(
+    payload: TenantRetentionPolicyUpdateIn,
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return set_tenant_retention_policy(
+        db,
+        tenant,
+        messages_retention_days=payload.messages_retention_days,
+        memory_retention_days=payload.memory_retention_days,
+        attachments_retention_days=payload.attachments_retention_days,
+        voice_retention_days=payload.voice_retention_days,
+        traces_retention_days=payload.traces_retention_days,
+        webchat_retention_days=payload.webchat_retention_days,
+        legal_hold=payload.legal_hold,
+        legal_hold_reason=payload.legal_hold_reason,
+        actor_user_id=principal.user_id,
+    )
+
+
+@router.get("/subprocessors")
+def subprocessors_list(
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+):
+    return {"items": list_subprocessors(db, tenant)}
+
+
+@router.put("/subprocessors/{provider_key}")
+def subprocessor_approve(
+    provider_key: str,
+    payload: SubprocessorApprovalIn,
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return set_subprocessor_approval(
+        db,
+        tenant,
+        provider_key=provider_key,
+        approved=payload.approved,
+        subprocessor_list_version=payload.subprocessor_list_version,
+        actor_user_id=principal.user_id,
+    )
+
+
+@router.get("/log-limpiezas/verify-chain")
+def log_limpiezas_verify_chain(
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+):
+    return verify_tenant_cleanup_chain(db, tenant)
+
+
+@router.get("/security-incidents")
+def security_incidents_list(
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+):
+    return {"items": list_security_incidents(db, tenant)}
+
+
+@router.post("/security-incidents", status_code=201)
+def security_incidents_create(
+    payload: SecurityIncidentCreateIn,
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return create_security_incident(
+        db,
+        tenant,
+        severity=payload.severity,
+        title=payload.title,
+        summary=payload.summary,
+        affected_records_estimate=payload.affected_records_estimate,
+        detected_at=payload.detected_at,
+        containment_notes=payload.containment_notes,
+        actor_user_id=principal.user_id,
+    )
+
+
+@router.patch("/security-incidents/{incident_id}")
+def security_incidents_update(
+    payload: SecurityIncidentUpdateIn,
+    incident_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return update_security_incident(
+        db,
+        tenant,
+        incident_id,
+        status_value=payload.status,
+        containment_notes=payload.containment_notes,
+        actor_user_id=principal.user_id,
     )

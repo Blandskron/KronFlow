@@ -14,6 +14,7 @@ from app.core.config import Settings, get_settings
 from app.domain.ports.llm import ChatInputBudgetExceeded
 from app.infrastructure.external_tools.mock_tools import TYPED_PROPOSAL_ACTIONS, prepare_action
 from app.infrastructure.llm.groq import GroqClient
+from app.infrastructure.llm.pii_scrubber import detect_sensitive_data
 from app.infrastructure.llm.pricing import estimate_cost_usd
 from app.infrastructure.operational_context import OperationalContextSource, operational_context_client
 from app.infrastructure.vector_store.simple_retriever import RetrievedSource, retrieve_sources
@@ -235,6 +236,22 @@ def process_stateless_agent_message(
     is_simulation: bool = False,
 ) -> AgentMessageResponse:
     message = payload.message.content
+    sensitive = detect_sensitive_data(message)
+    if sensitive["has_sensitive_data"]:
+        logger.info(
+            "sensitive_data_detected tenant_id=%s categories=%s",
+            tenant_id,
+            ",".join(sensitive["categories"]),
+        )
+        return _reply(
+            tenant_id,
+            payload,
+            "Para proteger tus datos sensibles, no procesaremos esta información de forma automatizada. "
+            "Derivaremos tu consulta a una persona de nuestro equipo.",
+            handoff_reason="sensitive_data_detected",
+            confidence=0.0,
+            is_simulation=is_simulation,
+        )
     if payload.agent_id is None and payload.agent_revision_id is None:
         if _is_greeting(message):
             return _reply(

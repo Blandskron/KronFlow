@@ -105,3 +105,32 @@ class ScrubSession:
 def scrub_payload(payload: Any) -> tuple[Any, ScrubSession]:
     session = ScrubSession()
     return session.scrub_value(payload), session
+
+
+HEALTH_SENSITIVE_RE = re.compile(
+    r"\b(diagn[oó]stico|enfermedad|medicamento|isapre|fonasa|ficha\s+cl[ií]nica|cirug[ií]a|"
+    r"alergia|embarazo|psiquiatr[ií]a|salud\s+mental|medical\s+record|diagnosis|prescription)\b",
+    re.IGNORECASE,
+)
+MINOR_SENSITIVE_RE = re.compile(
+    r"\b(menor\s+de\s+edad|tengo\s+1[0-7]\s+a[nñ]os|soy\s+menor|mi\s+hij[oa]\s+de\s+\d{1,2}\s+a[nñ]os|underage)\b",
+    re.IGNORECASE,
+)
+
+
+def detect_sensitive_data(text: str) -> dict[str, Any]:
+    """Detect special-category PII (health, payment cards, minors) to trigger human review (PRV-021)."""
+    if not text:
+        return {"has_sensitive_data": False, "categories": [], "requires_human_review": False}
+    categories: list[str] = []
+    if any(is_valid_luhn_pan(m.group(0)) for m in CARD_CANDIDATE_RE.finditer(text)):
+        categories.append("financial_card")
+    if HEALTH_SENSITIVE_RE.search(text):
+        categories.append("health")
+    if MINOR_SENSITIVE_RE.search(text):
+        categories.append("minor")
+    return {
+        "has_sensitive_data": bool(categories),
+        "categories": categories,
+        "requires_human_review": bool(categories),
+    }

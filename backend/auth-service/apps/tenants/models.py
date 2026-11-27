@@ -8,6 +8,7 @@ class Tenant(models.Model):
         ACTIVE = "active", "Activo"
         SUSPENDED = "suspended", "Suspendido"
         ARCHIVED = "archived", "Archivado"
+        PENDING_PURGE = "pending_purge", "Pendiente de purga"
 
     class Plan(models.TextChoices):
         FREE = "free", "Free"
@@ -47,6 +48,8 @@ class Tenant(models.Model):
     subscription_provider = models.CharField(max_length=64, blank=True)
     subscription_external_id = models.CharField(max_length=160, blank=True)
     subscription_current_period_end = models.DateTimeField(null=True, blank=True)
+    pending_purge_at = models.DateTimeField(null=True, blank=True)
+    purge_after = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

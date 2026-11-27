@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs';
 
-// This advisory has no patched npm release. Angular uses it only during
-// trusted builds with repository-owned glob patterns. Reassess by this date.
-const reviewed = new Map([
-  ['https://github.com/advisories/GHSA-fc5q-39xc-vjpf', { package: 'picomatch', expires: '2026-12-18' }],
-]);
+// No temporary development advisory exceptions are currently active (PRV-027).
+// Any future exception requires explicit security review and an expiration date.
+const reviewed = new Map();
 
 const report = JSON.parse(readFileSync(0, 'utf8'));
 if (report.error || report.auditReportVersion !== 2 || !report.vulnerabilities || !report.metadata?.vulnerabilities) {

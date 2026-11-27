@@ -1,21 +1,35 @@
 # Release readiness
 
-KronFlow (formerly Flowkron) Community v1.0 (`tenant_schema_v21`, Apache-2.0) has completed all functional implementation and passed full CI validation on `main` (builds, PostgreSQL integration suites, repeatable `v3–v21` upgrade matrix, contract validators, security audits, and standard/demo Compose smoke tests).
+KronFlow (formerly Flowkron) Community v1.0 (`tenant_schema_v22`, Apache-2.0) has completed all functional and privacy/security compliance implementation (Cycles 0–9, `PRV-001`–`PRV-028`) and enforces automated CI validation on `main` (builds, PostgreSQL integration suites, repeatable `v3–v22` upgrade matrix, `privacy-compliance` quality gates, CycloneDX SBOMs, security audits, and standard/demo Compose smoke tests).
 
-See [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for service boundaries, invariants and CI validation commands.
+See [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [compliance/DPIA_TEMPLATE_ISO29134.md](compliance/DPIA_TEMPLATE_ISO29134.md) for service boundaries, invariants, incident SLAs, DPIA templates, and CI validation commands.
 
 ## Validate the release candidate
 
-- Run [Validate](.github/workflows/validate.yml) from a clean checkout. It builds the SPAs, runs service tests and contract checks, audits dependencies and Git history, and starts both Compose variants with isolated, synthetic instances.
+- Run [Validate](.github/workflows/validate.yml) from a clean checkout. It builds the SPAs, runs service tests, contract checks, and the dedicated `privacy-compliance` job (PII inventory parity, `pii_scrubber`, Nginx CSP/HSTS, crypto/revocation, ARCOP-B, hash-chain integrity, and incident SLAs), audits dependencies and Git history (`gitleaks`, `pip-audit`, `npm audit`), uploads CycloneDX SBOM artifacts, and starts both Compose variants with isolated, synthetic instances.
 - The demo smoke covers CRM and Django admin logins, the demo workspace, document upload and simulation, contact submission, rejection of refresh tokens used as access credentials, and suspension/reactivation. The standard smoke verifies that no superuser exists on first start, uses the console verification email, and creates a new login and workspace.
 - Verify the exact archive contains only intended versioned files. Never publish `.env`, signing keys, WhatsApp credentials, local logs, backups or databases. Use [the private security form](https://github.com/Blandskron/KronFlow/security/advisories/new) to report problems.
-- Both SPA production dependency trees are audited separately from the development toolchain. CI temporarily tracks [the unpatched development advisory for picomatch](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) through an exception scoped to that advisory and expiring on 18 December 2026. Critical and other high-severity findings still fail. Do not expose Angular development servers or accept arbitrary glob patterns in build jobs. Remove the exception when a compatible fix is available.
-- Review [third-party licenses and redistribution](THIRD_PARTY.md) and generate inventory and notices for the exact artifact. A preview tag can ship source only. The Baileys image needs a separate distribution review.
+- Both SPA production and development dependency trees are audited with **zero active advisory exceptions** (`.github/scripts/check-dev-audit.mjs`). Any high or critical advisory fails CI. CycloneDX SBOM artifacts are generated automatically on every push/PR (`PRV-027`).
+- Review [third-party licenses and redistribution](THIRD_PARTY.md) and verify the generated SBOM artifacts against the exact release archive. A preview tag can ship source only. The Baileys image needs a separate distribution review.
 
-## Before hosting or announcing a stable release
+## Encrypted Backup/Restore & Tombstone Reconciliation Drill (`FK-15` / `PRV-028`)
 
-- Validate a backup restore and a migration in an isolated deployment. Ensure the IAM private PEM is never mounted into validators. For installations previously running the vulnerable version, inspect archived/deleted workspaces for orphaned Operational runtimes and WhatsApp sessions before re-exposing services. Review old role assignments and invitations, and rotate the JWT key if it may have been exposed.
-- Configure TLS, exposed origins and hosts, secrets, Redis/PostgreSQL grants, telemetry and a recovery process. The per-process admission controls complement ingress limits; they do not constitute distributed rate limiting.
-- Refresh credentials no longer authenticate to backends. Previously issued access JWTs can keep their claims until expiration in services that verify them locally; plan logout/revocation and role changes with the configured access lifetime in mind.
-- Confirm sandbox delivery with authorized Resend, Google and Groq configurations. Test a dedicated WhatsApp account for linking, automatic replies, consent withdrawal, overload and disconnect. WhatsApp turns become durable after Operational admits them. Requests still in the connector's in-memory queue can be lost on restart (see [backend/baileys-services/README.md](backend/baileys-services/README.md)).
-- Use deployment-specific privacy and retention terms. Workspace deletion stops integrations; it is not a purge of the separately stored CRM data. Define who may authorize retention, export and deletion of that data.
+Automated verification runs in `backend/operational-service/tests/test_operational_restore.py` (`test_restore_reapplies_erasure_tombstones_with_zero_pii_resurrection`) against PostgreSQL 18 in CI. Before promoting a production deployment, operators must execute and archive an isolated restore drill recording commit SHA, dump checksum, measured RPO/RTO, and zero PII resurrection:
+
+1. Create an encrypted PostgreSQL custom dump (`pg_dump --format=custom`) and store its SHA-256 checksum separately from the encryption key.
+2. Restore into an isolated target database (`pg_restore --exit-on-error --single-transaction --no-owner --no-privileges`).
+3. Reapply the post-backup erasure ledger so previously erased subjects are never resurrected:
+   ```sh
+   python backend/operational-service/scripts/reapply_erasure_tombstones.py
+   ```
+4. Verify audit chain integrity via `GET /api/v1/operational/log-limpiezas/verify-chain` and confirm `reapplied_clients` / zero residual PII.
+
+## External Go/No-Go Gates Before Production (`PRV-029` / `QG-9`)
+
+Technical gates `QG-0` through `QG-8` are enforced in code and CI. The following organizational, legal, and external sandbox gates must be completed and archived by the deployment operator outside the public repository prior to announcing a stable production service:
+
+- [ ] **Legal & Policy Sign-off:** Legal review and publication of deployment-specific Privacy Policy (layered ISO/IEC 29184 notice in `frontend/landing`) and Terms of Service, plus designation of DPO (`dpo_contact_email`) and jurisdiction (`privacy_jurisdiction`) per tenant.
+- [ ] **DPIA Approval:** Completed and signed [DPIA Template (`ISO/IEC 29134:2023`)](compliance/DPIA_TEMPLATE_ISO29134.md) covering conversational AI, Voice/Twilio, omnichannel messaging, and international transfers.
+- [ ] **Subprocessor Contracts (DPAs / SCCs / TIAs):** Executed Data Processing Agreements, Standard Contractual Clauses, and Transfer Impact Assessments for enabled subprocessors (Groq, Resend, Meta, Twilio, Google, Shopify, Mercado Pago, HubSpot) before enabling them in `/api/v1/operational/subprocessors`.
+- [ ] **External Sandbox Homologation (`FK-14`):** Validated delivery and opt-out flows with authorized Resend, Google, Twilio, and Groq accounts, plus a dedicated authorized WhatsApp account testing linking, automatic replies, consent withdrawal, overload, and disconnect (see [backend/baileys-services/README.md](backend/baileys-services/README.md)).
+- [ ] **Infrastructure Hardening & `FK-15` Drill Minutes:** Configured TLS, exposed origins/hosts, secret rotation, Redis/PostgreSQL grants, ingress rate limits, JWT key isolation (IAM private PEM never mounted into validators), and signed technical minutes of the isolated `FK-15` backup/restore + tombstone drill.

@@ -50,8 +50,17 @@ class RedisWebhookEventStore:
         await self.redis.aclose()
 
 
-def build_webhook_event_store(redis_url: str) -> WebhookEventStore:
-    return RedisWebhookEventStore(redis_url) if redis_url else MemoryWebhookEventStore()
+def build_webhook_event_store(
+    redis_url: str,
+    *,
+    ttl_seconds: int = 604_800,
+    allow_memory_fallback: bool = True,
+) -> WebhookEventStore:
+    if redis_url:
+        return RedisWebhookEventStore(redis_url, ttl_seconds=ttl_seconds)
+    if not allow_memory_fallback:
+        raise RuntimeError("REDIS_URL is required for distributed webhook deduplication in production")
+    return MemoryWebhookEventStore()
 
 
 def verify_resend_signature(body: bytes, secret: str, svix_id: str | None, timestamp: str | None, signature: str | None) -> bool:

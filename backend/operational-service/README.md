@@ -1,6 +1,6 @@
 # KronFlow Operational Service (`backend/operational-service`)
 
-Microservicio FastAPI de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) que mantiene datos operacionales aislados en un schema PostgreSQL 18 por tenant (`tenant_schema_v21`, migraciones repetibles `v3–v21`). Expone lectura/escritura para el CRM, bandeja HITL, pipeline comercial, plataforma multi-agente, workflows DAG, Tool Hub/MCP, webchat, comercio/voz, campañas y privacidad, ingesta omnicanal durable y endpoints internos de aprovisionamiento, migración y contexto RAG.
+Microservicio FastAPI de **KronFlow — Intelligent CRM** (*By BLANDSKRON*) que mantiene datos operacionales aislados en un schema PostgreSQL 18 por tenant (`tenant_schema_v22`, migraciones repetibles `v3–v22`). Expone lectura/escritura para el CRM, bandeja HITL, pipeline comercial, plataforma multi-agente, workflows DAG, Tool Hub/MCP, webchat, comercio/voz, campañas y privacidad ARCOP-B, ingesta omnicanal durable y endpoints internos de aprovisionamiento, migración y contexto RAG.
 
 ## Capacidades reales
 
@@ -63,6 +63,7 @@ python scripts/migrate_all_tenants.py
 python scripts/rotate_ingest_key.py 1
 python scripts/validate_tenant_schema.py
 python scripts/validate_demo_seed.py
+python scripts/reapply_erasure_tombstones.py
 ```
 
 Los scripts de validacion crean schemas temporales dentro de la base configurada; ejecutalos unicamente en una base descartable/autorizada.

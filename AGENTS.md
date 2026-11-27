@@ -1,6 +1,6 @@
 # AGENTS.md — Protocolo Agents-First, Human-Friendly (KronFlow)
 
-Fuente única de contexto, reglas operativas y validación para agentes de IA y desarrolladores humanos en **KronFlow — Intelligent CRM** (*By BLANDSKRON*, Apache-2.0, `tenant_schema_v21`).
+Fuente única de contexto, reglas operativas y validación para agentes de IA y desarrolladores humanos en **KronFlow — Intelligent CRM** (*By BLANDSKRON*, Apache-2.0, `tenant_schema_v22`).
 
 > **Regla de oro:** El código ejecutable, los esquemas OpenAPI/SQLAlchemy/Django y `.github/workflows/validate.yml` prevalecen siempre sobre cualquier resumen textual. No asumas capacidades no verificadas en el código.
 
@@ -14,7 +14,7 @@ Cada microservicio backend, cada frontend y el stack de despliegue mantienen **u
 | --- | --- | --- | --- | --- |
 | Raíz / Arquitectura | `/` | Monorepo | — | [README.md](README.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [RELEASE_READINESS.md](RELEASE_READINESS.md) |
 | IAM & Tenants | `backend/auth-service` | Django 5 / DRF / PG / Redis | `8000` | [backend/auth-service/README.md](backend/auth-service/README.md) |
-| CRM & Operaciones | `backend/operational-service` | FastAPI / PG 18 (`tenant_schema_v21`) + Worker | `8001` | [backend/operational-service/README.md](backend/operational-service/README.md) |
+| CRM & Operaciones | `backend/operational-service` | FastAPI / PG 18 (`tenant_schema_v22`) + Worker | `8001` | [backend/operational-service/README.md](backend/operational-service/README.md) |
 | Runtime IA & RAG | `backend/agent-core` | FastAPI / RAG / Groq opcional | `8002` | [backend/agent-core/README.md](backend/agent-core/README.md) |
 | Correo transaccional | `backend/mail-service` | FastAPI / Redis / Resend HTTPS | `8000` (interno) | [backend/mail-service/README.md](backend/mail-service/README.md) |
 | WhatsApp Lab | `backend/baileys-services` | Node 24 / TypeScript / Baileys | `3001` (interno) | [backend/baileys-services/README.md](backend/baileys-services/README.md) |
@@ -29,7 +29,7 @@ Cada microservicio backend, cada frontend y el stack de despliegue mantienen **u
 1. **Aislamiento multi-tenant (`schema_translate_map`):**
    - Nunca aceptar `schema_name` desde requests públicos o del frontend; `operational-service` resuelve el schema desde el JWT validado y `TenantRuntime` activo.
    - Nunca interpolar identificadores SQL sin `sanitize_schema_name` y quoting seguro.
-   - Toda mutación sobre modelos tenant debe mantener migraciones repetibles `v3–v21` (o incrementar `TENANT_MIGRATION_VERSION` con prueba en `test_tenant_upgrade_matrix.py`).
+   - Toda mutación sobre modelos tenant debe mantener migraciones repetibles `v3–v22` (o incrementar `TENANT_MIGRATION_VERSION` con prueba en `test_tenant_upgrade_matrix.py`).
 2. **Tres fronteras estrictas de autenticación:**
    - **Browser → APIs:** `Authorization: Bearer <JWT RS256>` (nunca aceptar refresh tokens como access tokens).
    - **Ingesta de canales → Operational:** `X-Tenant-Code` + `X-Ingest-Key` (o firma HMAC-SHA256 verificada por ruta de webhook).

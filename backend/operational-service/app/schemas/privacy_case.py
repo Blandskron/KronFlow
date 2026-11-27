@@ -140,3 +140,55 @@ class TenantAIPolicyOut(BaseModel):
     updated_at: datetime | None = None
     cancelled_ai_turns: int = 0
 
+
+class TenantRetentionPolicyUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    messages_retention_days: int = 180
+    memory_retention_days: int = 90
+    attachments_retention_days: int = 90
+    voice_retention_days: int = 90
+    traces_retention_days: int = 90
+    webchat_retention_days: int = 90
+    legal_hold: bool = False
+    legal_hold_reason: str | None = None
+
+
+class TenantRetentionPolicyOut(BaseModel):
+    messages_retention_days: int = 180
+    memory_retention_days: int = 90
+    attachments_retention_days: int = 90
+    voice_retention_days: int = 90
+    traces_retention_days: int = 90
+    webchat_retention_days: int = 90
+    legal_hold: bool = False
+    legal_hold_reason: str | None = None
+    last_swept_at: datetime | None = None
+    updated_by: str | None = None
+    updated_at: datetime | None = None
+
+
+class SubprocessorApprovalIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    approved: bool
+    subprocessor_list_version: str = "2026-11-v1"
+
+
+class SecurityIncidentCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    severity: Literal["low", "medium", "high", "critical"]
+    title: str
+    summary: str
+    affected_records_estimate: int = 0
+    detected_at: datetime | None = None
+    containment_notes: str | None = None
+
+
+class SecurityIncidentUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["open", "contained", "notified", "closed"] | None = None
+    containment_notes: str | None = None
+

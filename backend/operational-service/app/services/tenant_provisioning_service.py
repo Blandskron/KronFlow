@@ -322,6 +322,11 @@ def upgrade_privacy_policy_schema(db: Session, schema_name: str) -> None:
         "subject_email TEXT",
     ):
         db.execute(text(f"ALTER TABLE {quoted_schema}.solicitudes_derechos ADD COLUMN IF NOT EXISTS {col_ddl}"))
+    for col_ddl in (
+        "prev_hash VARCHAR(64)",
+        "entry_hash VARCHAR(64)",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.log_limpiezas ADD COLUMN IF NOT EXISTS {col_ddl}"))
 
 
 def apply_tenant_schema(db: Session, schema_name: str) -> None:
@@ -494,6 +499,37 @@ def set_tenant_status(db: Session, auth_tenant_id: int, status: str) -> TenantRu
     db.commit()
     db.refresh(runtime)
     return runtime
+
+
+def purge_tenant_schema(db: Session, auth_tenant_id: int) -> dict | None:
+    """Physically drop a tenant schema (DROP SCHEMA ... CASCADE) and record destruction certificate (PRV-018)."""
+    _lock_runtime_transition(db, auth_tenant_id)
+    runtime = db.scalar(select(TenantRuntime).where(TenantRuntime.auth_tenant_id == auth_tenant_id).with_for_update())
+    if not runtime:
+        return None
+    schema_name = sanitize_schema_name(runtime.schema_name)
+    purged_at = datetime.now(UTC)
+    db.connection().execute(DropSchema(schema_name, cascade=True, if_exists=True))
+    create_system_event(
+        db,
+        "tenant.purged",
+        runtime.auth_tenant_id,
+        schema_name,
+        {
+            "tenant_slug": runtime.tenant_slug,
+            "schema_name": schema_name,
+            "purged_at": purged_at.isoformat(),
+            "certificate": f"purge:{runtime.auth_tenant_id}:{schema_name}:{int(purged_at.timestamp())}",
+        },
+    )
+    db.delete(runtime)
+    db.commit()
+    return {
+        "auth_tenant_id": auth_tenant_id,
+        "schema_name": schema_name,
+        "purged": True,
+        "purged_at": purged_at.isoformat(),
+    }
 
 
 def rotate_ingest_key(db: Session, auth_tenant_id: int) -> tuple[TenantRuntime | None, str | None]:

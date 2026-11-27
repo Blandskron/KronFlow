@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 60
     enable_legacy_mail_endpoint: bool = False
     redis_url: str = ""
+    webhook_dedup_ttl_seconds: int = 604_800
 
     @property
     def senders(self) -> dict[str, SenderConfig]:

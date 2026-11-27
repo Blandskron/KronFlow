@@ -4,10 +4,12 @@ import argparse
 import logging
 import signal
 import threading
+import time
 
 from app.core.config import get_settings
 from app.core.database import SessionLocal, create_public_tables
 from app.services.outbox_dispatcher import StdlibOutboxTransport, run_worker_cycle
+from app.services.privacy_case_service import run_due_retention_sweeps
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -34,10 +36,18 @@ def main(argv: list[str] | None = None) -> int:
         signal.signal(signal.SIGTERM, _request_stop)
 
     logger.info("operational-worker started (once=%s, poll=%.2fs)", args.once, settings.worker_poll_interval_seconds)
+    last_retention_monotonic = 0.0
+    retention_interval = 3600.0
     while not stop_event.is_set():
         summary = run_worker_cycle(SessionLocal, settings=settings, transport=transport)
         if summary["claimed"] or summary["promoted_campaigns"] or summary["tenants_failed"]:
             logger.info("worker_cycle %s", summary)
+        now_mono = time.monotonic()
+        if args.once or (now_mono - last_retention_monotonic) >= retention_interval:
+            ret_summary = run_due_retention_sweeps(SessionLocal)
+            last_retention_monotonic = now_mono
+            if ret_summary["swept"] or ret_summary["failed"]:
+                logger.info("retention_sweep %s", ret_summary)
         if args.once:
             break
         stop_event.wait(max(0.1, settings.worker_poll_interval_seconds))

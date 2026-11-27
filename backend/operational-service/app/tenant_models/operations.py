@@ -20,6 +20,8 @@ ACTIVE_TENANT_TABLE_NAMES = {
     "conversation_controls",
     "conversation_control_events",
     "tenant_ai_policies",
+    "tenant_retention_policies",
+    "tenant_subprocessor_approvals",
     "pipeline_stages",
     "opportunities",
     "opportunity_activities",
@@ -254,6 +256,8 @@ class LogLimpieza(Base):
     estado: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'exitoso'"))
     detalle: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     notas: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prev_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entry_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Conversation(Base):

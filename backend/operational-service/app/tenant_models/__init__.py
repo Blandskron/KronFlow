@@ -33,6 +33,7 @@ from app.tenant_models.post_v1 import (
     WebhookDelivery,
     WebhookSubscription,
 )
+from app.tenant_models.privacy_lifecycle import TenantRetentionPolicy, TenantSubprocessorApproval
 from app.tenant_models.whatsapp_consent import WhatsAppConsentState
 from app.tenant_models.whatsapp_turn import WhatsAppSendEvidence, WhatsAppTurn, WhatsAppTurnJob
 from app.tenant_models.workflows import (
@@ -141,6 +142,8 @@ __all__ = [
     "ReglaNegocio",
     "SolicitudDerecho",
     "TenantAgentProfile",
+    "TenantRetentionPolicy",
+    "TenantSubprocessorApproval",
     "WorkflowDefinition",
     "WorkflowRevision",
     "WorkflowRun",

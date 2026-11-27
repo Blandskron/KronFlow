@@ -20,4 +20,5 @@ docker compose -f compose.demo.yaml --env-file .env.example config --quiet
 ```
 
 - **Smoke E2E descartable:** `docker compose -f compose.yaml -p kronflow-smoke up --build --wait --wait-timeout 180 && python deploy/bootstrap/smoke.py kronflow-smoke --standard` (y repetir con `compose.demo.yaml` sin `--standard`; desmontar con `docker compose ... -p kronflow-smoke down`).
+- **Restauración de backups y tombstones (`FK-15` / `PRV-028`):** tras cualquier `pg_restore`, ejecuta `python backend/operational-service/scripts/reapply_erasure_tombstones.py` para reaplicar `public.privacy_erasure_tombstones` y garantizar cero resurrección de PII suprimida.
 - **Seguridad:** nunca ejecutes `docker compose config` sin `--quiet` en logs compartidos (puede exponer secretos), nunca montes la clave privada JWT en `operational-service` o `agent-core`, y recuerda que los defaults incluidos están pensados para desarrollo en loopback. Antes de producción revisa [RELEASE_READINESS.md](../RELEASE_READINESS.md), [AGENTS.md](../AGENTS.md) y [.agents/skills/compose-deploy-and-ci/SKILL.md](../.agents/skills/compose-deploy-and-ci/SKILL.md).

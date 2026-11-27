@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Privacy & Security Compliance Program (`tenant_schema_v22`, repeatable upgrade `v3–v22`, `PRV-001`–`PRV-028`):**
+  - Declarative PII inventory (`compliance/data_inventory.yaml`) with automated CI parity checks across `operational-service` and `auth-service`, plus tenant privacy profile (`privacy_jurisdiction`, `dpo_contact_email`, `privacy_policy_url`).
+  - Zero-residue `/erase` across all derived CRM/AI/voice/attachment tables with email + WhatsApp suppressions, Privacy-by-Default AI/MCP egress controls (`allow_external_ai_transfer=false`, `memory_auto_capture=false`), and pre-egress PII scrubber + sensitive-data detection (health, minors, Luhn PAN) with automatic HITL handoff.
+  - Strict Nginx CSP/HSTS headers, Redis JWT fast revocation across all backends, `MultiFernet` envelope encryption + HMAC-SHA256 blind index for Chilean RUT, optional `HttpOnly` refresh cookie, and distributed Redis webhook deduplication in `mail-service`.
+  - ISO/IEC TS 27560:2023 consent receipts, layered ISO/IEC 29184:2020 privacy notice in Landing, EU AI Act Art. 50 AI disclosure, full ARCOP-B DSAR workflows (multichannel create, portable export, `/rectify`, `/restrict`, IAM self-service DSAR), and lead scoring explainability + human review.
+  - Automated multi-table retention policies (`legal_hold`, worker sweeps), IAM retention/purge (`PENDING_PURGE`), PII log scrubbing filters, irreversible erasure tombstones + post-restore reconciliation (`scripts/reapply_erasure_tombstones.py` & `FK-15` drill), subprocessor approval governance, SHA-256 hash-chained `log_limpiezas` with `/verify-chain`, tenant-scoped `security_incidents` with 3h CSIRT (Ley 21.663) / 72h GDPR Art. 33 SLAs + `SECURITY.md` runbook, `compliance/DPIA_TEMPLATE_ISO29134.md`, dedicated `privacy-compliance` CI job, retirement of the temporary `picomatch` exception, and automated CycloneDX SBOM artifacts.
 - **Platform Phases 1–8 (`tenant_schema_v17`–`v21`, repeatable upgrade `v3–v21`):**
   - Durable Outbox worker (`worker.py` + `outbox_dispatcher.py`), scheduled campaign auto-promotion, opaque self-service unsubscribe tokens, and end-to-end delivery dispatch.
   - Multi-agent platform with immutable revisions, scoped RAG/rules/traces, persistent setup-chat, bounded specialist handoff with HITL fallback, and `/app/agents` + `/app/conversations` UI.

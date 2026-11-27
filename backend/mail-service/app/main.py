@@ -28,7 +28,11 @@ async def lifespan(app: FastAPI):
     validate_runtime_settings(settings)
     client = httpx.AsyncClient(base_url=settings.resend_base_url.rstrip("/"), timeout=settings.resend_timeout_seconds)
     store = build_idempotency_store(settings.redis_url)
-    webhook_store = build_webhook_event_store(settings.redis_url)
+    webhook_store = build_webhook_event_store(
+        settings.redis_url,
+        ttl_seconds=settings.webhook_dedup_ttl_seconds,
+        allow_memory_fallback=settings.app_env.lower() != "production",
+    )
     app.state.settings = settings
     app.state.provider = ResendEmailProvider(settings, client)
     app.state.idempotency = store

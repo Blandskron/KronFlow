@@ -74,7 +74,9 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - kronflow-network
+      kronflow-network:
+        aliases:
+          - flowkron-auth-service
 
   operational-service:
     build:
@@ -108,7 +110,9 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - kronflow-network
+      kronflow-network:
+        aliases:
+          - flowkron-operational-service
 
   operational-worker:
     build:
@@ -178,7 +182,9 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - kronflow-network
+      kronflow-network:
+        aliases:
+          - flowkron-agent-core
 
 networks:
   kronflow-network:

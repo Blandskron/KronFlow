@@ -20,7 +20,9 @@ services:
       retries: 20
     restart: unless-stopped
     networks:
-      - kronflow-network
+      kronflow-network:
+        aliases:
+          - flowkron-postgres
 
   redis:
     image: redis:7
@@ -35,7 +37,9 @@ services:
       retries: 20
     restart: unless-stopped
     networks:
-      - kronflow-network
+      kronflow-network:
+        aliases:
+          - flowkron-redis
 
 volumes:
   kronflow-postgres-18-cluster:

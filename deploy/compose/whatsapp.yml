@@ -19,7 +19,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - kronflow-network
+      kronflow-network:
+        aliases:
+          - flowkron-baileys-services
 
 volumes:
   baileys-lab-sessions:

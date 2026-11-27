@@ -12,8 +12,11 @@ from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.core.crypto import decrypt_value, encrypt_value
+from app.core.pii_scrubber import scrub_payload
 from app.core.tenant_resolver import TenantContext
 from app.schemas.mcp_client import RemoteMcpInvokeIn, RemoteMcpServerCreateIn
+from app.services.conversation_control_service import is_external_ai_transfer_allowed_in_tx
 from app.services.post_v1_service import _validate_webhook_url
 from app.services.tenant_data import bind_tenant_session
 from app.services.tenant_provisioning_service import create_system_event
@@ -109,7 +112,7 @@ def register_remote_mcp_server(
         name=payload.name.strip()[:160],
         base_url=safe_url,
         auth_header_name=payload.auth_header_name.strip()[:64],
-        auth_token=clean_token,
+        auth_token=encrypt_value(clean_token) if clean_token else None,
         auth_fingerprint=fingerprint,
         allowed_tools=allowed,
         discovered_tools=[],
@@ -165,7 +168,10 @@ def revoke_remote_mcp_server(
 def _auth_headers(server: RemoteMcpServer) -> dict[str, str]:
     if not server.auth_token:
         return {}
-    return {server.auth_header_name: server.auth_token}
+    token = decrypt_value(server.auth_token)
+    if not token:
+        return {}
+    return {server.auth_header_name: token}
 
 
 def discover_remote_mcp_tools(
@@ -186,6 +192,19 @@ def discover_remote_mcp_tools(
     if not row.is_active or row.revoked_at is not None:
         db.rollback()
         raise HTTPException(status_code=403, detail="Remote MCP server is revoked or inactive")
+    if not is_external_ai_transfer_allowed_in_tx(db):
+        create_system_event(
+            db,
+            "mcp_client.egress.blocked",
+            tenant.auth_tenant_id,
+            tenant.schema_name,
+            {"server_id": row.id, "server_key": row.server_key, "action": "discover"},
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="External AI/MCP data transfer is disabled by tenant privacy policy",
+        )
 
     _validate_webhook_url(row.base_url)
     sender = transport or _default_jsonrpc_transport
@@ -222,6 +241,25 @@ def invoke_remote_mcp_tool(
     if not row.is_active or row.revoked_at is not None:
         db.rollback()
         raise HTTPException(status_code=403, detail="Remote MCP server is revoked or inactive")
+    if not is_external_ai_transfer_allowed_in_tx(db):
+        create_system_event(
+            db,
+            "mcp_client.egress.blocked",
+            tenant.auth_tenant_id,
+            tenant.schema_name,
+            {
+                "server_id": row.id,
+                "server_key": row.server_key,
+                "tool_name": payload.tool_name.strip(),
+                "actor_user_id": actor_user_id,
+                "action": "invoke",
+            },
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="External AI/MCP data transfer is disabled by tenant privacy policy",
+        )
 
     tool_name = payload.tool_name.strip()
     allowed_set = set(row.allowed_tools or [])
@@ -255,6 +293,7 @@ def invoke_remote_mcp_tool(
         }
 
     _validate_webhook_url(row.base_url)
+    scrubbed_arguments, scrub_session = scrub_payload(dict(payload.arguments or {}))
     sender = transport or _default_jsonrpc_transport
     rpc_res = sender(
         row.base_url,
@@ -263,7 +302,7 @@ def invoke_remote_mcp_tool(
             "jsonrpc": "2.0",
             "id": f"inv-{idem_key[:32]}",
             "method": "tools/call",
-            "params": {"name": tool_name, "arguments": dict(payload.arguments or {})},
+            "params": {"name": tool_name, "arguments": scrubbed_arguments},
         },
     )
     if rpc_res.get("error"):

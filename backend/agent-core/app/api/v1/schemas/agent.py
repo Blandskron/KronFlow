@@ -71,6 +71,12 @@ class SourcePayload(BaseModel):
     uri: str | None = None
 
 
+AI_DISCLOSURE_NOTICE = (
+    "Estás interactuando con un asistente automatizado de Inteligencia Artificial (EU AI Act Art. 50). "
+    "Puedes solicitar atención humana en cualquier momento."
+)
+
+
 class AgentMessageResponse(BaseModel):
     tenant_id: str
     conversation_id: str
@@ -82,3 +88,4 @@ class AgentMessageResponse(BaseModel):
     next_step: NextStep
     agent_id: int | None = None
     agent_revision_id: int | None = None
+    ai_disclosure: str = AI_DISCLOSURE_NOTICE

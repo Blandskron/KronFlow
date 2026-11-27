@@ -3,7 +3,7 @@ from django.urls import path
 from apps.security.views import ClientCredentialsView, EmailConfirmView, EmailResendView, ForgotPasswordView, InitialPasswordView, JwksView, MfaConfirmView, MfaSetupView, MfaVerifyView, ResetPasswordView, TokenIntrospectionView
 
 from .public_auth import AuthOptionsView, GoogleLoginView, SignupCompleteView, SignupView
-from .views import ChangePasswordView, LoginView, LogoutAllView, LogoutView, MeView, ProfileAvatarView, ProfileView, TaggedTokenRefreshView, TaggedTokenVerifyView
+from .views import ChangePasswordView, LoginView, LogoutAllView, LogoutView, MeEraseView, MeExportView, MeView, ProfileAvatarView, ProfileView, TaggedTokenRefreshView, TaggedTokenVerifyView
 
 urlpatterns = [
     path("options/", AuthOptionsView.as_view(), name="auth-options"),
@@ -18,6 +18,8 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("logout-all/", LogoutAllView.as_view(), name="auth-logout-all"),
     path("me/", MeView.as_view(), name="auth-me"),
+    path("me/export/", MeExportView.as_view(), name="auth-me-export"),
+    path("me/erase/", MeEraseView.as_view(), name="auth-me-erase"),
     path("profile/", ProfileView.as_view(), name="auth-profile"),
     path("profile/avatar/", ProfileAvatarView.as_view(), name="auth-profile-avatar"),
     path("password/change/", ChangePasswordView.as_view(), name="password-change"),

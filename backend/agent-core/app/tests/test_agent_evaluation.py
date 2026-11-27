@@ -35,6 +35,12 @@ def test_versioned_agent_evaluation(case, monkeypatch):
     settings = Settings(_env_file=None, chat_provider="local" if provider == "local" else "groq",
                         groq_api_key="synthetic", chat_input_max_chars=case.get("budget", 12000))
     monkeypatch.setattr(agent_runtime, "get_settings", lambda: settings)
+    if provider != "local":
+        monkeypatch.setattr(
+            agent_runtime,
+            "_safe_load_ai_policy",
+            lambda _tenant_id: {"ai_enabled": True, "allow_external_ai_transfer": True, "memory_auto_capture": False},
+        )
 
     def retrieve(authenticated_tenant, question):
         assert retrieval != "skip"

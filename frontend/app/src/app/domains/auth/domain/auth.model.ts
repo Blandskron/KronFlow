@@ -78,6 +78,9 @@ export interface Tenant {
   tax_id?: string;
   logo_url?: string;
   country?: string;
+  privacy_jurisdiction?: 'CL' | 'EU' | 'LATAM';
+  dpo_contact_email?: string;
+  privacy_policy_url?: string;
   status: string;
   plan: string;
   subscription_status: string;
@@ -154,6 +157,9 @@ export interface TenantUpdateRequest {
   tax_id?: string;
   logo_url?: string;
   country?: string;
+  privacy_jurisdiction?: 'CL' | 'EU' | 'LATAM';
+  dpo_contact_email?: string;
+  privacy_policy_url?: string;
 }
 
 export interface MeResponse {

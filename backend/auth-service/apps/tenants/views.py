@@ -16,6 +16,7 @@ from apps.audit.services import audit
 from apps.accounts.tokens import issue_tokens
 from apps.rbac.models import TenantRole
 from apps.rbac.services import assert_delegable, permissions_for_membership, roles_for_membership
+from apps.sessions.revocation import revoke_tenant_tokens, revoke_user_tokens
 from apps.shared.permissions import HasTenantPermission
 from apps.shared.responses import api_error, ok
 from apps.shared.image_uploads import absolute_media_url, save_uploaded_image
@@ -241,6 +242,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             return api_error(status=503, error_code="WORKSPACE_UNAVAILABLE", detail="No pudimos detener el espacio operativo y su conexión.")
         tenant.status = Tenant.Status.SUSPENDED
         tenant.save(update_fields=["status", "updated_at"])
+        revoke_tenant_tokens(tenant.id)
         return ok(TenantSerializer(tenant).data)
 
     @decorators.action(detail=True, methods=["post"])
@@ -289,6 +291,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             membership.status = TenantMembership.Status.REVOKED
             membership.revoked_at = timezone.now()
             membership.save(update_fields=["status", "revoked_at", "updated_at"])
+            revoke_user_tokens(membership.user_id)
             audit(AuditLog.Event.MEMBER_REMOVED, request=request, tenant=tenant, membership_id=membership.id)
             return ok(TenantMembershipSerializer(membership).data)
         serializer = MemberUpdateSerializer(data=request.data, context={"membership": membership})
@@ -303,6 +306,7 @@ class TenantViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         membership = serializer.save()
+        revoke_user_tokens(membership.user_id)
         audit(AuditLog.Event.MEMBER_ROLE_CHANGED, request=request, tenant=tenant, membership_id=membership.id)
         return ok(TenantMembershipSerializer(membership).data)
 
@@ -451,6 +455,29 @@ class RejectInvitationView(APIView):
         invitation.rejected_at = timezone.now()
         invitation.save(update_fields=["status", "rejected_at"])
         return ok(TenantInvitationSerializer(invitation).data)
+
+
+class PublicTenantPrivacyProfileView(APIView):
+    """Public read-only tenant privacy notice metadata (PRV-002)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(tags=["Tenants"], request=None, responses=OpenApiTypes.OBJECT)
+    def get(self, request, slug: str):
+        tenant = Tenant.objects.filter(slug=slug, status=Tenant.Status.ACTIVE).first()
+        if not tenant:
+            return api_error(status=404, error_code="TENANT_NOT_FOUND", detail="Tenant no encontrado.")
+        return ok(
+            {
+                "slug": tenant.slug,
+                "name": tenant.name,
+                "legal_name": tenant.legal_name,
+                "country": tenant.country,
+                "privacy_jurisdiction": tenant.privacy_jurisdiction,
+                "dpo_contact_email": tenant.dpo_contact_email,
+                "privacy_policy_url": tenant.privacy_policy_url,
+            }
+        )
 
 
 def _active_owner_count(tenant):

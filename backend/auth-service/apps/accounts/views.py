@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
@@ -16,6 +17,7 @@ from apps.audit.models import AuditLog
 from apps.audit.services import audit
 from apps.rbac.services import permissions_for_membership, roles_for_membership
 from apps.sessions.models import UserSession
+from apps.sessions.revocation import revoke_jti, revoke_session, revoke_user_tokens
 from apps.sessions.services import mark_refresh_reuse
 from apps.shared.responses import ok
 from apps.shared.image_uploads import absolute_media_url, save_uploaded_image
@@ -58,10 +60,33 @@ class LoginView(views.APIView):
         return login_response(user, membership, request, amr=serializer.validated_data["amr"])
 
 
+REFRESH_COOKIE_NAME = "flowkron_refresh"
+
+
+def _set_refresh_cookie(resp, refresh_token: str) -> None:
+    if not getattr(settings, "AUTH_REFRESH_COOKIE_ENABLED", False):
+        return
+    resp.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=14 * 24 * 3600,
+        httponly=True,
+        secure=not getattr(settings, "DEBUG", False),
+        samesite="Lax",
+        path="/api/v1/auth/",
+    )
+
+
+def _clear_refresh_cookie(resp) -> None:
+    if not getattr(settings, "AUTH_REFRESH_COOKIE_ENABLED", False):
+        return
+    resp.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/v1/auth/", samesite="Lax")
+
+
 def login_response(user, membership, request, *, amr):
     refresh, session = issue_tokens(user, membership, request, amr=amr)
     audit(AuditLog.Event.LOGIN_SUCCESS, request=request, user=user, tenant=membership.tenant if membership else None, session_id=session.id)
-    return ok(
+    resp = ok(
         {
             "access": str(refresh.access_token),
             "refresh": str(refresh),
@@ -73,6 +98,8 @@ def login_response(user, membership, request, *, amr):
             "onboarding_required": membership is None,
         }
     )
+    _set_refresh_cookie(resp, str(refresh))
+    return resp
 
 
 class MeView(views.APIView):
@@ -95,6 +122,118 @@ class MeView(views.APIView):
                 "session": {"id": session.id, "status": session.status, "expires_at": session.expires_at} if session else None,
             }
         )
+
+
+class MeExportView(views.APIView):
+    """GDPR Art. 15/20 & Ley 21.719 Art. 5/9 portable DSAR export for the authenticated IAM user (PRV-015)."""
+
+    @extend_schema(tags=["Auth - Users"], request=None, responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        user = request.user
+        memberships = list(
+            user.memberships.select_related("tenant").prefetch_related("membership_roles__role").all()
+        )
+        sessions = list(
+            UserSession.objects.filter(user=user)
+            .order_by("-created_at")
+            .values("id", "tenant_id", "status", "ip_address", "user_agent", "created_at", "expires_at", "revoked_at")
+        )
+        audit_events = list(
+            AuditLog.objects.filter(user=user)
+            .order_by("-created_at")[:200]
+            .values("id", "event", "tenant_id", "created_at")
+        )
+        return ok(
+            {
+                "exported_at": timezone.now().isoformat(),
+                "user": UserSerializer(user).data,
+                "memberships": TenantMembershipSerializer(memberships, many=True).data,
+                "sessions": sessions,
+                "audit_events": audit_events,
+            }
+        )
+
+
+class MeEraseView(views.APIView):
+    """GDPR Art. 17 & Ley 21.719 Art. 7 IAM account erasure/anonymization protecting last active owner (PRV-015)."""
+
+    @extend_schema(tags=["Auth - Users"], request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    @transaction.atomic
+    def post(self, request):
+        if request.data.get("confirmed") is not True:
+            return Response(
+                {
+                    "success": False,
+                    "code": "ERASURE_CONFIRMATION_REQUIRED",
+                    "message": "Debes confirmar explicitamente la eliminacion de tu cuenta.",
+                    "details": {},
+                },
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        owned_memberships = list(
+            TenantMembership.objects.select_related("tenant").filter(
+                user=user,
+                status=TenantMembership.Status.ACTIVE,
+                tenant__status="active",
+                membership_roles__role__code="TENANT_OWNER",
+            ).distinct()
+        )
+        for mem in owned_memberships:
+            other_owners = TenantMembership.objects.filter(
+                tenant=mem.tenant,
+                status=TenantMembership.Status.ACTIVE,
+                membership_roles__role__code="TENANT_OWNER",
+            ).exclude(user=user).distinct().count()
+            if other_owners == 0:
+                return Response(
+                    {
+                        "success": False,
+                        "code": "LAST_OWNER_ERASURE_DENIED",
+                        "message": "No puedes eliminar tu cuenta mientras seas el unico propietario activo de un tenant.",
+                        "details": {"tenant_id": mem.tenant_id},
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+        now = timezone.now()
+        user.email = f"anon-{user.id}@erased.invalid"
+        user.username = f"anon-{user.id}"
+        user.first_name = ""
+        user.last_name = ""
+        user.is_active = False
+        user.set_unusable_password()
+        user.save(update_fields=["email", "username", "first_name", "last_name", "is_active", "password"])
+
+        profile = getattr(user, "profile", None)
+        if profile is not None:
+            profile.display_name = "Anonimizado"
+            profile.phone = ""
+            profile.avatar_url = ""
+            profile.google_subject = None
+            profile.mfa_enabled = False
+            profile.save(update_fields=["display_name", "phone", "avatar_url", "google_subject", "mfa_enabled", "updated_at"])
+
+        from apps.security.models import MfaDevice, MfaRecoveryCode
+
+        MfaDevice.objects.filter(user=user).delete()
+        MfaRecoveryCode.objects.filter(user=user).delete()
+
+        TenantMembership.objects.filter(user=user, status=TenantMembership.Status.ACTIVE).update(
+            status=TenantMembership.Status.REVOKED,
+            revoked_at=now,
+        )
+        revoked_sessions = UserSession.objects.filter(user=user, status=UserSession.Status.ACTIVE).update(
+            status=UserSession.Status.REVOKED,
+            revoked_at=now,
+        )
+        revoke_user_tokens(user.id)
+        audit(AuditLog.Event.SESSION_REVOKED, request=request, user=user, reason="iam_user_erasure", revoked=revoked_sessions)
+
+        resp = ok({"erased": True, "user_id": user.id, "sessions_revoked": revoked_sessions})
+        _clear_refresh_cookie(resp)
+        return resp
 
 
 class ProfileView(views.APIView):
@@ -127,17 +266,25 @@ class LogoutView(views.APIView):
     @extend_schema(tags=["Auth - Sessions"], request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         session_id = request.auth.get("session_id") if request.auth else None
+        jti = request.auth.get("jti") if request.auth else None
         UserSession.objects.filter(id=session_id, user=request.user).update(status=UserSession.Status.REVOKED, revoked_at=timezone.now())
+        revoke_session(session_id)
+        revoke_jti(jti)
         audit(AuditLog.Event.LOGOUT, request=request)
-        return ok({"revoked": True})
+        resp = ok({"revoked": True})
+        _clear_refresh_cookie(resp)
+        return resp
 
 
 class LogoutAllView(views.APIView):
     @extend_schema(tags=["Auth - Sessions"], request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         count = UserSession.objects.filter(user=request.user, status=UserSession.Status.ACTIVE).update(status=UserSession.Status.REVOKED, revoked_at=timezone.now())
+        revoke_user_tokens(request.user.id)
         audit(AuditLog.Event.SESSION_REVOKED, request=request, revoked=count)
-        return ok({"revoked": count})
+        resp = ok({"revoked": count})
+        _clear_refresh_cookie(resp)
+        return resp
 
 
 class ChangePasswordView(views.APIView):
@@ -150,6 +297,7 @@ class ChangePasswordView(views.APIView):
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save(update_fields=["password"])
         UserSession.objects.filter(user=request.user).update(status=UserSession.Status.REVOKED, revoked_at=timezone.now())
+        revoke_user_tokens(request.user.id)
         audit(AuditLog.Event.PASSWORD_CHANGED, request=request)
         return ok({"sessions_revoked": True})
 
@@ -183,7 +331,7 @@ class TaggedTokenRefreshView(TokenRefreshView):
     @extend_schema(tags=["Auth - Tokens"])
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        raw_refresh = request.data.get("refresh") or ""
+        raw_refresh = request.data.get("refresh") or request.COOKIES.get(REFRESH_COOKIE_NAME) or ""
         try:
             refresh_claims = FlowkronRefreshToken(raw_refresh)
         except TokenError:
@@ -204,7 +352,7 @@ class TaggedTokenRefreshView(TokenRefreshView):
         if not session or (not membership and not refresh_claims.get("onboarding_required")):
             return Response({"detail": "Tu sesión expiró o se cerró.", "code": "token_not_valid"}, status=401)
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data={"refresh": raw_refresh})
         try:
             serializer.is_valid(raise_exception=True)
         except TokenError:
@@ -223,7 +371,10 @@ class TaggedTokenRefreshView(TokenRefreshView):
         access["onboarding_required"] = membership is None
         access["amr"] = refresh_claims.get("amr", "pwd")
         data["access"] = str(access)
-        return Response(data, status=status.HTTP_200_OK)
+        resp = Response(data, status=status.HTTP_200_OK)
+        if data.get("refresh"):
+            _set_refresh_cookie(resp, str(data["refresh"]))
+        return resp
 
 
 class TaggedTokenVerifyView(TokenVerifyView):

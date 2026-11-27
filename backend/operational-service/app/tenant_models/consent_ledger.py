@@ -16,6 +16,10 @@ class ContactConsentDecision(Base):
             "source IN ('operational', 'whatsapp_message', 'form', 'unsubscribe_link', 'provider_webhook', 'import')",
             name="ck_consent_decision_source",
         ),
+        CheckConstraint(
+            "legal_basis IN ('consent', 'contract', 'legal_obligation', 'legitimate_interest')",
+            name="ck_consent_decision_legal_basis",
+        ),
         Index("idx_consent_decisions_scope", "channel", "destination", "purpose", "effective_at"),
         Index("idx_consent_decisions_client", "client_id", "channel", "purpose"),
         {"schema": "tenant"},
@@ -32,6 +36,10 @@ class ContactConsentDecision(Base):
     effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     policy_version: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    legal_basis: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'consent'"))
+    notice_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    notice_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    jurisdiction: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'CL'"))
     source: Mapped[str] = mapped_column(String(32), nullable=False)
     actor_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 

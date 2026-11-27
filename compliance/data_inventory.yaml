@@ -1,0 +1,1549 @@
+version: "1.0"
+schema_version: "tenant_schema_v22"
+standards:
+  - "GDPR Art. 30"
+  - "Ley 21.719 (Chile) Art. 14 quater"
+  - "ISO/IEC 27701:2025"
+
+allowed_values:
+  owner_roles: [controller, processor]
+  categories:
+    - identifier
+    - national_id
+    - contact
+    - credential
+    - communication
+    - financial
+    - behavioral
+    - device_network
+    - voice_biometric
+    - attachment
+    - consent_evidence
+    - governance_contact
+  sensitivities: [low, medium, high, special]
+  legal_bases: [consent, contract, legal_obligation, legitimate_interest]
+  export_actions: [include, exclude_security, exclude_internal, summary_only]
+  erase_actions: [anonymize, redact, delete, retain_proof, unlink_and_delete]
+
+services:
+  auth-service:
+    tables:
+      auth_user:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "account_lifetime"
+        pii_columns:
+          username:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          email:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          first_name:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          last_name:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          password:
+            category: credential
+            sensitivity: high
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: exclude_security
+            erase_action: anonymize
+        non_pii_columns: [id, last_login, is_superuser, is_staff, is_active, date_joined]
+
+      iam_user_profile:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "account_lifetime"
+        pii_columns:
+          display_name:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          phone:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          avatar_url:
+            category: identifier
+            sensitivity: low
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: include
+            erase_action: anonymize
+          google_subject:
+            category: identifier
+            sensitivity: high
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: exclude_security
+            erase_action: anonymize
+        non_pii_columns:
+          [id, user_id, timezone, locale, email_verified_at, account_activated_at,
+           initial_password_set_at, onboarding_completed_at, mfa_enabled, mfa_confirmed_at,
+           created_at, updated_at]
+
+      iam_contact_message:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          name:
+            category: identifier
+            sensitivity: medium
+            legal_basis: consent
+            retention: 180d
+            export_action: include
+            erase_action: delete
+          email:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: 180d
+            export_action: include
+            erase_action: delete
+          company:
+            category: identifier
+            sensitivity: low
+            legal_basis: consent
+            retention: 180d
+            export_action: include
+            erase_action: delete
+          phone:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: 180d
+            export_action: include
+            erase_action: delete
+          message:
+            category: communication
+            sensitivity: medium
+            legal_basis: consent
+            retention: 180d
+            export_action: include
+            erase_action: delete
+          ip_address:
+            category: device_network
+            sensitivity: medium
+            legal_basis: legitimate_interest
+            retention: 180d
+            export_action: exclude_security
+            erase_action: delete
+          user_agent:
+            category: device_network
+            sensitivity: low
+            legal_basis: legitimate_interest
+            retention: 180d
+            export_action: exclude_security
+            erase_action: delete
+        non_pii_columns: [id, accept_terms, privacy_notice_version, status, created_at]
+
+      iam_audit_log:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          ip_address:
+            category: device_network
+            sensitivity: medium
+            legal_basis: legitimate_interest
+            retention: 365d
+            export_action: exclude_security
+            erase_action: anonymize
+          user_agent:
+            category: device_network
+            sensitivity: low
+            legal_basis: legitimate_interest
+            retention: 365d
+            export_action: exclude_security
+            erase_action: anonymize
+          metadata:
+            category: behavioral
+            sensitivity: medium
+            legal_basis: legitimate_interest
+            retention: 365d
+            export_action: summary_only
+            erase_action: redact
+        non_pii_columns: [id, user_id, tenant_id, event, correlation_id, created_at]
+
+      iam_user_session:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "session_ttl_plus_30d"
+        pii_columns:
+          ip_address:
+            category: device_network
+            sensitivity: medium
+            legal_basis: contract
+            retention: session_ttl_plus_30d
+            export_action: include
+            erase_action: delete
+          user_agent:
+            category: device_network
+            sensitivity: low
+            legal_basis: contract
+            retention: session_ttl_plus_30d
+            export_action: include
+            erase_action: delete
+        non_pii_columns:
+          [id, user_id, tenant_id, membership_id, status, risk_score, risk_flags,
+           last_refresh_at, expires_at, revoked_at, token_family, created_at, updated_at]
+
+      iam_tenant:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "tenant_lifetime"
+        pii_columns:
+          tax_id:
+            category: financial
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_lifetime
+            export_action: include
+            erase_action: anonymize
+          dpo_contact_email:
+            category: governance_contact
+            sensitivity: low
+            legal_basis: legal_obligation
+            retention: tenant_lifetime
+            export_action: include
+            erase_action: anonymize
+        non_pii_columns:
+          [id, slug, name, legal_name, logo_url, country, privacy_jurisdiction,
+           privacy_policy_url, status, plan, subscription_status, subscription_provider,
+           subscription_external_id, subscription_current_period_end, created_by_id,
+           created_at, updated_at]
+
+      iam_tenant_membership:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, user_id, tenant_id, status, invited_by_id, joined_at, revoked_at, created_at, updated_at]
+
+      iam_tenant_invitation:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          email:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: 90d
+            export_action: include
+            erase_action: delete
+        non_pii_columns:
+          [id, tenant_id, token_hash, role_code, status, invited_by_id, accepted_by_id,
+           expires_at, accepted_at, rejected_at, revoked_at, created_at]
+
+      iam_tenant_operational_runtime:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tenant_id, schema_name, tenant_code, plan, status, provisioned_at,
+           suspended_at, last_sync_at, last_error, created_at, updated_at]
+
+      iam_permission:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "static_catalog"
+        pii_columns: {}
+        non_pii_columns: [id, code, resource, action, description, created_at]
+
+      iam_tenant_role:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, tenant_id, code, name, description, is_system, created_at, updated_at]
+
+      iam_role_permission:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, role_id, permission_id, created_at]
+
+      iam_membership_role:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, membership_id, role_id, created_at]
+
+      iam_signing_key:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "key_rotation_lifecycle"
+        pii_columns: {}
+        non_pii_columns:
+          [id, kid, algorithm, public_key, encrypted_private_key, status, created_at, expires_at, rotated_at]
+
+      iam_service_account:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "service_lifecycle"
+        pii_columns: {}
+        non_pii_columns:
+          [id, name, client_id, secret_hash, scopes, status, expires_at, last_used_at, created_at, updated_at]
+
+      iam_api_key:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tenant_id, name, prefix, key_hash, scopes, status, expires_at,
+           last_used_at, revoked_at, created_by_id, created_at, updated_at]
+
+      iam_email_verification_token:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "token_ttl"
+        pii_columns: {}
+        non_pii_columns: [id, user_id, token_hash, used_at, expires_at, created_at]
+
+      iam_password_reset_token:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "token_ttl"
+        pii_columns: {}
+        non_pii_columns: [id, user_id, token_hash, used_at, expires_at, created_at]
+
+      iam_mfa_device:
+        owner_role: controller
+        contains_pii: true
+        retention_policy: "account_lifetime"
+        pii_columns:
+          secret:
+            category: credential
+            sensitivity: high
+            legal_basis: contract
+            retention: account_lifetime
+            export_action: exclude_security
+            erase_action: delete
+        non_pii_columns: [id, user_id, confirmed_at, created_at, updated_at]
+
+      iam_mfa_recovery_code:
+        owner_role: controller
+        contains_pii: false
+        retention_policy: "account_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, user_id, code_hash, used_at, created_at]
+
+  operational-service:
+    tables:
+      billing_reference:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "legal_statute"
+        pii_columns: {}
+        non_pii_columns: [id, auth_tenant_id, provider, external_id, plan, status, payload, created_at, updated_at]
+
+      migration_registry:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, schema_name, migration_version, status, executed_at, error_message]
+
+      public.channel_webhook_routes:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_lifetime"
+        pii_columns:
+          app_secret:
+            category: credential
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_lifetime
+            export_action: exclude_security
+            erase_action: delete
+        non_pii_columns:
+          [id, auth_tenant_id, channel, provider, external_account_id, connection_id,
+           verify_token_hash, secret_fingerprint, is_active, created_by, created_at, updated_at]
+
+      public.webchat_widgets:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, auth_tenant_id, widget_key, name, is_active, allowed_origins, agent_id,
+           welcome_message, session_ttl_minutes, rate_limit_per_minute, created_by, created_at, updated_at]
+
+      public_capture_forms:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, auth_tenant_id, schema_name, name, form_token, source_label,
+           allowed_fields, is_active, created_by, created_at]
+
+      public_unsubscribe_tokens:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          destination:
+            category: contact
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: 90d
+            export_action: exclude_internal
+            erase_action: delete
+        non_pii_columns:
+          [id, token_hash, auth_tenant_id, schema_name, channel, purpose,
+           client_id, expires_at, used_at, created_at]
+
+      scoped_integration_credentials:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, auth_tenant_id, schema_name, name, key_prefix, key_hash, scopes,
+           expires_at, revoked_at, created_by, created_at]
+
+      system_events:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          payload:
+            category: behavioral
+            sensitivity: medium
+            legal_basis: legitimate_interest
+            retention: 365d
+            export_action: exclude_internal
+            erase_action: retain_proof
+        non_pii_columns: [id, auth_tenant_id, schema_name, event_type, created_at]
+
+      tenant_runtime:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, auth_tenant_id, tenant_slug, schema_name, tenant_code, ingest_key_hash,
+           plan, status, provisioned_at, suspended_at, created_at, updated_at]
+
+      tenant.action_outbox_jobs:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          payload:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 90d
+            export_action: exclude_internal
+            erase_action: redact
+          effect_payload:
+            category: communication
+            sensitivity: low
+            legal_basis: contract
+            retention: 90d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, action_type, idempotency_key, payload_hash, state, attempts, max_attempts,
+           available_at, claim_token, lease_until, correlation_id, effect_reference,
+           last_error, created_at, updated_at, completed_at]
+
+      tenant.agent_execution_traces:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          query:
+            category: communication
+            sensitivity: high
+            legal_basis: contract
+            retention: 90d
+            export_action: include
+            erase_action: redact
+          output_message:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 90d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, tenant_id, conversation_id, agent_id, agent_revision_id, confidence,
+           requires_human, is_simulation, sources, actions, correlation_id, created_at]
+
+      tenant.agent_revisions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, agent_id, revision_number, status, name, role, tone, language, instructions,
+           allowed_tools, allowed_document_ids, limits_json, prompt_config, publish_note,
+           published_by, published_at]
+
+      tenant.agent_rules:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, tenant_id, agent_id, name, rule_type, content, priority, is_active, created_at, updated_at]
+
+      tenant.ai_action_proposals:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          arguments_json:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: include
+            erase_action: redact
+          rationale:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: include
+            erase_action: redact
+          review_note:
+            category: communication
+            sensitivity: low
+            legal_basis: contract
+            retention: 180d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, action_type, resource_type, resource_id, arguments_hash, idempotency_key,
+           status, proposal_version, proposed_by, correlation_id, expires_at, reviewed_by,
+           reviewed_at, executed_by, executed_at, effect_result, created_at, updated_at]
+
+      tenant.ai_usage_records:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "365d"
+        pii_columns: {}
+        non_pii_columns:
+          [id, provider, model, prompt_tokens, completion_tokens, latency_ms,
+           estimated_cost_usd, is_simulation, agent_id, agent_revision_id,
+           pricing_version, correlation_id, recorded_at]
+
+      tenant.business_context_documents:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tenant_id, title, filename, content_type, status, priority, version,
+           source_type, raw_text, metadata, created_at, updated_at]
+
+      tenant.business_context_fields:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, form_id, name, label, field_type, required, position]
+
+      tenant.business_context_form_submissions:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          payload:
+            category: communication
+            sensitivity: medium
+            legal_basis: consent
+            retention: 365d
+            export_action: include
+            erase_action: redact
+        non_pii_columns: [id, tenant_id, form_id, created_at]
+
+      tenant.business_context_forms:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, tenant_id, code, name, description, is_active, created_at]
+
+      tenant.calendar_appointments:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          title:
+            category: communication
+            sensitivity: low
+            legal_basis: contract
+            retention: 365d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, resource_key, client_id, conversation_id, starts_at, ends_at,
+           status, idempotency_key, created_by, created_at, updated_at]
+
+      tenant.campaign_approvals:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "365d"
+        pii_columns: {}
+        non_pii_columns:
+          [id, campaign_id, campaign_version, template_version_id, connection_id,
+           snapshot_count, approved_by, approved_at]
+
+      tenant.campaign_recipients:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          destination:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: 365d
+            export_action: include
+            erase_action: anonymize
+        non_pii_columns:
+          [id, campaign_id, contact_point_id, client_id, status, outbox_job_id,
+           provider_message_id, last_error, updated_at]
+
+      tenant.campaigns:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, name, channel, purpose, template_version_id, connection_id, segment_filter,
+           timezone_iana, status, version, scheduled_at, created_by, created_at, updated_at]
+
+      tenant.channel_events:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          destination:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: anonymize
+          payload:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, provider_account_id, provider_event_id, event_type, provider_message_id, occurred_at, recorded_at]
+
+      tenant.clientes:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_365d"
+        pii_columns:
+          rut:
+            category: national_id
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: anonymize
+          rut_encrypted:
+            category: national_id
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_configurable_default_365d
+            export_action: exclude_internal
+            erase_action: anonymize
+          nombre:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: anonymize
+          email:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: anonymize
+          telefono:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: anonymize
+          whatsapp_id:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: anonymize
+        non_pii_columns:
+          [id, rut_blind_index, tipo_cliente, canal_origen, consentimiento_datos,
+           fecha_consentimiento, canal_consentimiento, version_politica,
+           processing_restricted, processing_restricted_reason,
+           creado_en, actualizado_en]
+
+      tenant.commerce_orders:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "legal_statute"
+        pii_columns:
+          metadata_json:
+            category: financial
+            sensitivity: medium
+            legal_basis: contract
+            retention: legal_statute
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, provider, external_order_id, order_number, client_id, opportunity_id,
+           conversation_id, currency, expected_amount_minor, confirmed_amount_minor,
+           refunded_amount_minor, status, checkout_url, discrepancy_reason,
+           created_by, created_at, updated_at]
+
+      tenant.commerce_payment_events:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "legal_statute"
+        pii_columns:
+          payload_json:
+            category: financial
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: legal_statute
+            export_action: summary_only
+            erase_action: retain_proof
+        non_pii_columns:
+          [id, order_id, provider, external_event_id, external_payment_id, event_type,
+           currency, amount_minor, occurred_at, recorded_at]
+
+      tenant.connector_sync_cursors:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, connection_ref, stream_name, cursor_value, status, last_error, synced_count, updated_at]
+
+      tenant.contact_consent_decisions:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "legal_statute"
+        pii_columns:
+          destination:
+            category: consent_evidence
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: legal_statute
+            export_action: include
+            erase_action: retain_proof
+        non_pii_columns:
+          [id, client_id, channel, purpose, granted, effective_at, recorded_at,
+           policy_version, legal_basis, notice_version, notice_hash, jurisdiction,
+           source, actor_id]
+
+      tenant.contact_enrichment_candidates:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          proposed_value:
+            category: contact
+            sensitivity: medium
+            legal_basis: legitimate_interest
+            retention: 180d
+            export_action: include
+            erase_action: delete
+          previous_value:
+            category: contact
+            sensitivity: medium
+            legal_basis: legitimate_interest
+            retention: 180d
+            export_action: include
+            erase_action: delete
+        non_pii_columns:
+          [id, client_id, field_name, source, status, reviewed_by, reviewed_at, created_at]
+
+      tenant.contact_points:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_365d"
+        pii_columns:
+          normalized_value:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: delete
+        non_pii_columns: [id, client_id, point_type, status, verified, source, created_at]
+
+      tenant.contact_suppressions:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "legal_statute"
+        pii_columns:
+          destination:
+            category: consent_evidence
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: legal_statute
+            export_action: include
+            erase_action: retain_proof
+        non_pii_columns: [id, client_id, channel, purpose, reason, source, recorded_at, actor_id]
+
+      tenant.conversaciones:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_180d"
+        pii_columns:
+          session_id:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: anonymize
+          message:
+            category: communication
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: redact
+        non_pii_columns: [id, creado_en]
+
+      tenant.conversaciones_resumen:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_180d"
+        pii_columns:
+          whatsapp_id:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: delete
+          nombre_cliente:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: anonymize
+          ultimo_mensaje:
+            category: communication
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: redact
+        non_pii_columns: [ultimo_rol, ultimo_mensaje_en, total_mensajes, no_leidos, actualizado_en]
+
+      tenant.conversation_control_events:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "365d"
+        pii_columns: {}
+        non_pii_columns:
+          [id, conversation_id, from_mode, to_mode, control_version,
+           actor_user_id, owner_user_id, reason, created_at]
+
+      tenant.conversation_controls:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [conversation_id, mode, owner_user_id, ai_enabled, control_version,
+           handoff_reason, resolution_reason, updated_by, updated_at]
+
+      tenant.conversation_memory_items:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "memory_ttl_default_90d"
+        pii_columns:
+          memory_value:
+            category: behavioral
+            sensitivity: high
+            legal_basis: consent
+            retention: memory_ttl_default_90d
+            export_action: include
+            erase_action: delete
+        non_pii_columns: [id, conversation_id, memory_key, source_type, source_ref, expires_at, created_at]
+
+      tenant.delivery_attempts:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "180d"
+        pii_columns: {}
+        non_pii_columns:
+          [id, campaign_recipient_id, attempt_number, idempotency_key, provider,
+           provider_message_id, outcome, error_code, created_at]
+
+      tenant.document_chunks:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, tenant_id, document_id, chunk_index, content, token_count, source_ref, created_at]
+
+      tenant.document_embeddings:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, tenant_id, chunk_id, provider, vector, score_hint]
+
+      tenant.domain_event_subscriptions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, subscriber_name, event_types, last_event_id, is_active, updated_at]
+
+      tenant.domain_events:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          payload:
+            category: behavioral
+            sensitivity: medium
+            legal_basis: contract
+            retention: 365d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, event_id, event_type, schema_version, aggregate_type, aggregate_id, correlation_id, occurred_at]
+
+      tenant.ejecutivos:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "employment_lifetime"
+        pii_columns:
+          nombre:
+            category: identifier
+            sensitivity: low
+            legal_basis: contract
+            retention: employment_lifetime
+            export_action: exclude_internal
+            erase_action: anonymize
+          whatsapp:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: employment_lifetime
+            export_action: exclude_internal
+            erase_action: anonymize
+        non_pii_columns: [id, activo, leads_asignados, ultimo_asignado_at]
+
+      tenant.external_entity_mappings:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_lifetime"
+        pii_columns:
+          remote_id:
+            category: identifier
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_lifetime
+            export_action: include
+            erase_action: delete
+          conflict_payload:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_lifetime
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, connection_ref, resource_type, local_type, local_id, remote_version,
+           local_version, sync_state, owner_user_id, last_synced_at, created_at, updated_at]
+
+      tenant.external_notification_deliveries:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          recipient:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: anonymize
+          payload:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, dedup_key, event_type, channel, status, outbox_job_id,
+           receipt_ref, created_by, created_at, updated_at]
+
+      tenant.inventario_vehiculos:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, marca, modelo, anio, version, color, condicion, kilometraje,
+           tipo_vehiculo, transmision, combustible, precio_lista, disponible,
+           creado_en, actualizado_en]
+
+      tenant.lead_captures:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          conflict_details:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: 365d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, source_kind, source_ref, idempotency_key, payload_hash,
+           client_id, lead_id, status, created_at]
+
+      tenant.leads:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_365d"
+        pii_columns:
+          requiere_credito:
+            category: financial
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: anonymize
+          resumen_ia:
+            category: behavioral
+            sensitivity: high
+            legal_basis: legitimate_interest
+            retention: tenant_configurable_default_365d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, cliente_id, score_lead, clasificacion, plazo_compra, estado,
+           score_factors_json, human_review_requested, human_review_reason,
+           creado_en, actualizado_en, followup_count, ultimo_followup_at,
+           estado_seguimiento, ejecutivo_id]
+
+      tenant.log_limpiezas:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "legal_statute"
+        pii_columns: {}
+        non_pii_columns:
+          [id, fecha_ejecucion, mensajes_eliminados, clientes_anonimizados,
+           solicitudes_eliminadas, estado, detalle, notas]
+
+      tenant.mensajes_dashboard:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_180d"
+        pii_columns:
+          whatsapp_id:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: anonymize
+          mensaje:
+            category: communication
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_configurable_default_180d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, rol, creado_en, connection_id, channel, external_message_id,
+           provider_message_id, direction, message_type, delivery_status, recorded_at]
+
+      tenant.mensajes_procesados:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "90d"
+        pii_columns: {}
+        non_pii_columns: [id, message_id, procesado_en]
+
+      tenant.message_templates:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, name, channel, language, created_by, created_at]
+
+      tenant.opportunities:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "legal_statute"
+        pii_columns:
+          title:
+            category: communication
+            sensitivity: low
+            legal_basis: contract
+            retention: legal_statute
+            export_action: include
+            erase_action: redact
+          close_reason:
+            category: communication
+            sensitivity: low
+            legal_basis: contract
+            retention: legal_statute
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, contact_id, lead_id, conversation_id, stage_id, owner_user_id,
+           amount, currency, outcome, version, closed_at, created_at, updated_at]
+
+      tenant.opportunity_activities:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "365d"
+        pii_columns:
+          note:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 365d
+            export_action: include
+            erase_action: redact
+          metadata_json:
+            category: communication
+            sensitivity: low
+            legal_basis: contract
+            retention: 365d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, opportunity_id, activity_type, actor_user_id, from_stage_id, to_stage_id, created_at]
+
+      tenant.pipeline_stages:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns: [id, slug, name, position, stage_kind, is_active, created_at]
+
+      tenant.private_attachments:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "attachment_ttl_default_90d"
+        pii_columns:
+          filename:
+            category: attachment
+            sensitivity: high
+            legal_basis: contract
+            retention: attachment_ttl_default_90d
+            export_action: include
+            erase_action: unlink_and_delete
+          storage_key:
+            category: attachment
+            sensitivity: high
+            legal_basis: contract
+            retention: attachment_ttl_default_90d
+            export_action: exclude_internal
+            erase_action: unlink_and_delete
+        non_pii_columns:
+          [id, resource_type, resource_id, content_type, size_bytes, sha256_hex,
+           uploaded_by, expires_at, deleted_at, created_at]
+
+      tenant.rate_limit:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "24h"
+        pii_columns:
+          whatsapp_id:
+            category: contact
+            sensitivity: low
+            legal_basis: legitimate_interest
+            retention: 24h
+            export_action: exclude_internal
+            erase_action: delete
+        non_pii_columns: [contador, ventana_inicio]
+
+      tenant.reglas_negocio:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tipo, alcance, valor, descripcion, fecha_inicio, fecha_fin, activo, creado_por, creado_en]
+
+      tenant.remote_mcp_servers:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_lifetime"
+        pii_columns:
+          auth_token:
+            category: credential
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_lifetime
+            export_action: exclude_security
+            erase_action: delete
+        non_pii_columns:
+          [id, server_key, name, base_url, auth_header_name, auth_fingerprint,
+           allowed_tools, discovered_tools, is_active, revoked_at, created_by, created_at, updated_at]
+
+      tenant.setup_chat_sessions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "180d"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tenant_id, objective, status, messages, generated_summary,
+           generated_document_id, created_at, updated_at]
+
+      tenant.solicitudes_derechos:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "legal_statute"
+        pii_columns:
+          subject_email:
+            category: contact
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: legal_statute
+            export_action: include
+            erase_action: anonymize
+          whatsapp_id:
+            category: contact
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: legal_statute
+            export_action: include
+            erase_action: anonymize
+          notas:
+            category: communication
+            sensitivity: medium
+            legal_basis: legal_obligation
+            retention: legal_statute
+            export_action: include
+            erase_action: redact
+        non_pii_columns: [id, client_id, tipo_derecho, estado, fecha_solicitud, fecha_limite, fecha_resolucion]
+
+      tenant.template_versions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, template_id, version, status, subject, body_text, body_html,
+           declared_variables, approved_by, approved_at, created_at]
+
+      tenant.tenant_agent_profiles:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tenant_id, name, role, tone, language, status, is_default, version,
+           active_revision_id, context_summary, allowed_tools, allowed_document_ids,
+           limits_json, configuration, created_at, updated_at]
+
+      tenant.tenant_ai_policies:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, ai_enabled, allow_external_ai_transfer, memory_auto_capture,
+           updated_by, reason, updated_at]
+
+      tenant.tenant_channel_connections:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, channel, provider, sender_address, display_name, status, verified,
+           sandbox_only, secret_fingerprint, credential_version, revoked_at,
+           created_by, created_at, updated_at]
+
+      tenant.tool_definitions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, tool_key, name, description, effect_mode, schema_version, input_schema,
+           required_permission, connector_ref, is_enabled, max_calls_per_hour,
+           created_by, created_at, updated_at]
+
+      tenant.tool_invocations:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          arguments_json:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+          result_json:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, tool_id, tool_key, schema_version, idempotency_key, arguments_hash,
+           effect_mode, status, proposal_id, outbox_job_id, invoked_by, correlation_id, created_at]
+
+      tenant.voice_call_segments:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_90d"
+        pii_columns:
+          transcript:
+            category: voice_biometric
+            sensitivity: high
+            legal_basis: consent
+            retention: tenant_configurable_default_90d
+            export_action: include
+            erase_action: redact
+        non_pii_columns: [id, call_id, sequence_no, speaker, message_id, started_ms, ended_ms, is_barge_in, created_at]
+
+      tenant.voice_call_sessions:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_configurable_default_90d"
+        pii_columns:
+          from_number:
+            category: contact
+            sensitivity: high
+            legal_basis: consent
+            retention: tenant_configurable_default_90d
+            export_action: include
+            erase_action: redact
+          to_number:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: tenant_configurable_default_90d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, provider, external_call_id, direction, client_id, conversation_id,
+           agent_revision_id, status, billable_seconds, estimated_cost_usd,
+           recording_consent, recording_attachment_id, barge_in_count, close_reason,
+           started_at, ended_at, created_at, updated_at]
+
+      tenant.webchat_sessions:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          visitor_name:
+            category: identifier
+            sensitivity: medium
+            legal_basis: consent
+            retention: 90d
+            export_action: include
+            erase_action: anonymize
+          visitor_email:
+            category: contact
+            sensitivity: medium
+            legal_basis: consent
+            retention: 90d
+            export_action: include
+            erase_action: anonymize
+        non_pii_columns:
+          [id, widget_key, token_hash, origin, client_id, conversation_id,
+           status, expires_at, created_at, last_seen_at]
+
+      tenant.webhook_deliveries:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          payload:
+            category: communication
+            sensitivity: medium
+            legal_basis: contract
+            retention: 90d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, subscription_id, event_id, event_type, signature, status, attempts,
+           last_http_status, last_error, outbox_job_id, created_at, updated_at]
+
+      tenant.webhook_subscriptions:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "tenant_lifetime"
+        pii_columns:
+          signing_secret:
+            category: credential
+            sensitivity: high
+            legal_basis: contract
+            retention: tenant_lifetime
+            export_action: exclude_security
+            erase_action: delete
+        non_pii_columns:
+          [id, name, target_url, event_types, is_active, max_attempts, created_by, created_at, updated_at]
+
+      tenant.whatsapp_consent_state:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "legal_statute"
+        pii_columns: {}
+        non_pii_columns: [client_id, decision_at, authorized_from]
+
+      tenant.whatsapp_send_evidence:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "180d"
+        pii_columns: {}
+        non_pii_columns: [turn_id, account_key, provider_message_id, status, failure_reason, started_at]
+
+      tenant.whatsapp_turn_jobs:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "30d"
+        pii_columns:
+          recipient_jid:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: 30d
+            export_action: exclude_internal
+            erase_action: delete
+        non_pii_columns: [turn_id, account_key, attempts, available_at]
+
+      tenant.whatsapp_turns:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "90d"
+        pii_columns:
+          phone:
+            category: contact
+            sensitivity: medium
+            legal_basis: contract
+            retention: 90d
+            export_action: include
+            erase_action: anonymize
+          reply_body:
+            category: communication
+            sensitivity: high
+            legal_basis: contract
+            retention: 90d
+            export_action: include
+            erase_action: redact
+        non_pii_columns:
+          [id, lead_id, conversation_id, state, claim_token, lease_until,
+           requires_human, outbound_message_id, last_error, created_at, updated_at]
+
+      tenant.workflow_definitions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, name, description, status, trigger_event_type, draft_graph,
+           draft_version, active_revision_id, created_by, created_at, updated_at]
+
+      tenant.workflow_revisions:
+        owner_role: processor
+        contains_pii: false
+        retention_policy: "tenant_lifetime"
+        pii_columns: {}
+        non_pii_columns:
+          [id, workflow_id, revision_number, status, trigger_event_type,
+           graph_json, publish_note, published_by, published_at]
+
+      tenant.workflow_runs:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          context_json:
+            category: behavioral
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, workflow_id, revision_id, trigger_event_id, entity_type, entity_id,
+           contact_id, conversation_id, status, current_node_id, wake_at,
+           cancel_on_events, error_message, started_at, updated_at, finished_at]
+
+      tenant.workflow_step_runs:
+        owner_role: processor
+        contains_pii: true
+        retention_policy: "180d"
+        pii_columns:
+          input_json:
+            category: behavioral
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+          output_json:
+            category: behavioral
+            sensitivity: medium
+            legal_basis: contract
+            retention: 180d
+            export_action: exclude_internal
+            erase_action: redact
+        non_pii_columns:
+          [id, run_id, node_id, node_type, visit_number, status, effect_ref,
+           error_message, started_at, finished_at]

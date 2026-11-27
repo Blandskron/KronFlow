@@ -195,3 +195,64 @@ class TenantInvitationTests(TestCase):
         self.assertEqual(patch_response.status_code, 400)
         patch_body = getattr(patch_response, "data", None) or json.loads(patch_response.content)
         self.assertIn("LAST_OWNER_ROLE_CHANGE_DENIED", str(patch_body))
+
+
+class TenantPrivacyProfileTests(TestCase):
+    def test_only_owner_or_admin_can_update_privacy_profile_and_public_endpoint_exposes_it(self):
+        owner = get_user_model().objects.create_user(
+            username="privacy-owner@example.com",
+            email="privacy-owner@example.com",
+            password="a-very-safe-password-123",
+        )
+        viewer = get_user_model().objects.create_user(
+            username="privacy-viewer@example.com",
+            email="privacy-viewer@example.com",
+            password="a-very-safe-password-123",
+        )
+        tenant, _ = create_owned_tenant(owner, "Privacy Corp")
+        viewer_membership = TenantMembership.objects.create(
+            user=viewer, tenant=tenant, status=TenantMembership.Status.ACTIVE,
+        )
+        viewer_role = TenantRole.objects.get(tenant=tenant, code="VIEWER")
+        MembershipRole.objects.create(membership=viewer_membership, role=viewer_role)
+
+        client = APIClient()
+        client.force_authenticate(user=viewer, token={"tenant_id": tenant.pk})
+        forbidden = client.patch(
+            f"/api/v1/tenants/{tenant.pk}/",
+            {
+                "privacy_jurisdiction": "EU",
+                "dpo_contact_email": "dpo@privacycorp.test",
+                "privacy_policy_url": "https://privacycorp.test/privacy",
+            },
+            format="json",
+            HTTP_X_TENANT_ID=str(tenant.pk),
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
+        client.force_authenticate(user=owner, token={"tenant_id": tenant.pk})
+        updated = client.patch(
+            f"/api/v1/tenants/{tenant.pk}/",
+            {
+                "privacy_jurisdiction": "EU",
+                "dpo_contact_email": "dpo@privacycorp.test",
+                "privacy_policy_url": "https://privacycorp.test/privacy",
+            },
+            format="json",
+            HTTP_X_TENANT_ID=str(tenant.pk),
+        )
+        self.assertEqual(updated.status_code, 200)
+        updated_body = updated.json()
+        updated_payload = updated_body["data"] if isinstance(updated_body, dict) and "data" in updated_body else updated_body
+        self.assertEqual(updated_payload["privacy_jurisdiction"], "EU")
+        self.assertEqual(updated_payload["dpo_contact_email"], "dpo@privacycorp.test")
+        self.assertEqual(updated_payload["privacy_policy_url"], "https://privacycorp.test/privacy")
+
+        public_client = APIClient()
+        public_res = public_client.get(f"/api/v1/tenants/privacy-profile/{tenant.slug}/")
+        self.assertEqual(public_res.status_code, 200)
+        public_data = public_res.json()["data"]
+        self.assertEqual(public_data["privacy_jurisdiction"], "EU")
+        self.assertEqual(public_data["dpo_contact_email"], "dpo@privacycorp.test")
+        self.assertEqual(public_data["privacy_policy_url"], "https://privacycorp.test/privacy")
+        self.assertNotIn("tax_id", public_data)

@@ -279,6 +279,51 @@ def upgrade_agent_platform_schema(db: Session, schema_name: str) -> None:
         db.execute(text(f"ALTER TABLE {quoted_schema}.ai_usage_records ADD COLUMN IF NOT EXISTS {col_ddl}"))
 
 
+def upgrade_privacy_policy_schema(db: Session, schema_name: str) -> None:
+    """Additive lossless migration to tenant_schema_v22 for Privacy-by-Default AI gates and encrypted RUT (PRV-004, PRV-008)."""
+    quoted_schema = quote_identifier(schema_name)
+    for col_ddl in (
+        "allow_external_ai_transfer BOOLEAN NOT NULL DEFAULT FALSE",
+        "memory_auto_capture BOOLEAN NOT NULL DEFAULT FALSE",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.tenant_ai_policies ADD COLUMN IF NOT EXISTS {col_ddl}"))
+    for col_ddl in (
+        "rut_encrypted TEXT",
+        "rut_blind_index VARCHAR(64)",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.clientes ADD COLUMN IF NOT EXISTS {col_ddl}"))
+    db.execute(
+        text(
+            f"CREATE INDEX IF NOT EXISTS idx_clientes_rut_blind_index "
+            f"ON {quoted_schema}.clientes (rut_blind_index)"
+        )
+    )
+    db.execute(text(f"ALTER TABLE {quoted_schema}.clientes ALTER COLUMN rut DROP NOT NULL"))
+    for col_ddl in (
+        "legal_basis VARCHAR(32) NOT NULL DEFAULT 'consent'",
+        "notice_version VARCHAR(64)",
+        "notice_hash VARCHAR(64)",
+        "jurisdiction VARCHAR(16) NOT NULL DEFAULT 'CL'",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.contact_consent_decisions ADD COLUMN IF NOT EXISTS {col_ddl}"))
+    for col_ddl in (
+        "processing_restricted BOOLEAN NOT NULL DEFAULT FALSE",
+        "processing_restricted_reason VARCHAR(240)",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.clientes ADD COLUMN IF NOT EXISTS {col_ddl}"))
+    for col_ddl in (
+        "score_factors_json JSONB NOT NULL DEFAULT '{}'::jsonb",
+        "human_review_requested BOOLEAN NOT NULL DEFAULT FALSE",
+        "human_review_reason VARCHAR(240)",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.leads ADD COLUMN IF NOT EXISTS {col_ddl}"))
+    for col_ddl in (
+        "client_id BIGINT",
+        "subject_email TEXT",
+    ):
+        db.execute(text(f"ALTER TABLE {quoted_schema}.solicitudes_derechos ADD COLUMN IF NOT EXISTS {col_ddl}"))
+
+
 def apply_tenant_schema(db: Session, schema_name: str) -> None:
     # Serialize upgrades of the same schema, including first-time provisioning.
     db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"flowkron-schema:{schema_name}"})
@@ -309,6 +354,7 @@ def apply_tenant_schema(db: Session, schema_name: str) -> None:
     ).on_conflict_do_nothing())
     upgrade_message_schema(db, schema_name)
     upgrade_agent_platform_schema(db, schema_name)
+    upgrade_privacy_policy_schema(db, schema_name)
     apply_tenant_database_objects(db, schema_name)
 
 

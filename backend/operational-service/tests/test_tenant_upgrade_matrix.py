@@ -124,12 +124,12 @@ class TenantUpgradeMatrixTests(PostgresCase):
         return name
 
     def test_active_matrix_is_repeatable_and_suspended_upgrade_is_transactional(self):
-        matrix = {version: self.seed_version(version, version) for version in range(3, 22)}
+        matrix = {version: self.seed_version(version, version) for version in range(3, 23)}
         suspended = self.seed_version(3, 99, status="suspended")
         for _ in range(2):
             with Session(self.engine) as db:
                 result = migrate_all_tenants(db)
-                self.assertEqual((result["total"], result["success"], result["failed"]), (19, 19, 0), result)
+                self.assertEqual((result["total"], result["success"], result["failed"]), (20, 20, 0), result)
         self.assertFalse(inspect(self.engine).has_table("whatsapp_turns", schema=suspended))
 
         for version, schema in matrix.items():

@@ -55,8 +55,30 @@ def _safe_resolve_agent(tenant_id: str, payload: AgentMessageRequest) -> dict[st
     return resolved if isinstance(resolved, dict) and "agent_revision_id" in resolved else None
 
 
-def _safe_load_memory(tenant_id: str, conversation_id: str) -> list[dict[str, Any]]:
+def _safe_load_ai_policy(tenant_id: str) -> dict[str, Any]:
+    """Privacy by Default (PRV-004): fail closed when tenant policy is unavailable."""
+    default_policy = {
+        "ai_enabled": True,
+        "allow_external_ai_transfer": False,
+        "memory_auto_capture": False,
+    }
     if not get_settings().internal_token.strip():
+        return default_policy
+    try:
+        policy = operational_context_client.get_tenant_ai_policy(tenant_id)
+    except Exception:
+        return default_policy
+    if not isinstance(policy, dict):
+        return default_policy
+    return {
+        "ai_enabled": bool(policy.get("ai_enabled", True)),
+        "allow_external_ai_transfer": bool(policy.get("allow_external_ai_transfer", False)),
+        "memory_auto_capture": bool(policy.get("memory_auto_capture", False)),
+    }
+
+
+def _safe_load_memory(tenant_id: str, conversation_id: str, *, allow_memory: bool = False) -> list[dict[str, Any]]:
+    if not allow_memory or not get_settings().internal_token.strip():
         return []
     try:
         items = operational_context_client.list_conversation_memory(tenant_id, conversation_id, limit=10)
@@ -215,7 +237,11 @@ def process_stateless_agent_message(
     message = payload.message.content
     if payload.agent_id is None and payload.agent_revision_id is None:
         if _is_greeting(message):
-            return _reply(tenant_id, payload, "¡Hola! Soy el asistente de este espacio. ¿En qué te puedo ayudar?")
+            return _reply(
+                tenant_id,
+                payload,
+                "¡Hola! Soy el asistente de Inteligencia Artificial de este espacio. ¿En qué te puedo ayudar? (Puedes pedir hablar con una persona en cualquier momento).",
+            )
         if THANKS_RE.fullmatch(message):
             return _reply(tenant_id, payload, "¡De nada! Si tienes otra consulta, estoy aquí para ayudarte.")
         if HANDOFF_RE.match(message):
@@ -229,7 +255,13 @@ def process_stateless_agent_message(
     agent_rev_id = active_agent["agent_revision_id"] if active_agent else payload.agent_revision_id
 
     if _is_greeting(message):
-        return _reply(tenant_id, payload, "¡Hola! Soy el asistente de este espacio. ¿En qué te puedo ayudar?", agent_id=agent_id, agent_revision_id=agent_rev_id)
+        return _reply(
+            tenant_id,
+            payload,
+            "¡Hola! Soy el asistente de Inteligencia Artificial de este espacio. ¿En qué te puedo ayudar? (Puedes pedir hablar con una persona en cualquier momento).",
+            agent_id=agent_id,
+            agent_revision_id=agent_rev_id,
+        )
     if THANKS_RE.fullmatch(message):
         return _reply(tenant_id, payload, "¡De nada! Si tienes otra consulta, estoy aquí para ayudarte.", agent_id=agent_id, agent_revision_id=agent_rev_id)
     if HANDOFF_RE.match(message):
@@ -256,7 +288,12 @@ def process_stateless_agent_message(
         _record_trace_best_effort(tenant_id, payload, response, is_simulation=is_simulation)
         return response
 
-    memory_items = _safe_load_memory(tenant_id, payload.conversation_id)
+    ai_policy = _safe_load_ai_policy(tenant_id)
+    memory_items = _safe_load_memory(
+        tenant_id,
+        payload.conversation_id,
+        allow_memory=bool(ai_policy.get("memory_auto_capture", False)),
+    )
     response = _contextual_reply(
         tenant_id,
         payload,
@@ -266,6 +303,7 @@ def process_stateless_agent_message(
         source_limit=3,
         active_agent=active_agent,
         memory_items=memory_items,
+        allow_external_ai_transfer=bool(ai_policy.get("allow_external_ai_transfer", False)),
         is_simulation=is_simulation,
         record_usage=True,
     )
@@ -297,6 +335,7 @@ def _contextual_reply(
     source_limit: int,
     active_agent: dict[str, Any] | None = None,
     memory_items: list[dict[str, Any]] | None = None,
+    allow_external_ai_transfer: bool = False,
     is_simulation: bool = False,
     record_usage: bool = False,
 ) -> AgentMessageResponse:
@@ -313,7 +352,9 @@ def _contextual_reply(
             "No cuento con información suficiente para responder tu solicitud de forma precisa. "
             "Dejaré tu solicitud pendiente para que la revise el equipo."
         )
-    elif not llm.enabled_for_chat:
+    elif not llm.enabled_for_chat or not allow_external_ai_transfer:
+        if llm.enabled_for_chat and not allow_external_ai_transfer:
+            logger.info("external_ai_egress outcome=blocked_by_policy tenant_id=%s", tenant_id)
         reply_content = f"Según el contexto disponible: {sources[0].content[:700]}"
         sources = sources[:1]
     else:

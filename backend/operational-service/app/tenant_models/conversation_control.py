@@ -61,6 +61,8 @@ class TenantAIPolicy(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, server_default=text("1"))
     ai_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    allow_external_ai_transfer: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    memory_auto_capture: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     updated_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     reason: Mapped[str | None] = mapped_column(String(180), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))

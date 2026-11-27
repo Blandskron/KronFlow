@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "RS256"
     jwt_audience: str = "flowkron"
     jwt_issuer: str = "flowkron-auth-service"
+    redis_url: str = ""
     allow_insecure_tenant_header: bool = False
     max_upload_bytes: int = 5_242_880
     allowed_upload_extensions: Annotated[List[str], NoDecode] = Field(

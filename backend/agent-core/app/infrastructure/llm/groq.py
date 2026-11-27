@@ -6,6 +6,7 @@ import httpx
 
 from app.core.config import Settings
 from app.domain.ports.llm import ChatInputBudgetExceeded, ChatMessage
+from app.infrastructure.llm.pii_scrubber import ScrubSession
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,14 @@ class GroqClient:
             _observe("input_budget_exceeded", started, input_chars)
             raise ChatInputBudgetExceeded("Groq input budget exceeded")
 
+        scrubber = ScrubSession()
+        scrubbed_messages = [
+            {"role": message.role, "content": scrubber.scrub_text(message.content)}
+            for message in messages
+        ]
+        if scrubber.redaction_count:
+            logger.info("chat_completion_pii_scrubbed redactions=%d", scrubber.redaction_count)
+
         try:
             with httpx.Client(timeout=self.settings.chat_completion_timeout_seconds) as client:
                 response = client.post(
@@ -68,7 +77,7 @@ class GroqClient:
                     headers={"Authorization": f"Bearer {self.settings.groq_api_key.get_secret_value()}"},
                     json={
                         "model": self.settings.groq_model,
-                        "messages": [{"role": message.role, "content": message.content} for message in messages],
+                        "messages": scrubbed_messages,
                         "temperature": self.settings.chat_completion_temperature,
                         "max_completion_tokens": self.settings.chat_completion_max_tokens,
                     },

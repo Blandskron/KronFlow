@@ -34,6 +34,7 @@ VALID_CHANNELS: tuple[Channel, ...] = ("email", "whatsapp")
 VALID_DECISION_SOURCES = frozenset(
     {"operational", "whatsapp_message", "form", "unsubscribe_link", "provider_webhook", "import"}
 )
+VALID_LEGAL_BASES = frozenset({"consent", "contract", "legal_obligation", "legitimate_interest"})
 VALID_SUPPRESSION_REASONS = frozenset({"unsubscribe", "baja", "hard_bounce", "complaint", "manual"})
 
 
@@ -113,6 +114,10 @@ def record_consent_decision(
     effective_at: datetime,
     source: str,
     policy_version: str | None = None,
+    legal_basis: str = "consent",
+    notice_version: str | None = None,
+    notice_hash: str | None = None,
+    jurisdiction: str = "CL",
     actor_id: str | None = None,
     recorded_at: datetime | None = None,
     commit: bool = True,
@@ -123,6 +128,9 @@ def record_consent_decision(
     norm_purpose = _normalize_purpose(purpose)
     if source not in VALID_DECISION_SOURCES:
         raise ValueError(f"Unsupported consent decision source: {source!r}")
+    norm_basis = legal_basis.strip().lower()
+    if norm_basis not in VALID_LEGAL_BASES:
+        raise ValueError(f"Unsupported legal_basis: {legal_basis!r}")
     eff_utc = _utc(effective_at)
     rec_utc = _utc(recorded_at)
 
@@ -142,6 +150,10 @@ def record_consent_decision(
         effective_at=eff_utc,
         recorded_at=rec_utc,
         policy_version=policy_version.strip()[:36] if policy_version else None,
+        legal_basis=norm_basis,
+        notice_version=notice_version.strip()[:64] if notice_version else None,
+        notice_hash=notice_hash.strip()[:64] if notice_hash else None,
+        jurisdiction=(jurisdiction.strip().upper()[:16] or "CL"),
         source=source,
         actor_id=actor_id.strip()[:64] if actor_id else None,
     )
@@ -495,3 +507,133 @@ def authorize_outbox_delivery(
         job_state=job.state,
         job_id=job.id,
     )
+
+
+def build_ts27560_consent_receipt(
+    decision: ContactConsentDecision,
+    *,
+    tenant_slug: str,
+    controller_name: str | None = None,
+    dpo_contact_email: str | None = None,
+) -> dict:
+    """Build an ISO/IEC TS 27560:2023 interoperable consent receipt from a ledger decision (PRV-011)."""
+    return {
+        "schemaVersion": "ISO/IEC TS 27560:2023",
+        "recordId": f"urn:kronflow:{tenant_slug}:consent:{decision.id}",
+        "piiPrincipalId": f"contact:{decision.client_id}",
+        "jurisdiction": decision.jurisdiction or "CL",
+        "collectionMethod": decision.source,
+        "piiControllers": [
+            {
+                "piiController": controller_name or tenant_slug,
+                "contact": dpo_contact_email or "",
+            }
+        ],
+        "services": [
+            {
+                "service": f"kronflow:{decision.channel}",
+                "channel": decision.channel,
+                "destination": decision.destination,
+                "purposes": [
+                    {
+                        "purpose": decision.purpose,
+                        "lawfulBasis": decision.legal_basis or "consent",
+                        "consentType": "explicit" if (decision.legal_basis or "consent") == "consent" else "non_consent",
+                        "status": "granted" if decision.granted else "withdrawn",
+                        "effectiveAt": decision.effective_at.isoformat(),
+                        "recordedAt": decision.recorded_at.isoformat(),
+                        "policyVersion": decision.policy_version,
+                        "noticeVersion": decision.notice_version,
+                        "noticeHash": decision.notice_hash,
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def list_contact_consent_receipts(db: Session, tenant: TenantContext, contact_id: int) -> list[dict]:
+    bind_tenant_session(db, tenant.schema_name)
+    _require_consent_ledger_ready(db, tenant)
+    if db.get(Cliente, contact_id) is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    rows = list(
+        db.scalars(
+            select(ContactConsentDecision)
+            .where(ContactConsentDecision.client_id == contact_id)
+            .order_by(ContactConsentDecision.effective_at.desc(), ContactConsentDecision.id.desc())
+        ).all()
+    )
+    return [build_ts27560_consent_receipt(row, tenant_slug=tenant.tenant_slug) for row in rows]
+
+
+def record_omnichannel_revocation(
+    db: Session,
+    tenant: TenantContext,
+    *,
+    client_id: int,
+    purpose: str | None = None,
+    reason: str = "baja",
+    source: str = "operational",
+    actor_id: str | None = None,
+    recorded_at: datetime | None = None,
+    cancel_pending_jobs: bool = True,
+    commit: bool = True,
+) -> dict:
+    """Propagate a revocation across ALL known email and WhatsApp destinations of a contact (PRV-011)."""
+    from app.tenant_models.contact_capture import ContactPoint
+
+    rec_utc = _utc(recorded_at)
+    bind_tenant_session(db, tenant.schema_name)
+    _require_consent_ledger_ready(db, tenant)
+    client = db.get(Cliente, client_id)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    targets: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add(ch: str, dest: str | None) -> None:
+        if not dest or not dest.strip() or dest.strip().startswith("anon:"):
+            return
+        norm = _normalize_destination(_normalize_channel(ch), dest)
+        key = (ch, norm)
+        if key not in seen:
+            seen.add(key)
+            targets.append(key)
+
+    _add("email", client.email)
+    _add("whatsapp", client.whatsapp_id)
+    if inspect(db.connection()).has_table(ContactPoint.__tablename__, schema=tenant.schema_name):
+        for pt in db.scalars(select(ContactPoint).where(ContactPoint.client_id == client_id)).all():
+            if pt.point_type == "email":
+                _add("email", pt.normalized_value)
+            elif pt.point_type in ("whatsapp", "phone"):
+                _add("whatsapp", pt.normalized_value)
+
+    suppressed_channels: list[dict[str, str]] = []
+    for ch, dest in targets:
+        record_suppression(
+            db,
+            tenant,
+            channel=ch,
+            destination=dest,
+            purpose=purpose,
+            reason=reason,
+            source=source,
+            client_id=client_id,
+            actor_id=actor_id,
+            recorded_at=rec_utc,
+            cancel_pending_jobs=cancel_pending_jobs,
+            commit=False,
+        )
+        suppressed_channels.append({"channel": ch, "destination": dest})
+
+    if commit:
+        db.commit()
+    return {
+        "client_id": client_id,
+        "purpose": purpose,
+        "suppressed_count": len(suppressed_channels),
+        "suppressed_channels": suppressed_channels,
+    }

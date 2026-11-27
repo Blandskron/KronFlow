@@ -46,10 +46,17 @@ class WebchatSessionCreateIn(BaseModel):
     visitor_email: str | None = Field(default=None, max_length=180)
 
 
+WEBCHAT_AI_DISCLOSURE = (
+    "Estás interactuando con un asistente automatizado de Inteligencia Artificial (EU AI Act Art. 50). "
+    "Puedes solicitar atención humana en cualquier momento."
+)
+
+
 class WebchatSessionOut(BaseModel):
     session_token: str
     conversation_id: int
     welcome_message: str
+    ai_disclosure: str = WEBCHAT_AI_DISCLOSURE
     cursor: int
     expires_at: datetime
 

@@ -30,9 +30,11 @@ class Settings(BaseSettings):
 
     default_page_size: int = 50
     max_page_size: int = 200
-    tenant_migration_version: str = "tenant_schema_v21"
+    tenant_migration_version: str = "tenant_schema_v22"
     ingest_rate_limit_per_minute: int = 120
     redis_url: str = ""
+    app_encryption_keys: str = ""
+    app_blind_index_key: str = ""
     attachment_storage_dir: str = ""
     agent_core_url: str = ""
 

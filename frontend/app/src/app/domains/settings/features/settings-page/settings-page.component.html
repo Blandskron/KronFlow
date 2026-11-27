@@ -75,6 +75,22 @@
                   País
                   <input class="field" type="text" formControlName="country" maxlength="2">
                 </label>
+                <label>
+                  Jurisdicción de privacidad
+                  <select class="field" formControlName="privacy_jurisdiction">
+                    @for (item of jurisdictionOptions; track item.code) {
+                      <option [value]="item.code">{{ item.label }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  Correo DPO / Encargado de Privacidad
+                  <input class="field" type="email" formControlName="dpo_contact_email" placeholder="privacidad@empresa.com">
+                </label>
+                <label>
+                  URL Política de Privacidad
+                  <input class="field" type="url" formControlName="privacy_policy_url" placeholder="https://empresa.com/privacidad">
+                </label>
               </div>
             </form>
             <dl class="meta">

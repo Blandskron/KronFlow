@@ -513,6 +513,24 @@ class CommerceVoiceMcpClientTests(PostgresCase):
                 resp = http_client.post("/api/v1/mcp", headers=headers, json=body)
                 return resp.json()
 
+            # Privacy by Default (PRV-004): remote MCP egress is blocked until tenant explicitly opts in.
+            with self.assertRaises(HTTPException) as blocked_err:
+                discover_remote_mcp_tools(db, tenant, server["id"], transport=peer_transport, now=T0)
+            self.assertEqual(blocked_err.exception.status_code, 403)
+            self.assertEqual(call_counter["count"], 0)
+
+            from app.services.conversation_control_service import set_tenant_ai_policy
+
+            set_tenant_ai_policy(
+                db,
+                tenant,
+                ai_enabled=True,
+                allow_external_ai_transfer=True,
+                actor_user_id="mgr-1",
+                reason="explicit_opt_in_for_mcp_test",
+                now=T0,
+            )
+
             discovered = discover_remote_mcp_tools(db, tenant, server["id"], transport=peer_transport, now=T0)
             self.assertTrue(any(t["name"] == "crm.contact.rename" for t in discovered["discovered_tools"]))
 

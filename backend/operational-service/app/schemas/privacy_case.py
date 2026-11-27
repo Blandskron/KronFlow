@@ -5,7 +5,32 @@ from pydantic import BaseModel, ConfigDict
 
 
 CaseState = Literal["pendiente", "en_proceso", "completada"]
-CaseKind = Literal["acceso", "rectificacion", "eliminacion", "oposicion", "portabilidad"]
+CaseKind = Literal["acceso", "rectificacion", "eliminacion", "oposicion", "portabilidad", "bloqueo"]
+
+
+class PrivacyCaseCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: CaseKind
+    contact_id: int | None = None
+    email: str | None = None
+    whatsapp_id: str | None = None
+    notas: str | None = None
+
+
+class PrivacyRectifyIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str | None = None
+    email: str | None = None
+    telefono: str | None = None
+
+
+class PrivacyRestrictIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    restricted: bool = True
+    reason: str | None = None
 
 
 class PrivacyCaseOut(BaseModel):
@@ -41,10 +66,14 @@ class PrivacyCaseExportOut(BaseModel):
     leads: list[dict] = []
     opportunities: list[dict] = []
     message_count: int = 0
+    messages: list[dict] = []
     consent_decisions: list[dict] = []
+    consent_receipts: list[dict] = []
     suppressions: list[dict] = []
     memory_items: list[dict] = []
     attachments: list[dict] = []
+    voice_transcripts: list[dict] = []
+    commerce_orders: list[dict] = []
     webchat_sessions_count: int = 0
     external_mappings_count: int = 0
     workflow_runs_count: int = 0
@@ -71,6 +100,13 @@ class PrivacyErasureOut(BaseModel):
     webchat_sessions_anonymized: int = 0
     workflow_runs_cancelled: int = 0
     voice_segments_redacted: int = 0
+    email_suppressions_recorded: int = 0
+    conversations_redacted: int = 0
+    leads_redacted: int = 0
+    activities_redacted: int = 0
+    proposals_redacted: int = 0
+    domain_events_redacted: int = 0
+    external_mappings_deleted: int = 0
 
 
 class RetentionSweepIn(BaseModel):
@@ -84,4 +120,23 @@ class RetentionSweepOut(BaseModel):
     messages_deleted: int
     cleanup_log_id: int
     swept_at: datetime
+
+
+class TenantAIPolicyUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ai_enabled: bool = True
+    allow_external_ai_transfer: bool | None = None
+    memory_auto_capture: bool | None = None
+    reason: str | None = None
+
+
+class TenantAIPolicyOut(BaseModel):
+    ai_enabled: bool
+    allow_external_ai_transfer: bool = False
+    memory_auto_capture: bool = False
+    updated_by: str | None = None
+    reason: str | None = None
+    updated_at: datetime | None = None
+    cancelled_ai_turns: int = 0
 

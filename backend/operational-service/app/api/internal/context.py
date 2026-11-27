@@ -29,6 +29,7 @@ from app.schemas.context import (
 from app.services.agent_service import resolve_runtime_agent
 from app.services.ai_extensions_service import record_ai_usage
 from app.services.ai_proposal_service import create_ai_proposal
+from app.services.conversation_control_service import get_tenant_ai_policy
 from app.services.context_service import (
     append_setup_message,
     context_status,
@@ -220,6 +221,12 @@ def create_proposal_internal(
         proposed_by=payload.proposed_by,
         rationale=payload.rationale,
     )
+
+
+@router.get("/ai-policy")
+def get_ai_policy_internal(tenant_id: int, db: Session = Depends(get_db)):
+    tenant = resolve_internal_tenant(tenant_id, db)
+    return get_tenant_ai_policy(db, tenant)
 
 
 @router.post("/ai-usage", status_code=status.HTTP_201_CREATED)

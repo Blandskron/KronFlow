@@ -152,6 +152,9 @@ class OperationalContextClient:
             params={"limit": limit},
         )
 
+    def get_tenant_ai_policy(self, tenant_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/internal/tenants/{tenant_id}/context/ai-policy")
+
     def create_proposal(self, tenant_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/internal/tenants/{tenant_id}/context/proposals", json=payload)
 

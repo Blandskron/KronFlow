@@ -23,12 +23,24 @@ class Tenant(models.Model):
         CANCELED = "canceled", "Canceled"
         UNPAID = "unpaid", "Unpaid"
 
+    class PrivacyJurisdiction(models.TextChoices):
+        CL = "CL", "Chile (Ley 21.719 / 19.628)"
+        EU = "EU", "Union Europea (GDPR)"
+        LATAM = "LATAM", "LATAM"
+
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     name = models.CharField(max_length=180)
     legal_name = models.CharField(max_length=220)
     tax_id = models.CharField(max_length=64, blank=True)
     logo_url = models.URLField(blank=True)
     country = models.CharField(max_length=2, default="CL")
+    privacy_jurisdiction = models.CharField(
+        max_length=16,
+        choices=PrivacyJurisdiction.choices,
+        default=PrivacyJurisdiction.CL,
+    )
+    dpo_contact_email = models.EmailField(blank=True)
+    privacy_policy_url = models.URLField(blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     plan = models.CharField(max_length=24, choices=Plan.choices, default=Plan.FREE)
     subscription_status = models.CharField(max_length=24, choices=SubscriptionStatus.choices, default=SubscriptionStatus.FREE)

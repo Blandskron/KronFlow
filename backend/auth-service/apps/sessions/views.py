@@ -7,6 +7,7 @@ from apps.audit.services import audit
 from apps.shared.responses import ok
 
 from .models import UserSession
+from .revocation import revoke_session
 from .serializers import UserSessionSerializer
 
 
@@ -30,6 +31,7 @@ class UserSessionViewSet(viewsets.ReadOnlyModelViewSet):
         session.status = UserSession.Status.REVOKED
         session.revoked_at = timezone.now()
         session.save(update_fields=["status", "revoked_at", "updated_at"])
+        revoke_session(session.id)
         audit(AuditLog.Event.SESSION_REVOKED, request=request, session_id=session.id)
         return ok({"revoked": True})
 

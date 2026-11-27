@@ -139,6 +139,8 @@ class ApiContractMiddleware:
         for header in ("X-Request-ID", "X-Correlation-ID"):
             if response.get(header):
                 new_response[header] = response[header]
+        if response.cookies:
+            new_response.cookies.update(response.cookies)
         return new_response
 
 

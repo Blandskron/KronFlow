@@ -20,7 +20,7 @@ from app.core.rate_limit import IngestRateLimiter
 from app.core.tenant_resolver import TenantContext, ensure_runtime_is_usable
 from app.public_models.tenant_runtime import TenantRuntime
 from app.public_models.webchat import PublicWebchatWidget
-from app.schemas.webchat import WebchatWidgetCreateIn, WebchatWidgetUpdateIn
+from app.schemas.webchat import WEBCHAT_AI_DISCLOSURE, WebchatWidgetCreateIn, WebchatWidgetUpdateIn
 from app.services.contact_points import normalize_email
 from app.services.conversation_control_service import (
     get_conversation_control,
@@ -328,6 +328,7 @@ def create_webchat_session(
         "session_token": raw_token,
         "conversation_id": conversation.id,
         "welcome_message": widget.welcome_message,
+        "ai_disclosure": WEBCHAT_AI_DISCLOSURE,
         "cursor": welcome_msg.id,
         "expires_at": expires_at,
     }

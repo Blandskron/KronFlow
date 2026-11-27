@@ -103,11 +103,14 @@ class Cliente(Base):
         Index("idx_clientes_whatsapp_id", "whatsapp_id"),
         Index("idx_clientes_email", "email"),
         Index("idx_clientes_consentimiento", "consentimiento_datos", "fecha_consentimiento"),
+        Index("idx_clientes_rut_blind_index", "rut_blind_index"),
         {"schema": "tenant"},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    rut: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    rut: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
+    rut_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rut_blind_index: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nombre: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[str | None] = mapped_column(Text, nullable=True)
     telefono: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -118,6 +121,8 @@ class Cliente(Base):
     fecha_consentimiento: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     canal_consentimiento: Mapped[str | None] = mapped_column(Text, nullable=True)
     version_politica: Mapped[str | None] = mapped_column(Text, nullable=True, server_default=text("'v1.0'"))
+    processing_restricted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    processing_restricted_reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     actualizado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
@@ -162,6 +167,9 @@ class Lead(Base):
     requiere_credito: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     estado: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'nuevo'"))
     resumen_ia: Mapped[str | None] = mapped_column(Text, nullable=True)
+    score_factors_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    human_review_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    human_review_reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     actualizado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     followup_count: Mapped[int | None] = mapped_column(Integer, nullable=True, server_default=text("0"))
@@ -210,7 +218,7 @@ class SolicitudDerecho(Base):
     __tablename__ = "solicitudes_derechos"
     __table_args__ = (
         CheckConstraint(
-            "tipo_derecho IN ('acceso', 'rectificacion', 'eliminacion', 'oposicion', 'portabilidad')",
+            "tipo_derecho IN ('acceso', 'rectificacion', 'eliminacion', 'oposicion', 'portabilidad', 'bloqueo')",
             name="ck_solicitudes_tipo_derecho",
         ),
         CheckConstraint("estado IN ('pendiente', 'en_proceso', 'completada')", name="ck_solicitudes_estado"),
@@ -220,6 +228,8 @@ class SolicitudDerecho(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    client_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    subject_email: Mapped[str | None] = mapped_column(Text, nullable=True)
     whatsapp_id: Mapped[str] = mapped_column(Text, nullable=False)
     tipo_derecho: Mapped[str] = mapped_column(Text, nullable=False)
     estado: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'pendiente'"))

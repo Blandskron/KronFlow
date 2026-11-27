@@ -187,6 +187,11 @@ def test_runtime_live_vs_simulation_resolves_agent_memory_proposals_and_usage(mo
     )
     monkeypatch.setattr(
         operational_context_client,
+        "get_tenant_ai_policy",
+        lambda tenant_id: {"ai_enabled": True, "allow_external_ai_transfer": True, "memory_auto_capture": True},
+    )
+    monkeypatch.setattr(
+        operational_context_client,
         "list_conversation_memory",
         lambda tenant_id, conv_id, limit=10: [
             {"memory_key": "empresa", "memory_value": "ACME Ltda"}

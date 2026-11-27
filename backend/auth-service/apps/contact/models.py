@@ -13,6 +13,7 @@ class ContactMessage(models.Model):
     phone = models.CharField(max_length=32, blank=True)
     message = models.TextField(max_length=2000)
     accept_terms = models.BooleanField(default=False)
+    privacy_notice_version = models.CharField(max_length=64, default="2026-11-v1")
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.NEW)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)

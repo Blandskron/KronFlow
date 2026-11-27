@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from apps.shared.responses import ok
 
+from .models import ContactMessage
 from .serializers import ContactMessageSerializer
 
 
@@ -36,6 +37,38 @@ class ContactMessageView(views.APIView):
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:1000],
         )
         return ok({"id": message.id, "created_at": message.created_at}, status=status.HTTP_201_CREATED)
+
+
+class ContactMessageDsarView(views.APIView):
+    """Admin DSAR export & erasure for public landing contact messages by email (PRV-015)."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(tags=["Contact"], responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        email = (request.query_params.get("email") or "").strip().lower()
+        if not email:
+            return Response(
+                {"success": False, "code": "EMAIL_REQUIRED", "message": "Parametro email requerido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        items = list(
+            ContactMessage.objects.filter(email__iexact=email)
+            .order_by("-created_at")
+            .values("id", "name", "email", "company", "phone", "message", "privacy_notice_version", "status", "created_at")
+        )
+        return ok({"email": email, "count": len(items), "items": items})
+
+    @extend_schema(tags=["Contact"], responses=OpenApiTypes.OBJECT)
+    def delete(self, request):
+        email = (request.query_params.get("email") or "").strip().lower()
+        if not email:
+            return Response(
+                {"success": False, "code": "EMAIL_REQUIRED", "message": "Parametro email requerido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        deleted, _ = ContactMessage.objects.filter(email__iexact=email).delete()
+        return ok({"email": email, "deleted": deleted})
 
 
 def _client_ip(request):

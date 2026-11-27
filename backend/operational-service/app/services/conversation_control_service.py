@@ -45,6 +45,43 @@ def _tenant_ai_enabled_in_tx(db: Session) -> bool:
     return True if policy is None else bool(policy.ai_enabled)
 
 
+def is_external_ai_transfer_allowed_in_tx(db: Session) -> bool:
+    """Privacy by Default (PRV-004): external LLM/MCP transfer is False unless explicitly opted in."""
+    policy = db.get(TenantAIPolicy, 1)
+    return False if policy is None else bool(policy.allow_external_ai_transfer)
+
+
+def get_tenant_ai_policy(db: Session, tenant: TenantContext) -> dict:
+    bind_tenant_session(db, tenant.schema_name)
+    if not conversation_control_ready(db, tenant):
+        return {
+            "ai_enabled": True,
+            "allow_external_ai_transfer": False,
+            "memory_auto_capture": False,
+            "updated_by": None,
+            "reason": None,
+            "updated_at": None,
+        }
+    policy = db.get(TenantAIPolicy, 1)
+    if policy is None:
+        return {
+            "ai_enabled": True,
+            "allow_external_ai_transfer": False,
+            "memory_auto_capture": False,
+            "updated_by": None,
+            "reason": None,
+            "updated_at": None,
+        }
+    return {
+        "ai_enabled": bool(policy.ai_enabled),
+        "allow_external_ai_transfer": bool(policy.allow_external_ai_transfer),
+        "memory_auto_capture": bool(policy.memory_auto_capture),
+        "updated_by": policy.updated_by,
+        "reason": policy.reason,
+        "updated_at": policy.updated_at,
+    }
+
+
 def is_ai_permitted_for_conversation_in_tx(
     db: Session, tenant: TenantContext, conversation_id: int,
 ) -> tuple[bool, str | None]:
@@ -56,6 +93,13 @@ def is_ai_permitted_for_conversation_in_tx(
         return True, None
     if not _tenant_ai_enabled_in_tx(db):
         return False, "tenant_ai_disabled"
+    conv = db.get(Conversation, conversation_id)
+    if conv is not None and conv.session_id:
+        restricted = db.scalar(
+            select(Cliente.processing_restricted).where(Cliente.whatsapp_id == conv.session_id)
+        )
+        if restricted is True:
+            return False, "processing_restricted"
     control = db.get(ConversationControl, conversation_id)
     if control is None:
         return True, None
@@ -209,20 +253,43 @@ def set_tenant_ai_policy(
     *,
     ai_enabled: bool,
     actor_user_id: str,
+    allow_external_ai_transfer: bool | None = None,
+    memory_auto_capture: bool | None = None,
     reason: str | None = None,
     now: datetime | None = None,
 ) -> dict:
     current = _now(now)
     bind_tenant_session(db, tenant.schema_name)
     _require_control_ready(db, tenant)
+    existing = db.get(TenantAIPolicy, 1)
+    eff_external = (
+        bool(allow_external_ai_transfer)
+        if allow_external_ai_transfer is not None
+        else (bool(existing.allow_external_ai_transfer) if existing is not None else False)
+    )
+    eff_memory = (
+        bool(memory_auto_capture)
+        if memory_auto_capture is not None
+        else (bool(existing.memory_auto_capture) if existing is not None else False)
+    )
     clean_reason = reason.strip()[:180] if reason else None
     db.execute(
         insert(TenantAIPolicy)
-        .values(id=1, ai_enabled=bool(ai_enabled), updated_by=actor_user_id[:64], reason=clean_reason, updated_at=current)
+        .values(
+            id=1,
+            ai_enabled=bool(ai_enabled),
+            allow_external_ai_transfer=eff_external,
+            memory_auto_capture=eff_memory,
+            updated_by=actor_user_id[:64],
+            reason=clean_reason,
+            updated_at=current,
+        )
         .on_conflict_do_update(
             index_elements=["id"],
             set_={
                 "ai_enabled": bool(ai_enabled),
+                "allow_external_ai_transfer": eff_external,
+                "memory_auto_capture": eff_memory,
                 "updated_by": actor_user_id[:64],
                 "reason": clean_reason,
                 "updated_at": current,
@@ -237,11 +304,20 @@ def set_tenant_ai_policy(
         "tenant.ai_policy.changed",
         tenant.auth_tenant_id,
         tenant.schema_name,
-        {"ai_enabled": bool(ai_enabled), "actor_user_id": actor_user_id, "reason": clean_reason, "cancelled_ai_turns": cancelled},
+        {
+            "ai_enabled": bool(ai_enabled),
+            "allow_external_ai_transfer": eff_external,
+            "memory_auto_capture": eff_memory,
+            "actor_user_id": actor_user_id,
+            "reason": clean_reason,
+            "cancelled_ai_turns": cancelled,
+        },
     )
     db.commit()
     return {
         "ai_enabled": bool(ai_enabled),
+        "allow_external_ai_transfer": eff_external,
+        "memory_auto_capture": eff_memory,
         "updated_by": actor_user_id[:64],
         "reason": clean_reason,
         "updated_at": current,

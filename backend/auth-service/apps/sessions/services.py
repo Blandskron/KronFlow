@@ -4,6 +4,7 @@ from apps.audit.models import AuditLog
 from apps.audit.services import audit
 
 from .models import UserSession
+from .revocation import revoke_session
 
 
 def evaluate_session_risk(session, request=None):
@@ -36,5 +37,6 @@ def mark_refresh_reuse(session, request=None):
     session.risk_score = 100
     session.revoked_at = timezone.now()
     session.save(update_fields=["status", "risk_flags", "risk_score", "revoked_at", "updated_at"])
+    revoke_session(session.id)
     audit(AuditLog.Event.SESSION_COMPROMISED, request=request, user=session.user, tenant=session.tenant, session_id=session.id)
     return session

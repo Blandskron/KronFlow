@@ -10,15 +10,21 @@ from app.core.tenant_resolver import TenantContext, resolve_audit_reader, resolv
 from app.schemas.audit_event import AuditEventPage
 from app.schemas.privacy_case import (
     CaseState,
+    PrivacyCaseCreateIn,
     PrivacyCaseExportOut,
     PrivacyCaseOut,
     PrivacyCasePage,
     PrivacyCaseTransition,
     PrivacyErasureIn,
     PrivacyErasureOut,
+    PrivacyRectifyIn,
+    PrivacyRestrictIn,
     RetentionSweepIn,
     RetentionSweepOut,
+    TenantAIPolicyOut,
+    TenantAIPolicyUpdateIn,
 )
+from app.services.conversation_control_service import get_tenant_ai_policy, set_tenant_ai_policy
 from app.services.operational_read_service import (
     list_clientes,
     list_conversaciones,
@@ -30,10 +36,13 @@ from app.services.operational_read_service import (
     list_solicitudes_derechos,
 )
 from app.services.privacy_case_service import (
+    create_privacy_case,
     execute_privacy_erasure,
     export_privacy_case_data,
     list_privacy_cases,
+    rectify_privacy_case_subject,
     run_retention_sweep,
+    set_privacy_case_restriction,
     transition_privacy_case,
 )
 from app.services.audit_event_service import list_audit_events
@@ -133,6 +142,53 @@ def privacy_cases(
     return list_privacy_cases(db, tenant, state, limit, offset)
 
 
+@router.post("/privacy-cases", response_model=PrivacyCaseOut, status_code=201)
+def create_privacy_case_endpoint(
+    payload: PrivacyCaseCreateIn,
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return create_privacy_case(db, tenant, payload, actor_id=principal.user_id)
+
+
+@router.post("/privacy-cases/{case_id}/rectify")
+def rectify_privacy_case_endpoint(
+    payload: PrivacyRectifyIn,
+    case_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return rectify_privacy_case_subject(
+        db,
+        tenant,
+        case_id,
+        nombre=payload.nombre,
+        email=payload.email,
+        telefono=payload.telefono,
+        actor_id=principal.user_id,
+    )
+
+
+@router.post("/privacy-cases/{case_id}/restrict")
+def restrict_privacy_case_endpoint(
+    payload: PrivacyRestrictIn,
+    case_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return set_privacy_case_restriction(
+        db,
+        tenant,
+        case_id,
+        restricted=payload.restricted,
+        reason=payload.reason,
+        actor_id=principal.user_id,
+    )
+
+
 @router.patch("/privacy-cases/{case_id}", response_model=PrivacyCaseOut)
 def change_privacy_case(
     transition: PrivacyCaseTransition,
@@ -196,3 +252,29 @@ def log_limpiezas(
     settings: Settings = Depends(get_settings),
 ):
     return list_log_limpiezas(db, tenant, page_size(limit, settings), offset)
+
+
+@router.get("/ai-policy", response_model=TenantAIPolicyOut)
+def ai_policy_read(
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    db: Session = Depends(get_db),
+):
+    return get_tenant_ai_policy(db, tenant)
+
+
+@router.put("/ai-policy", response_model=TenantAIPolicyOut)
+def ai_policy_update(
+    payload: TenantAIPolicyUpdateIn,
+    tenant: TenantContext = Depends(resolve_tenant_from_jwt),
+    db: Session = Depends(get_db),
+    principal: CurrentPrincipal = Depends(require_permission("crm.manage")),
+):
+    return set_tenant_ai_policy(
+        db,
+        tenant,
+        ai_enabled=payload.ai_enabled,
+        allow_external_ai_transfer=payload.allow_external_ai_transfer,
+        memory_auto_capture=payload.memory_auto_capture,
+        actor_user_id=principal.user_id,
+        reason=payload.reason,
+    )

@@ -58,6 +58,11 @@ def test_operational_mode_requests_human_when_groq_fails(monkeypatch):
     monkeypatch.setattr(httpx, "Client", lambda **_kwargs: client)
     monkeypatch.setattr(agent_runtime, "get_settings", lambda: settings)
     monkeypatch.setattr(
+        agent_runtime,
+        "_safe_load_ai_policy",
+        lambda _tenant_id: {"ai_enabled": True, "allow_external_ai_transfer": True, "memory_auto_capture": False},
+    )
+    monkeypatch.setattr(
         agent_runtime.operational_context_client,
         "retrieve_sources",
         lambda *_args: [OperationalContextSource(1, 1, "Fixture", 0.8, "Abre a las nueve.")],
@@ -154,6 +159,11 @@ def test_successful_reply_identifies_only_excerpts_sent_to_the_provider(monkeypa
                                   message={"content": "¿Cuál es el horario?"})
     settings = Settings(_env_file=None, chat_provider="groq", groq_api_key="synthetic", chat_input_max_chars=400)
     monkeypatch.setattr(agent_runtime, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        agent_runtime,
+        "_safe_load_ai_policy",
+        lambda _tenant_id: {"ai_enabled": True, "allow_external_ai_transfer": True, "memory_auto_capture": False},
+    )
     monkeypatch.setattr(agent_runtime.operational_context_client, "retrieve_sources", lambda *_args: sources)
 
     def complete(_client, messages):

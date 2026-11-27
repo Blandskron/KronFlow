@@ -69,11 +69,20 @@ export class SettingsPageComponent implements OnInit {
     { code: 'VIEWER', label: 'Lector' }
   ];
 
+  readonly jurisdictionOptions = [
+    { code: 'CL', label: 'Chile (Ley 21.719 / 19.628)' },
+    { code: 'EU', label: 'Unión Europea (GDPR)' },
+    { code: 'LATAM', label: 'LATAM' }
+  ] as const;
+
   readonly companyForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
     legal_name: [''],
     tax_id: [''],
     country: ['CL', [Validators.maxLength(2)]],
+    privacy_jurisdiction: ['CL' as 'CL' | 'EU' | 'LATAM', Validators.required],
+    dpo_contact_email: ['', Validators.email],
+    privacy_policy_url: [''],
     logo_url: ['']
   });
 
@@ -352,6 +361,9 @@ export class SettingsPageComponent implements OnInit {
       legal_name: tenant.legal_name || '',
       tax_id: tenant.tax_id || '',
       country: tenant.country || 'CL',
+      privacy_jurisdiction: tenant.privacy_jurisdiction || 'CL',
+      dpo_contact_email: tenant.dpo_contact_email || '',
+      privacy_policy_url: tenant.privacy_policy_url || '',
       logo_url: tenant.logo_url || ''
     });
   }

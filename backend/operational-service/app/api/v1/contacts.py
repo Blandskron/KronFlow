@@ -25,6 +25,7 @@ from app.schemas.lead import InitialLeadOut
 from app.services.contact_merge_service import merge_contacts
 from app.services.contact_points import normalize_email, normalize_phone
 from app.services.contact_consent_service import read_contact_consent
+from app.services.consent_authorization_service import list_contact_consent_receipts
 from app.services.lead_service import ensure_contact_lead
 from app.services.tenant_data import count_for_tenant, execute_for_tenant
 from app.services.tenant_provisioning_service import create_system_event
@@ -135,6 +136,20 @@ def contact_consent(
     tenant: TenantContext = Depends(resolve_audit_reader), db: Session = Depends(get_db),
 ):
     return read_contact_consent(db, tenant, contact_id, limit, before_id)
+
+
+@router.get("/{contact_id}/consent-receipts")
+def contact_consent_receipts(
+    contact_id: int = Path(ge=1, le=9223372036854775807),
+    tenant: TenantContext = Depends(resolve_audit_reader),
+    db: Session = Depends(get_db),
+):
+    """Export ISO/IEC TS 27560:2023 interoperable consent receipts for a contact (PRV-011)."""
+    return {
+        "schemaVersion": "ISO/IEC TS 27560:2023",
+        "contact_id": contact_id,
+        "receipts": list_contact_consent_receipts(db, tenant, contact_id),
+    }
 
 
 @router.patch("/{contact_id}", response_model=ContactOut)
